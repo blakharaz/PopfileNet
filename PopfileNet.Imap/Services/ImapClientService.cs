@@ -216,7 +216,20 @@ public class ImapClientService(
         }
         catch (Exception ex)
         {
-            await client.DisconnectAsync(true, cancellationToken);
+            try
+            {
+                if (client.IsConnected)
+                    await client.DisconnectAsync(true, cancellationToken);
+            }
+            catch
+            {
+                // best-effort cleanup; preserve original exception
+            }
+            finally
+            {
+                client.Dispose();
+            }
+
             throw new ImapConnectionException("Verbindung zum IMAP-Server fehlgeschlagen", ex);
         }
     }
