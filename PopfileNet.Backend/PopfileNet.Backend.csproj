@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.3" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.3" />
+        <PackageReference Include="MailKit" Version="4.15.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Services\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\PopfileNet.Common\PopfileNet.Common.csproj" />
+      <ProjectReference Include="..\PopfileNet.Database\PopfileNet.Database.csproj" />
+      <ProjectReference Include="..\PopfileNet.Classifier\PopfileNet.Classifier.csproj" />
+    </ItemGroup>
+
+</Project>

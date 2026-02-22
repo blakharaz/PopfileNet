@@ -1,0 +1,128 @@
+@page "/sync"
+@using PopfileNet.Ui.Services
+
+<FluentCard>
+    <h2>Mail Sync</h2>
+    
+    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+        <FluentStack Orientation="Orientation.Horizontal" Gap="10">
+            <FluentButton Appearance="Appearance.Accent" @onclick="RefreshFolders">Refresh Folders</FluentButton>
+            <FluentButton @onclick="SyncAll">Sync All</FluentButton>
+        </FluentStack>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Folder</th>
+                    <th>Email Count</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var folder in Folders)
+                {
+                    <tr>
+                        <td>@folder.Name</td>
+                        <td>@folder.EmailCount</td>
+                        <td><FluentButton @onclick="() => SyncFolder(folder.Name)">Sync</FluentButton></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        
+        @if (IsLoading)
+        {
+            <FluentProgressRing />
+        }
+        
+        @if (!string.IsNullOrEmpty(StatusMessage))
+        {
+            <FluentBadge>
+                @StatusMessage
+            </FluentBadge>
+        }
+    </FluentStack>
+</FluentCard>
+
+<FluentCard>
+    <h2>Database Statistics</h2>
+    
+    <p>Total Emails: @(Stats?.TotalEmails ?? 0)</p>
+</FluentCard>
+
+@code {
+    [Inject]
+    public ApiClient Api { get; set; } = null!;
+    
+    public List<FolderInfo> Folders { get; set; } = [];
+    public MailStats? Stats { get; set; }
+    public bool IsLoading { get; set; }
+    public string StatusMessage { get; set; } = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshFolders();
+        Stats = await Api.GetMailStatsAsync();
+    }
+    
+    private async Task RefreshFolders()
+    {
+        IsLoading = true;
+        try
+        {
+            Folders = await Api.GetFoldersAsync();
+            StatusMessage = "";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+    
+    private async Task SyncFolder(string folderName)
+    {
+        IsLoading = true;
+        try
+        {
+            var result = await Api.SyncFolderAsync(folderName);
+            StatusMessage = result.Message;
+            Stats = await Api.GetMailStatsAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+    
+    private async Task SyncAll()
+    {
+        IsLoading = true;
+        try
+        {
+            var totalSynced = 0;
+            foreach (var folder in Folders)
+            {
+                var result = await Api.SyncFolderAsync(folder.Name);
+                totalSynced += result.SyncedCount;
+            }
+            StatusMessage = $"Synced {totalSynced} total emails";
+            Stats = await Api.GetMailStatsAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

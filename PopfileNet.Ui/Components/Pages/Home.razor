@@ -1,0 +1,24 @@
+@page "/"
+
+<FluentCard>
+    <h1>PopfileNet</h1>
+    <p>Welcome to PopfileNet - your AI-powered email classifier</p>
+    
+    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+        <FluentCard>
+            <h3>Getting Started</h3>
+            <ol>
+                <li>Configure your IMAP settings in the Settings page</li>
+                <li>Sync your emails from the Mail Sync page</li>
+                <li>Train the classifier with your emails</li>
+                <li>Use the classifier to automatically categorize new emails</li>
+            </ol>
+        </FluentCard>
+        
+        <FluentStack Orientation="Orientation.Horizontal" Gap="10">
+            <FluentButton Href="/settings" Appearance="Appearance.Accent">Settings</FluentButton>
+            <FluentButton Href="/sync" Appearance="Appearance.Accent">Mail Sync</FluentButton>
+            <FluentButton Href="/classify" Appearance="Appearance.Accent">Classifier</FluentButton>
+        </FluentStack>
+    </FluentStack>
+</FluentCard>

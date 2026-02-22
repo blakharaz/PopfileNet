@@ -1,0 +1,84 @@
+@page "/classify"
+@using PopfileNet.Ui.Services
+
+<FluentCard>
+    <h2>Email Classifier</h2>
+    
+    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+        <FluentCard>
+            <h3>Training</h3>
+            <FluentStack Orientation="Orientation.Horizontal" Gap="10">
+                <p>Status: @(Status.IsTrained ? "Trained" : "Not Trained")</p>
+                <p>Training Data: @(Status.TrainingDataCount) emails</p>
+                <FluentButton Appearance="Appearance.Accent" @onclick="Train">Train Model</FluentButton>
+            </FluentStack>
+        </FluentCard>
+        
+        <FluentCard>
+            <h3>Prediction</h3>
+            <FluentStack Orientation="Orientation.Vertical" Gap="10">
+                <p>Select an email to classify:</p>
+                
+                <FluentButton Appearance="Appearance.Accent" @onclick="Predict" Disabled="@(!Status.IsTrained)">Classify Selected Email</FluentButton>
+                
+                @if (Prediction != null)
+                {
+                    <FluentCard>
+                        <h4>Result</h4>
+                        <p>Predicted Bucket: <strong>@Prediction.PredictedBucket</strong></p>
+                        <p>Confidence: @((Prediction.Confidence * 100).ToString("F1"))%</p>
+                    </FluentCard>
+                }
+            </FluentStack>
+        </FluentCard>
+        
+        @if (!string.IsNullOrEmpty(StatusMessage))
+        {
+            <FluentBadge>
+                @StatusMessage
+            </FluentBadge>
+        }
+    </FluentStack>
+</FluentCard>
+
+@code {
+    [Inject]
+    public ApiClient Api { get; set; } = null!;
+    
+    public ClassifierStatus Status { get; set; } = new(false, 0);
+    public string? SelectedEmailId { get; set; }
+    public PredictionResult? Prediction { get; set; }
+    public string StatusMessage { get; set; } = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        Status = await Api.GetClassifierStatusAsync();
+        StatusMessage = "";
+    }
+    
+    private async Task Train()
+    {
+        try
+        {
+            await Api.TrainClassifierAsync();
+            Status = await Api.GetClassifierStatusAsync();
+            StatusMessage = "Model trained successfully!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    private async Task Predict()
+    {
+        try
+        {
+            StatusMessage = "Predict called";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+}
