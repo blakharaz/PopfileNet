@@ -8,6 +8,7 @@ using PopfileNet.Common;
 using PopfileNet.Imap.Exceptions;
 using PopfileNet.Imap.Models;
 using PopfileNet.Imap.Settings;
+using System.Collections.Concurrent;
 using IMailFolder = MailKit.IMailFolder;
 
 namespace PopfileNet.Imap.Services;
@@ -89,15 +90,10 @@ public class ImapClientService(
      
         try
         {
-            var (client, mailFolder) = await ConnectAndOpenFolderAsync(folderName, cancellationToken);
-            using var imapClient = client;
-
-            var mails = LoadMessagesInParallel(client, mailFolder, imapIds);
+            var mails = await LoadMessagesInParallelAsync(folderName, imapIds, cancellationToken);
             
             var emails = mails.Select(
                 entry => Mapping.ConvertToEmail(entry.Item1, entry.Item2)).ToList();
-
-            await client.DisconnectAsync(true, cancellationToken);
 
             return emails;
         }
@@ -108,34 +104,101 @@ public class ImapClientService(
         }
     }
 
-    private List<(UniqueId, MimeMessage)> LoadMessagesInParallel(ImapClient client, IMailFolder mailFolder,
-        IEnumerable<UniqueId> uids)
+    private async Task<List<(UniqueId, MimeMessage)>> LoadMessagesInParallelAsync(
+        string? folderName,
+        IEnumerable<UniqueId> uids,
+        CancellationToken cancellationToken = default)
     {
-        var messages = new List<(UniqueId, MimeMessage)>();
-        var lockObject = new object();
+        var messages = new ConcurrentBag<(UniqueId, MimeMessage)>();
+        var uidList = uids.ToList();
 
-        var parallelOptions = new ParallelOptions
+        // Create a pool of reusable IMAP clients
+        var clients = new List<ImapClient>();
+        try
         {
-            MaxDegreeOfParallelism = _settings.MaxParallelConnections
-        };
+            // Initialize connection pool
+            for (int i = 0; i < _settings.MaxParallelConnections; i++)
+            {
+                clients.Add(await ConnectToServerAsync(cancellationToken));
+            }
 
-        Parallel.ForEach(uids, parallelOptions, uid =>
-        {
+            // Use a semaphore to manage access to the client pool
+            var semaphore = new SemaphoreSlim(_settings.MaxParallelConnections);
             try
             {
-                var message = client.Inbox.GetMessage(uid);
-                lock (lockObject)
-                {
-                    messages.Add((uid, message));
-                }
+                await FetchAllMessagesAsync(folderName, uidList, messages, clients, semaphore, cancellationToken);
             }
-            catch
+            finally
             {
-                // Handle individual message fetch errors
+                semaphore.Dispose();
             }
-        });
 
-        return messages;
+            return messages.ToList();
+        }
+        finally
+        {
+            // Cleanup: disconnect all clients in the pool
+            foreach (var client in clients)
+            {
+                try
+                {
+                    await client.DisconnectAsync(true, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Fehler beim Trennen der IMAP-Verbindung");
+                }
+                client.Dispose();
+            }
+        }
+    }
+
+    private async Task FetchAllMessagesAsync(
+        string? folderName,
+        List<UniqueId> uidList,
+        ConcurrentBag<(UniqueId, MimeMessage)> messages,
+        List<ImapClient> clients,
+        SemaphoreSlim semaphore,
+        CancellationToken cancellationToken)
+    {
+        var tasks = uidList.Select(uid =>
+            FetchMessageWithPoolAsync(folderName, uid, messages, clients, semaphore, cancellationToken));
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task FetchMessageWithPoolAsync(
+        string? folderName,
+        UniqueId uid,
+        ConcurrentBag<(UniqueId, MimeMessage)> messages,
+        List<ImapClient> clientPool,
+        SemaphoreSlim semaphore,
+        CancellationToken cancellationToken)
+    {
+        await semaphore.WaitAsync(cancellationToken);
+        try
+        {
+            // Get the next available client from the pool
+            var client = clientPool[Thread.CurrentThread.ManagedThreadId % clientPool.Count];
+            
+            // Open folder if needed
+            var folder = string.IsNullOrEmpty(folderName) ? client.Inbox : await client.GetFolderAsync(folderName, cancellationToken);
+            if (!folder.IsOpen)
+            {
+                await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
+            }
+
+            var message = await folder.GetMessageAsync(uid, cancellationToken);
+            messages.Add((uid, message));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fehler beim Abrufen der Nachricht mit UID {Uid}", uid.Id);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     
