@@ -1,0 +1,30 @@
+@inherits LayoutComponentBase
+
+<FluentLayout>
+    <FluentHeader>
+        <a href="/" class="logo">PopfileNet</a>
+        <FluentSpacer />
+    </FluentHeader>
+    
+    <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%">
+        <FluentNavMenu Width="250">
+            <FluentNavLink Href="/" Match="NavLinkMatch.All">Dashboard</FluentNavLink>
+            <FluentNavLink Href="/settings">Settings</FluentNavLink>
+            <FluentNavLink Href="/sync">Mail Sync</FluentNavLink>
+            <FluentNavLink Href="/classify">Classifier</FluentNavLink>
+        </FluentNavMenu>
+        
+        <FluentMainContent>
+            @Body
+        </FluentMainContent>
+    </FluentStack>
+</FluentLayout>
+
+<style>
+    .logo {
+        font-weight: bold;
+        font-size: 1.2rem;
+        color: var(--neutralforegroundhighbrush);
+        text-decoration: none;
+    }
+</style>
