@@ -72,9 +72,9 @@ public class ImapClientService(
         try
         {
             client = await ConnectToServerAsync(cancellationToken);
-            var inbox = string.IsNullOrEmpty(folderName) ? client.Inbox : await client.GetFolderAsync(folderName, cancellationToken);
-            await inbox.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
-            return (client, inbox);
+            var folder = string.IsNullOrEmpty(folderName) ? client.Inbox : await client.GetFolderAsync(folderName, cancellationToken);
+            await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
+            return (client, folder);
         }
         catch
         {

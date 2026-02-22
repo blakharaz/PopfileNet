@@ -24,7 +24,13 @@ var imapService = new ImapClientService(Options.Create(settings), new Logger<Ima
 await imapService.TestConnectionAsync();
 
 var folders = await imapService.GetAllPersonalFoldersAsync();
-var folder = folders[Math.Min(folders.Count, 10)];
+if (folders.Count == 0)
+{
+    Console.WriteLine("No folders found.");
+    return;
+}
+
+var folder = folders[Math.Min(folders.Count - 1, 10)];
 var mailIds = await imapService.FetchEmailIdsAsync(folder.FullName);
 var mails = await imapService.FetchEmailsAsync(mailIds.Take(40));
 

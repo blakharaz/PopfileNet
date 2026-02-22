@@ -1,6 +1,6 @@
 namespace PopfileNet.Common;
 
-public class IBucket
+public interface IBucket
 {
     
 }
