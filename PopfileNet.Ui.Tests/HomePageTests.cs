@@ -1,0 +1,27 @@
+using Bunit;
+using PopfileNet.Ui.Components.Pages;
+using Xunit;
+
+namespace PopfileNet.Ui.Tests;
+
+public class HomePageTests : BunitContext
+{
+    [Fact]
+    public void HomePage_RendersCorrectly()
+    {
+        var cut = Render<Home>();
+        
+        Assert.Contains("PopfileNet", cut.Markup);
+        Assert.Contains("Getting Started", cut.Markup);
+    }
+    
+    [Fact]
+    public void HomePage_ContainsNavigationLinks()
+    {
+        var cut = Render<Home>();
+        
+        Assert.Contains("Settings", cut.Markup);
+        Assert.Contains("Mail Sync", cut.Markup);
+        Assert.Contains("Classifier", cut.Markup);
+    }
+}
