@@ -2,7 +2,7 @@ namespace PopfileNet.Common;
 
 public class Email : IEmail
 {
-    public required EmailId UniqueId { get; set; }
+    public EmailId? UniqueId { get; set; }
     public string Id { get; init; } = string.Empty;
     public string Subject { get; set; } = string.Empty;
     public string FromAddress { get; set; } = string.Empty;
