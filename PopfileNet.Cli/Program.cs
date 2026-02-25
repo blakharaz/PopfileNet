@@ -15,18 +15,19 @@ var configuration = configBuilder.Build();
 
 using ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());
 
-var settings = configuration.GetSection("ImapSettings").Get<ImapSettings>()
+var imapSettings = configuration.GetSection("ImapSettings").Get<ImapSettings>()
     ?? throw new InvalidOperationException("ImapSettings configuration not found");
+var categoryMapping = configuration.GetSection("Classifications").Get<IDictionary<string, string>>()
+    ?? throw new InvalidOperationException("Classifications configuration not found");
 
 // Create root command
 var rootCommand = new RootCommand("PopfileNet CLI - IMAP mail test utility");
 
-// Create fetch-mails command
-var fetchMailsCommand = FetchMailsCommand.CreateCommand(settings, factory);
 
 // Create test command
 var testCommand = new Command("test", "Test IMAP connection and operations");
-testCommand.Subcommands.Add(fetchMailsCommand);
+testCommand.Subcommands.Add(FetchMailsCommand.CreateCommand(imapSettings, factory));
+testCommand.Subcommands.Add(TestClassifierCommand.CreateCommand(imapSettings, categoryMapping, factory));
 
 rootCommand.Subcommands.Add(testCommand);
 

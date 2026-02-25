@@ -4,8 +4,11 @@ namespace PopfileNet.Classifier;
 
 public class EmailTrainingData {
     [LoadColumn(0)]
-    public string Content { get; set; } = default!;
+    public required string Subject { get; set; }
 
     [LoadColumn(1)]
-    public string Category { get; set; } = default!;
+    public required string Content { get; set; }
+
+    [LoadColumn(2)]
+    public required string Label { get; set; }
 }

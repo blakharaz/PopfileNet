@@ -12,7 +12,11 @@ public static class FetchMailsCommand
     {
         // Create limit option
         var limitOption = new Option<int>("--limit",
-            "-l", "Number of emails to fetch") { DefaultValueFactory = _ => 40 };
+            "-l")
+        {
+            Description = "Number of emails to fetch",
+            DefaultValueFactory = _ => 40
+        };
         
         var fetchMailsCommand = new Command("fetch-mails", "Fetch emails from the IMAP server");
         fetchMailsCommand.Options.Add(limitOption);

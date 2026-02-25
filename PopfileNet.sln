@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.Imap", "PopfileN
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.Common", "PopfileNet.Common\PopfileNet.Common.csproj", "{186A859F-1D0F-4574-AC1C-593CEC556FB7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.Classifier", "PopfileNet.Classifier\PopfileNet.Classifier.csproj", "{6C9D7FEC-1C40-47BC-901B-C2F6E12A662C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{186A859F-1D0F-4574-AC1C-593CEC556FB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{186A859F-1D0F-4574-AC1C-593CEC556FB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{186A859F-1D0F-4574-AC1C-593CEC556FB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C9D7FEC-1C40-47BC-901B-C2F6E12A662C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C9D7FEC-1C40-47BC-901B-C2F6E12A662C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C9D7FEC-1C40-47BC-901B-C2F6E12A662C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C9D7FEC-1C40-47BC-901B-C2F6E12A662C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
