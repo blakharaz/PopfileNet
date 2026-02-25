@@ -150,27 +150,14 @@ public static class SyncMailsCommand
         if (removeDeleted)
         {
             Console.WriteLine("\nChecking for deleted emails...");
-            var dbEmails = await dbContext.Emails.Select(e => e.Id).ToListAsync();
-            var deletedCount = 0;
+            var dbEmailIds = await dbContext.Emails.Select(e => e.Id).ToListAsync();
+            var idsToDelete = dbEmailIds.Except(allImapEmailIds).ToList();
 
-            foreach (var emailId in dbEmails)
+            if (idsToDelete.Count > 0)
             {
-                if (!allImapEmailIds.Contains(emailId))
-                {
-                    var email = await dbContext.Emails.FindAsync(emailId);
-                    if (email != null)
-                    {
-                        dbContext.Emails.Remove(email);
-                        deletedCount++;
-                    }
-                }
+                await dbContext.Emails.Where(e => idsToDelete.Contains(e.Id)).ExecuteDeleteAsync();
             }
-
-            if (deletedCount > 0)
-            {
-                await dbContext.SaveChangesAsync();
-            }
-            Console.WriteLine($"Removed {deletedCount} deleted emails from database.");
+            Console.WriteLine($"Removed {idsToDelete.Count} deleted emails from database.");
         }
 
         Console.WriteLine($"\n=== Sync Complete ===");
