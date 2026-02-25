@@ -83,8 +83,8 @@ public static class TestClassifierCommand
                 var predictedFolder = classifier.Predict(testMail);
                 
                 if (predictedFolder.PredictedLabel != folderCategories[testDataFolderEntry.Key])
+                if (predictedFolder.PredictedLabel != testDataFolderEntry.Key)
                 {
-                    Console.WriteLine($"Misclassified mail from {testDataFolderEntry.Key} as {predictedFolder.PredictedLabel}");
                 }
             }
         }
