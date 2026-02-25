@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PopfileNet.Database;
 
-public static class DatabaseConfiguration
+namespace PopfileNet.Database;
+
+public static class DatabaseConfigurationExtensions
 {
     public static void AddEmailAnalysisDatabase(this IServiceCollection services, string connectionString)
     {
