@@ -76,7 +76,7 @@ Console application using [System.CommandLine](https://docs.microsoft.com/en-us/
   "ImapSettings": {
     "Server": "imap.example.com",
     "Username": "user@example.com",
-    "Password": "secret",
+    "Password": "your-password",
     "Port": 993,
     "UseSsl": true,
     "MaxParallelConnections": 5
