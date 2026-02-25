@@ -40,8 +40,8 @@ public static class TestClassifierCommand
 
         var testData = new Dictionary<string, IList<Email>>();
         var dataset = new EmailClassificationDataSet();
-        
-        var folders = (await imapService.GetAllPersonalFoldersAsync(cancellationTokenSource.Token)).Skip(4).Take(3);
+
+        var folders = await imapService.GetAllPersonalFoldersAsync(cancellationTokenSource.Token);
         
         foreach (var folder in folders)
         {
@@ -81,10 +81,9 @@ public static class TestClassifierCommand
             foreach (var testMail in testDataFolderEntry.Value)
             {
                 var predictedFolder = classifier.Predict(testMail);
-                
-                if (predictedFolder.PredictedLabel != folderCategories[testDataFolderEntry.Key])
                 if (predictedFolder.PredictedLabel != testDataFolderEntry.Key)
                 {
+Console.WriteLine($"Misclassified mail from {testDataFolderEntry.Key} as {predictedFolder.PredictedLabel}");
                 }
             }
         }
