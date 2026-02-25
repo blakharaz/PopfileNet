@@ -8,12 +8,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\PopfileNet.Database\PopfileNet.Database.csproj" />
       <ProjectReference Include="..\PopfileNet.Classifier\PopfileNet.Classifier.csproj" />
       <ProjectReference Include="..\PopfileNet.Common\PopfileNet.Common.csproj" />
       <ProjectReference Include="..\PopfileNet.Imap\PopfileNet.Imap.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
       <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.3" />
       <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
       <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.3" />
