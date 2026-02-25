@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PopfileNet.Cli;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 
@@ -14,45 +15,19 @@ var configuration = configBuilder.Build();
 
 using ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());
 
-var settings = configuration.GetSection("ImapSettings").Get<ImapSettings>()
+var imapSettings = configuration.GetSection("ImapSettings").Get<ImapSettings>()
     ?? throw new InvalidOperationException("ImapSettings configuration not found");
+var categoryMapping = configuration.GetSection("Classifications").Get<IDictionary<string, string>>()
+    ?? throw new InvalidOperationException("Classifications configuration not found");
 
 // Create root command
 var rootCommand = new RootCommand("PopfileNet CLI - IMAP mail test utility");
 
-// Create limit option
-var limitOption = new Option<int>("--limit",
-    "-l", "Number of emails to fetch") { DefaultValueFactory = _ => 40 };
-
-// Create fetch-mails command
-var fetchMailsCommand = new Command("fetch-mails", "Fetch emails from the IMAP server");
-fetchMailsCommand.Options.Add(limitOption);
-
-fetchMailsCommand.SetAction(async (pr) =>
-{
-    var limit = pr.GetValue(limitOption);
-    
-    var imapService = new ImapClientService(Options.Create(settings), new Logger<ImapClientService>(factory));
-    await imapService.TestConnectionAsync();
-
-    var folders = await imapService.GetAllPersonalFoldersAsync();
-    if (folders.Count == 0)
-    {
-        Console.WriteLine("No folders found.");
-        return 0;
-    }
-
-    var folder = folders[Math.Min(folders.Count - 1, 10)];
-    var mailIds = await imapService.FetchEmailIdsAsync(folder.FullName);
-    var mails = await imapService.FetchEmailsAsync(mailIds.Take(limit).ToList());
-
-    Console.WriteLine($"Fetched {mails.Count} emails.");
-    return 0;
-});
 
 // Create test command
 var testCommand = new Command("test", "Test IMAP connection and operations");
-testCommand.Subcommands.Add(fetchMailsCommand);
+testCommand.Subcommands.Add(FetchMailsCommand.CreateCommand(imapSettings, factory));
+testCommand.Subcommands.Add(TestClassifierCommand.CreateCommand(imapSettings, categoryMapping, factory));
 
 rootCommand.Subcommands.Add(testCommand);
 

@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\PopfileNet.Classifier\PopfileNet.Classifier.csproj" />
       <ProjectReference Include="..\PopfileNet.Common\PopfileNet.Common.csproj" />
       <ProjectReference Include="..\PopfileNet.Imap\PopfileNet.Imap.csproj" />
     </ItemGroup>
@@ -18,6 +19,15 @@
       <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.3" />
       <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.3" />
       <PackageReference Include="System.CommandLine" Version="2.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="appsettings.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="appsettings.Development.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>
