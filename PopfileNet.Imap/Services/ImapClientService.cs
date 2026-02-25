@@ -19,6 +19,7 @@ public class ImapClientService(
     : IImapClientService
 {
     private readonly ImapSettings _settings = settings.Value;
+    private int _clientPoolIndex;
 
     public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
@@ -178,18 +179,24 @@ public class ImapClientService(
         await semaphore.WaitAsync(cancellationToken);
         try
         {
-            // Get the next available client from the pool
-            var client = clientPool[Thread.CurrentThread.ManagedThreadId % clientPool.Count];
+            // Atomically assign a client to this task
+            // Use a simple round-robin approach with the semaphore ensuring max parallel access
+            int clientIndex = Interlocked.Increment(ref _clientPoolIndex) % clientPool.Count;
+            var client = clientPool[clientIndex];
             
-            // Open folder if needed
-            var folder = string.IsNullOrEmpty(folderName) ? client.Inbox : await client.GetFolderAsync(folderName, cancellationToken);
-            if (!folder.IsOpen)
+            // Lock the client's SyncRoot to ensure thread-safe access
+            lock (client.SyncRoot)
             {
-                await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
-            }
+                // Open folder if needed
+                var folder = string.IsNullOrEmpty(folderName) ? client.Inbox : client.GetFolder(folderName);
+                if (!folder.IsOpen)
+                {
+                    folder.Open(FolderAccess.ReadOnly, cancellationToken);
+                }
 
-            var message = await folder.GetMessageAsync(uid, cancellationToken);
-            messages.Add((uid, message));
+                var message = folder.GetMessage(uid, cancellationToken);
+                messages.Add((uid, message));
+            }
         }
         catch (Exception ex)
         {
