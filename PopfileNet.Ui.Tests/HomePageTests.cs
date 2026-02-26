@@ -1,11 +1,18 @@
 using Bunit;
 using PopfileNet.Ui.Components.Pages;
 using Xunit;
+using Microsoft.FluentUI.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace PopfileNet.Ui.Tests;
 
 public class HomePageTests : BunitContext
 {
+    public HomePageTests()
+    {
+        Services.AddSingleton(new LibraryConfiguration());
+    }
+    
     [Fact]
     public void HomePage_RendersCorrectly()
     {
