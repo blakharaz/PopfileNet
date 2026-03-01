@@ -69,12 +69,8 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
 
             entity.HasOne(b => b.AssociatedFolder)
                 .WithOne(f => f.Bucket)
+                .HasForeignKey<MailFolder>(f => f.BucketId)
                 .IsRequired(false);
-
-            // Many-to-many relationship using a join table
-            // entity.HasMany(b => b.Emails)
-            //     .WithMany()
-            //     .UsingEntity(j => j.ToTable("BucketEmails"));
         });
     }
 }
