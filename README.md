@@ -6,17 +6,22 @@ An IMAP-based email classification system inspired by [POPFile](https://getpopfi
 
 - **IMAP Integration**: Connect to any IMAP-compatible email server
 - **ML Classification**: Naive Bayes classifier for email categorization
-- **CLI Tool**: Command-line interface for testing and training
+- **Web UI**: Blazor-based user interface for configuration and management
+- **CLI Tool**: Command-line interface for development testing only
 - **Parallel Fetching**: Efficiently download emails using connection pooling
 
 ## Projects
 
 | Project | Description |
 |---------|-------------|
-| `PopfileNet.Cli` | Main CLI application entry point |
+| `PopfileNet.Ui` | Blazor UI application (user interface) |
+| `PopfileNet.Backend` | ASP.NET Core Web API backend |
 | `PopfileNet.Imap` | IMAP client services for email operations |
 | `PopfileNet.Classifier` | ML.NET-based email classification |
+| `PopfileNet.Database` | Database access layer |
 | `PopfileNet.Common` | Shared models and interfaces |
+| `PopfileNet.Cli` | CLI application (development/testing only) |
+| `PopfileNet.Ui.Tests` | UI component tests |
 
 ## Quick Start
 
@@ -24,19 +29,21 @@ An IMAP-based email classification system inspired by [POPFile](https://getpopfi
 # Build the solution
 dotnet build
 
-# Configure IMAP settings in PopfileNet.Cli/appsettings.json
-
-# Test IMAP connection and fetch emails
-dotnet run --project PopfileNet.Cli -- test fetch-mails --limit 20
+# Run the Web UI
+dotnet run --project PopfileNet.Ui
 ```
 
-## Usage
+Open http://localhost:5000 in your browser.
+
+## Development Testing
+
+The CLI is available for development testing only:
 
 ```bash
-# Fetch emails from IMAP server
-dotnet run --project PopfileNet.Cli -- test fetch-mails -l 50
+# Test IMAP connection
+dotnet run --project PopfileNet.Cli -- test fetch-mails --limit 20
 
-# Test classifier with sample data
+# Test classifier
 dotnet run --project PopfileNet.Cli -- test classifier
 ```
 
