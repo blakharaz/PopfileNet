@@ -2,8 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
 using PopfileNet.Database;
+using PopfileNet.Imap.Settings;
+using PopfileNet.ServiceDefaults;
+using Aspire.Hosting;
 
 var builder = WebApplication.CreateSlimBuilder(args);
+
+builder.AddServiceDefaults();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -12,16 +17,16 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddDbContext<PopfileNetDbContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Server=localhost;Database=PopfileNet;Trusted_Connection=True;MultipleActiveResultSets=true";
-    options.UseSqlServer(connectionString);
-});
+builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
 
-builder.Services.Configure<ImapSettings>(builder.Configuration.GetSection("ImapSettings"));
+var imapSettings = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
+    ?? throw new InvalidOperationException("ImapSettings configuration not found");
+builder.Services.AddSingleton(imapSettings);
 builder.Services.AddScoped<IImapService, ImapService>();
 
 var app = builder.Build();
+
+app.UseServiceDefaults();
 
 using (var scope = app.Services.CreateScope())
 {

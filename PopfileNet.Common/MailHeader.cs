@@ -2,6 +2,7 @@ namespace PopfileNet.Common;
 
 public class MailHeader : IMailHeader
 {
+    public Guid Id { get; init; } = Guid.NewGuid();
     public required string EmailId { get; set; }
     public Email? Email { get; set; }
     

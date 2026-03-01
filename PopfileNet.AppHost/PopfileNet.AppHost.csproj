@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Sdk Name="Aspire.AppHost.Sdk" Version="13.1.2"/>
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>81b1b26e-00fb-4d1c-89ed-283f400ba57d</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Hosting.AppHost" Version="13.1.2" />
+        <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.1.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\PopfileNet.Backend\PopfileNet.Backend.csproj" />
+      <ProjectReference Include="..\PopfileNet.Ui\PopfileNet.Ui.csproj" />
+    </ItemGroup>
+
+</Project>

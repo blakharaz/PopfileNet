@@ -4,13 +4,17 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <AssemblyName>PopfileNet.Backend</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.3" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.3" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+        <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.1.2" />
         <PackageReference Include="MailKit" Version="4.15.0" />
+        <PackageReference Include="Aspire.Hosting" Version="13.1.2" />
     </ItemGroup>
 
     <ItemGroup>
@@ -18,9 +22,11 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\PopfileNet.ServiceDefaults\PopfileNet.ServiceDefaults.csproj" />
       <ProjectReference Include="..\PopfileNet.Common\PopfileNet.Common.csproj" />
       <ProjectReference Include="..\PopfileNet.Database\PopfileNet.Database.csproj" />
       <ProjectReference Include="..\PopfileNet.Classifier\PopfileNet.Classifier.csproj" />
+      <ProjectReference Include="..\PopfileNet.Imap\PopfileNet.Imap.csproj" />
     </ItemGroup>
 
 </Project>
