@@ -10,14 +10,66 @@ PopfileNet is a modular .NET solution for email classification using IMAP and ML
 PopfileNet.sln
 ├── PopfileNet.Cli/           # CLI entry point
 ├── PopfileNet.Imap/          # IMAP client layer
-├── PopfileNet.Classifier/   # ML classification
-├── PopfileNet.Common/       # Shared domain models
-├── PopfileNet.Database/     # (placeholder) Data persistence
-├── PopfileNet.Backend/      # (placeholder) Web API
-└── PopfileNet.Ui/           # (placeholder) Web UI
+├── PopfileNet.Classifier/    # ML classification
+├── PopfileNet.Common/        # Shared domain models
+├── PopfileNet.Database/      # Data persistence layer
+├── PopfileNet.Backend/       # Web API backend
+└── PopfileNet.Ui/            # Blazor UI application
+```
+
+## Component Diagram
+
+```mermaid
+graph TB
+    subgraph UI
+        CLI[PopfileNet.Cli]
+        Blazor[PopfileNet.Ui]
+    end
+
+    subgraph Backend
+        API[PopfileNet.Backend API]
+    end
+
+    subgraph Core
+        IMAP[PopfileNet.Imap]
+        ML[PopfileNet.Classifier]
+        DB[PopfileNet.Database]
+    end
+
+    subgraph Shared
+        Common[PopfileNet.Common]
+    end
+
+    CLI -->|CLI commands| IMAP
+    CLI -->|CLI commands| ML
+    Blazor -->|HTTP| API
+    API --> IMAP
+    API --> ML
+    API --> DB
+    IMAP -->|IMAP protocol| EmailServer[Email Server]
+    ML -.->|ML model| Common
+    DB -->|SQL| Common
+    Common -->|Models/Interfaces| IMAP
+    Common -->|Models/Interfaces| ML
+    Common -->|Models/Interfaces| DB
 ```
 
 ## Core Components
+
+### PopfileNet.Ui
+
+Blazor Server application providing the user interface:
+- Settings configuration
+- Mail folder sync
+- Classifier training and prediction
+- Microsoft Fluent UI Blazor components
+
+### PopfileNet.Backend
+
+ASP.NET Core Web API serving the UI:
+- Settings endpoints
+- Mail operations endpoints
+- Classification endpoints
 
 ### PopfileNet.Common
 
@@ -62,11 +114,13 @@ Pipeline:
 
 ### PopfileNet.Cli
 
-Console application using [System.CommandLine](https://docs.microsoft.com/en-us/dotnet/standard/commandline/):
+Console application using [System.CommandLine](https://docs.microsoft.com/en-us/dotnet/standard/commandline/) for development testing only:
 
 - `Program.cs` - Entry point with command routing
 - `FetchMailsCommand` - Fetch emails from IMAP
 - `TestClassifierCommand` - Test ML classification
+
+**Note**: The CLI is for development/testing only. Use the Web UI for production.
 
 ## Configuration
 

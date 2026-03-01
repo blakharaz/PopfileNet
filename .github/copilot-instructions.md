@@ -8,6 +8,10 @@ PopfileNet is a .NET 10 solution for IMAP-based email classification using ML. I
 - **PopfileNet.Imap** - IMAP client using MailKit
 - **PopfileNet.Classifier** - ML.NET Naive Bayes classifier
 - **PopfileNet.Common** - Shared domain models
+- **PopfileNet.Backend** - ASP.NET Core Web API backend
+- **PopfileNet.Ui** - Blazor UI application
+- **PopfileNet.Ui.Tests** - UI component tests
+- **PopfileNet.Database** - Database access layer
 
 ## Code Guidelines
 
@@ -59,11 +63,12 @@ See `docs/incremental-development.md`:
 
 ## Important Files
 
-- `PopfileNet.Cli/Program.cs` - Entry point, command registration
-- `PopfileNet.Cli/appsettings.json` - IMAP configuration
+- `PopfileNet.Ui/Program.cs` - Web UI entry point
+- `PopfileNet.Backend/Program.cs` - Web API entry point
 - `PopfileNet.Imap/Services/ImapClientService.cs` - Core IMAP logic
 - `PopfileNet.Classifier/NaiveBayesianClassifier.cs` - ML model
 - `PopfileNet.Common/Email.cs` - Core domain model
+- `PopfileNet.Cli/Program.cs` - CLI entry point (development/testing only)
 
 ## Testing Guidelines
 
