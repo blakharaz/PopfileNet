@@ -1,6 +1,6 @@
 # C# Coding Standards
 
-Follow Microsoft C# coding conventions and .NET guidelines.
+Follow [Microsoft C# coding conventions](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions) and [.NET naming guidelines](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/naming-guidelines).
 
 ## General Principles
 
@@ -25,6 +25,7 @@ Follow Microsoft C# coding conventions and .NET guidelines.
 - 4 spaces for indentation
 - One namespace per file
 - Opening brace on new line for namespaces/classes
+- **One class/record per file** - each type should be in its own file with matching filename
 
 ### Language Features
 

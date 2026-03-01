@@ -55,3 +55,4 @@ Follow these external guidelines for all code changes:
 - Collection expressions `[]` instead of `new List<T>()`
 - Interfaces in PopfileNet.Common for abstractions
 - Configuration via appsettings.json
+- **One class/record per file** - each type should be in its own file with matching filename
