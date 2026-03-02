@@ -1,7 +1,6 @@
 using PopfileNet.Ui.Components;
 using PopfileNet.Ui.Services;
 using PopfileNet.ServiceDefaults;
-using Aspire.Hosting;
 using Microsoft.FluentUI.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,9 +12,12 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+var backendUrl = builder.Configuration["services:popfilenet-backend:http:0"] 
+    ?? "http://localhost:5000";
+
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
-    client.BaseAddress = new Uri("http://backend");
+    client.BaseAddress = new Uri(backendUrl);
 });
 
 var app = builder.Build();

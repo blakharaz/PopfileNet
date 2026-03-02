@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
 using PopfileNet.Database;
 using PopfileNet.Imap.Settings;
 using PopfileNet.ServiceDefaults;
-using Aspire.Hosting;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
@@ -17,10 +17,14 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 
-builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
+var connectionString = builder.Configuration.GetConnectionString("popfilenet")
+    ?? "Host=localhost;Database=popfilenet;Username=postgres;Password=postgres";
+
+builder.Services.AddDbContext<PopfileNetDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 var imapSettings = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
-    ?? throw new InvalidOperationException("ImapSettings configuration not found");
+    ?? new ImapSettings { Server = "imap.example.com", Username = "", Password = "" };
 builder.Services.AddSingleton(imapSettings);
 builder.Services.AddScoped<IImapService, ImapService>();
 

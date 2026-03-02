@@ -1,0 +1,136 @@
+@page "/mails"
+@using PopfileNet.Ui.Services
+
+<FluentCard>
+    <h2>Emails</h2>
+    
+    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+        @if (MailsResponse?.Items.Count > 0)
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>From</th>
+                        <th>Date</th>
+                        <th>Bucket</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var email in MailsResponse.Items)
+                    {
+                        <tr>
+                            <td>@email.Subject</td>
+                            <td>@email.FromAddress</td>
+                            <td>@email.ReceivedDate.ToString("g")</td>
+                            <td>@email.BucketName</td>
+                            <td><FluentButton @onclick="() => ViewEmail(email.Id)">View</FluentButton></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            
+            <FluentStack Orientation="Orientation.Horizontal" Gap="10">
+                <FluentButton @onclick="PreviousPage" Disabled="@(MailsResponse.Page <= 1)">Previous</FluentButton>
+                <span>Page @MailsResponse.Page of @MailsResponse.TotalPages (@MailsResponse.TotalCount total)</span>
+                <FluentButton @onclick="NextPage" Disabled="@(!MailsResponse.HasNext)">Next</FluentButton>
+            </FluentStack>
+        }
+        else
+        {
+            <p>No emails in database.</p>
+        }
+        
+        @if (!string.IsNullOrEmpty(StatusMessage))
+        {
+            <FluentBadge Appearance="Appearance.Neutral">
+                @StatusMessage
+            </FluentBadge>
+        }
+    </FluentStack>
+</FluentCard>
+
+@if (SelectedEmail != null)
+{
+    <FluentCard>
+        <h3>Email Details</h3>
+        
+        <FluentStack Orientation="Orientation.Vertical" Gap="10">
+            <p><strong>Subject:</strong> @SelectedEmail.Subject</p>
+            <p><strong>From:</strong> @SelectedEmail.FromAddress</p>
+            <p><strong>To:</strong> @SelectedEmail.ToAddresses</p>
+            <p><strong>Date:</strong> @SelectedEmail.ReceivedDate.ToString("f")</p>
+            <p><strong>Bucket:</strong> @SelectedEmail.BucketName</p>
+            <hr />
+            <div style="white-space: pre-wrap; overflow-wrap: break-word;">
+                @SelectedEmail.Body
+            </div>
+            
+            <FluentButton @onclick="CloseDetails">Close</FluentButton>
+        </FluentStack>
+    </FluentCard>
+}
+
+@code {
+    [Inject]
+    public ApiClient Api { get; set; } = null!;
+    
+    public PagedResponse<EmailDto>? MailsResponse { get; set; }
+    public EmailDetailDto? SelectedEmail { get; set; }
+    public string StatusMessage { get; set; } = "";
+    public int CurrentPage { get; set; } = 1;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMails();
+    }
+    
+    private async Task LoadMails()
+    {
+        try
+        {
+            MailsResponse = await Api.GetMailsAsync(CurrentPage, 20);
+            StatusMessage = "";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    private async Task ViewEmail(string id)
+    {
+        try
+        {
+            SelectedEmail = await Api.GetMailByIdAsync(id);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    private void CloseDetails()
+    {
+        SelectedEmail = null;
+    }
+    
+    private async Task PreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await LoadMails();
+        }
+    }
+    
+    private async Task NextPage()
+    {
+        if (MailsResponse?.HasNext == true)
+        {
+            CurrentPage++;
+            await LoadMails();
+        }
+    }
+}

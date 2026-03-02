@@ -31,7 +31,7 @@ public static class MailsGroupExtensions
     private static async Task<Ok<PagedApiResponse<EmailDto>>> GetMailsAsync(PopfileNetDbContext db, int page = 1, int pageSize = 20)
     {
         pageSize = Math.Min(pageSize, 100);
-        
+            
         try
         {
             var totalCount = await db.Emails.CountAsync();

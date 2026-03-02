@@ -7,10 +7,12 @@
     <FluentStack Orientation="Orientation.Vertical" Gap="20">
         <FluentCard>
             <h3>Training</h3>
-            <FluentStack Orientation="Orientation.Horizontal" Gap="10">
-                <p>Status: @(Status.IsTrained ? "Trained" : "Not Trained")</p>
-                <p>Training Data: @(Status.TrainingDataCount) emails</p>
-                <FluentButton Appearance="Appearance.Accent" @onclick="Train">Train Model</FluentButton>
+            <FluentStack Orientation="Orientation.Vertical" Gap="10">
+                <p>Status: <strong>@(Status?.IsTrained == true ? "Trained" : "Not Trained")</strong></p>
+                <p>Training Data: @(Status?.TrainingDataCount ?? 0) emails</p>
+                <FluentButton Appearance="Appearance.Accent" @onclick="Train" Disabled="@IsTraining">
+                    @(IsTraining ? "Training..." : "Train Model")
+                </FluentButton>
             </FluentStack>
         </FluentCard>
         
@@ -19,7 +21,32 @@
             <FluentStack Orientation="Orientation.Vertical" Gap="10">
                 <p>Select an email to classify:</p>
                 
-                <FluentButton Appearance="Appearance.Accent" @onclick="Predict" Disabled="@(!Status.IsTrained)">Classify Selected Email</FluentButton>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Subject</th>
+                            <th>From</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var email in (Emails?.Items ?? []))
+                        {
+                            <tr>
+                                <td><input type="radio" name="emailSelect" checked="@(SelectedEmailId == email.Id)" @onclick="() => SelectedEmailId = email.Id" /></td>
+                                <td>@email.Subject</td>
+                                <td>@email.FromAddress</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                
+                <FluentButton 
+                    Appearance="Appearance.Accent" 
+                    @onclick="Predict" 
+                    Disabled="@(!Status?.IsTrained == true || string.IsNullOrEmpty(SelectedEmailId))">
+                    Classify Selected Email
+                </FluentButton>
                 
                 @if (Prediction != null)
                 {
@@ -27,14 +54,53 @@
                         <h4>Result</h4>
                         <p>Predicted Bucket: <strong>@Prediction.PredictedBucket</strong></p>
                         <p>Confidence: @((Prediction.Confidence * 100).ToString("F1"))%</p>
+                        
+                        @if (Prediction.AllProbabilities.Count > 0)
+                        {
+                            <h5>All Probabilities:</h5>
+                            <ul>
+                                @foreach (var prob in Prediction.AllProbabilities.OrderByDescending(p => p.Value))
+                                {
+                                    <li>@prob.Key: @((prob.Value * 100).ToString("F1"))%</li>
+                                }
+                            </ul>
+                        }
                     </FluentCard>
                 }
             </FluentStack>
         </FluentCard>
         
+        <FluentCard>
+            <h3>Categories</h3>
+            @if (Categories?.Items.Count > 0)
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cat in Categories.Items)
+                        {
+                            <tr>
+                                <td>@cat.Name</td>
+                                <td>@cat.Description</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p>No categories configured.</p>
+            }
+        </FluentCard>
+        
         @if (!string.IsNullOrEmpty(StatusMessage))
         {
-            <FluentBadge>
+            <FluentBadge Appearance="Appearance.Neutral">
                 @StatusMessage
             </FluentBadge>
         }
@@ -45,14 +111,19 @@
     [Inject]
     public ApiClient Api { get; set; } = null!;
     
-    public ClassifierStatus Status { get; set; } = new(false, 0);
+    public ClassifierStatus? Status { get; set; }
+    public PagedResponse<EmailDto>? Emails { get; set; }
+    public PagedResponse<BucketDto>? Categories { get; set; }
     public string? SelectedEmailId { get; set; }
     public PredictionResult? Prediction { get; set; }
     public string StatusMessage { get; set; } = "";
+    public bool IsTraining { get; set; }
     
     protected override async Task OnInitializedAsync()
     {
         Status = await Api.GetClassifierStatusAsync();
+        Categories = await Api.GetCategoriesAsync(1, 100);
+        Emails = await Api.GetMailsAsync(1, 50);
         StatusMessage = "";
     }
     
@@ -60,6 +131,7 @@
     {
         try
         {
+            IsTraining = true;
             await Api.TrainClassifierAsync();
             Status = await Api.GetClassifierStatusAsync();
             StatusMessage = "Model trained successfully!";
@@ -68,13 +140,20 @@
         {
             StatusMessage = $"Error: {ex.Message}";
         }
+        finally
+        {
+            IsTraining = false;
+        }
     }
     
     private async Task Predict()
     {
+        if (string.IsNullOrEmpty(SelectedEmailId)) return;
+        
         try
         {
-            StatusMessage = "Predict called";
+            Prediction = await Api.PredictAsync(SelectedEmailId);
+            StatusMessage = Prediction != null ? "Classification complete!" : "Classification failed.";
         }
         catch (Exception ex)
         {
