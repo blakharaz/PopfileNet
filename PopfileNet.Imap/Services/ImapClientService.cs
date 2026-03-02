@@ -1,10 +1,10 @@
 using MailKit;
-using MailKit.Net.Imap;
 using MailKit.Search;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using PopfileNet.Common;
+using PopfileNet.Imap;
 using PopfileNet.Imap.Exceptions;
 using PopfileNet.Imap.Models;
 using PopfileNet.Imap.Settings;
@@ -15,7 +15,8 @@ namespace PopfileNet.Imap.Services;
 
 public class ImapClientService(
     IOptions<ImapSettings> settings,
-    ILogger<ImapClientService> logger)
+    ILogger<ImapClientService> logger,
+    IImapClientFactory clientFactory)
     : IImapClientService
 {
     private readonly ImapSettings _settings = settings.Value;
@@ -68,9 +69,9 @@ public class ImapClientService(
 
     private static EmailId ConvertToEmailId(UniqueId arg) => new(Validity: arg.Validity, Id: arg.Id);
     
-    private async Task<(ImapClient client, IMailFolder mailFolder)> ConnectAndOpenFolderAsync(string? folderName = null, CancellationToken cancellationToken = default)
+    private async Task<(IImapClient client, IMailFolder mailFolder)> ConnectAndOpenFolderAsync(string? folderName = null, CancellationToken cancellationToken = default)
     {
-        ImapClient? client = null;
+        IImapClient? client = null;
         try
         {
             client = await ConnectToServerAsync(cancellationToken);
@@ -113,17 +114,14 @@ public class ImapClientService(
         var messages = new ConcurrentBag<(UniqueId, MimeMessage)>();
         var uidList = uids.ToList();
 
-        // Create a pool of reusable IMAP clients
-        var clients = new List<ImapClient>();
+        var clients = new List<IImapClient>();
         try
         {
-            // Initialize connection pool
             for (int i = 0; i < _settings.MaxParallelConnections; i++)
             {
                 clients.Add(await ConnectToServerAsync(cancellationToken));
             }
 
-            // Use a semaphore to manage access to the client pool
             var semaphore = new SemaphoreSlim(_settings.MaxParallelConnections);
             try
             {
@@ -138,7 +136,6 @@ public class ImapClientService(
         }
         finally
         {
-            // Cleanup: disconnect all clients in the pool
             foreach (var client in clients)
             {
                 try
@@ -158,7 +155,7 @@ public class ImapClientService(
         string? folderName,
         List<UniqueId> uidList,
         ConcurrentBag<(UniqueId, MimeMessage)> messages,
-        List<ImapClient> clients,
+        List<IImapClient> clients,
         SemaphoreSlim semaphore,
         CancellationToken cancellationToken)
     {
@@ -172,31 +169,24 @@ public class ImapClientService(
         string? folderName,
         UniqueId uid,
         ConcurrentBag<(UniqueId, MimeMessage)> messages,
-        List<ImapClient> clientPool,
+        List<IImapClient> clientPool,
         SemaphoreSlim semaphore,
         CancellationToken cancellationToken)
     {
         await semaphore.WaitAsync(cancellationToken);
         try
         {
-            // Atomically assign a client to this task
-            // Use a simple round-robin approach with the semaphore ensuring max parallel access
             int clientIndex = Interlocked.Increment(ref _clientPoolIndex) % clientPool.Count;
             var client = clientPool[clientIndex];
             
-            // Lock the client's SyncRoot to ensure thread-safe access
-            lock (client.SyncRoot)
+            var folder = string.IsNullOrEmpty(folderName) ? client.Inbox : await client.GetFolderAsync(folderName, cancellationToken);
+            if (!folder.IsOpen)
             {
-                // Open folder if needed
-                var folder = string.IsNullOrEmpty(folderName) ? client.Inbox : client.GetFolder(folderName);
-                if (!folder.IsOpen)
-                {
-                    folder.Open(FolderAccess.ReadOnly, cancellationToken);
-                }
-
-                var message = folder.GetMessage(uid, cancellationToken);
-                messages.Add((uid, message));
+                folder.Open(FolderAccess.ReadOnly, cancellationToken);
             }
+
+            var message = folder.GetMessage(uid, cancellationToken);
+            messages.Add((uid, message));
         }
         catch (Exception ex)
         {
@@ -209,9 +199,9 @@ public class ImapClientService(
     }
 
     
-    private async Task<ImapClient> ConnectToServerAsync(CancellationToken cancellationToken = default)
+    private async Task<IImapClient> ConnectToServerAsync(CancellationToken cancellationToken = default)
     {
-        var client = new ImapClient();
+        var client = clientFactory.Create();
 
         try
         {
@@ -230,7 +220,6 @@ public class ImapClientService(
             }
             catch
             {
-                // best-effort cleanup; preserve original exception
             }
             finally
             {

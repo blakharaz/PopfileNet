@@ -33,7 +33,8 @@ public static class FetchMailsCommand
 
     private static async Task<int> Run(ImapSettings settings, int limit, ILoggerFactory loggerFactory)
     {
-        var imapService = new ImapClientService(Options.Create(settings), new Logger<ImapClientService>(loggerFactory));
+        var factory = new ImapClientFactory();
+        var imapService = new ImapClientService(Options.Create(settings), new Logger<ImapClientService>(loggerFactory), factory);
         await imapService.TestConnectionAsync();
 
         var folders = await imapService.GetAllPersonalFoldersAsync();

@@ -6,6 +6,8 @@ public static class Mapping
 {
     public static EmailTrainingData MapToTrainingData(Email email, string label)
     {
+        ArgumentNullException.ThrowIfNull(email);
+        
         return new EmailTrainingData
         {
             Content = email.Body,
@@ -16,6 +18,8 @@ public static class Mapping
 
     public static EmailInput MapToInput(Email email)
     {
+        ArgumentNullException.ThrowIfNull(email);
+        
         return new EmailInput
         {
             Content = email.Body,
