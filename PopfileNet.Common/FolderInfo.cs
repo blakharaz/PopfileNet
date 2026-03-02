@@ -1,4 +1,4 @@
-namespace PopfileNet.Backend.Services;
+namespace PopfileNet.Common;
 
 public class FolderInfo(string name, int count)
 {
