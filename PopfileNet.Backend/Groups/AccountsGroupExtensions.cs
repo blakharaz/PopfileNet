@@ -26,12 +26,9 @@ public static class AccountsGroupExtensions
         
         try
         {
-            var accounts = new List<AccountDto>
-            {
-                new("default", "Default Account", "imap.example.com", 993, true)
-            };
+            var accounts = new AccountDto("default", "Default Account", "imap.example.com", 993, true);
             
-            return TypedResults.Ok(PagedApiResponse<AccountDto>.Success(accounts, page, pageSize, accounts.Count));
+            return TypedResults.Ok(PagedApiResponse<AccountDto>.Success([accounts], page, pageSize, 1));
         }
         catch (InvalidOperationException ex)
         {

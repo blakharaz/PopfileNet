@@ -3,20 +3,6 @@ using PopfileNet.Imap.Settings;
 
 namespace PopfileNet.Backend.Services;
 
-public interface IImapService
-{
-    Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default);
-    Task<IList<EmailId>> FetchEmailIdsAsync(string? folderName = null, CancellationToken cancellationToken = default);
-    Task<IList<Email>> FetchEmailsAsync(IEnumerable<EmailId> ids, string? folderName = null, CancellationToken cancellationToken = default);
-    Task<List<FolderInfo>> GetAllPersonalFoldersAsync(CancellationToken cancellationToken = default);
-}
-
-public class FolderInfo(string name, int count)
-{
-    public string Name { get; } = name;
-    public int Count { get; } = count;
-}
-
 public class ImapService(ImapSettings settings) : IImapService
 {
     private readonly ImapSettings _settings = settings;
