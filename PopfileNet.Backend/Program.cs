@@ -26,6 +26,16 @@ builder.Services.AddScoped<IImapService, ImapService>();
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/")
+    {
+        context.Response.Redirect("/mails");
+        return;
+    }
+    await next();
+});
+
 app.UseServiceDefaults();
 
 using (var scope = app.Services.CreateScope())
@@ -37,6 +47,8 @@ using (var scope = app.Services.CreateScope())
 app.AddSettingsGroup()
     .AddJobsGroup()
     .AddMailsGroup()
-    .AddClassifierGroup();
+    .AddClassifierGroup()
+    .AddCategoriesGroup()
+    .AddAccountsGroup();
 
 app.Run();
