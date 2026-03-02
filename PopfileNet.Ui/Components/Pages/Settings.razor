@@ -18,7 +18,7 @@
         
         @if (!string.IsNullOrEmpty(StatusMessage))
         {
-            <FluentBadge>
+            <FluentBadge Appearance="Appearance.Neutral">
                 @StatusMessage
             </FluentBadge>
         }
@@ -28,17 +28,57 @@
 <FluentCard>
     <h2>Buckets</h2>
     
-    <ul>
-        @foreach (var bucket in Buckets)
-        {
-            <li>
-                <strong>@bucket.Name</strong> - @bucket.Description
-                <FluentButton @onclick="() => DeleteBucket(bucket.Id)">Delete</FluentButton>
-            </li>
-        }
-    </ul>
+    @if (Buckets.Count == 0)
+    {
+        <p>No buckets configured.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var bucket in Buckets)
+                {
+                    <tr>
+                        <td><FluentTextField @bind-Value="bucket.Name" /></td>
+                        <td><FluentTextField @bind-Value="bucket.Description" /></td>
+                        <td>
+                            <FluentButton @onclick="() => SaveBucket(bucket)">Save</FluentButton>
+                            <FluentButton @onclick="() => DeleteBucket(bucket.Id)">Delete</FluentButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
         
     <FluentButton @onclick="AddBucket">Add Bucket</FluentButton>
+</FluentCard>
+
+<FluentCard>
+    <h2>Folder Mappings</h2>
+    
+    @if (FolderMappings.Count == 0)
+    {
+        <p>No folder mappings configured.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var mapping in FolderMappings)
+            {
+                <li>
+                    <strong>@mapping.Name</strong> → @(GetBucketName(mapping.BucketId))
+                </li>
+            }
+        </ul>
+    }
 </FluentCard>
 
 @code {
@@ -53,25 +93,33 @@
     
     public string StatusMessage { get; set; } = "";
     
-    public List<Bucket> Buckets { get; set; } = [];
+    public List<BucketDto> Buckets { get; set; } = [];
+    public List<FolderMappingDto> FolderMappings { get; set; } = [];
     
     protected override async Task OnInitializedAsync()
     {
         var settings = await Api.GetSettingsAsync();
         if (settings != null)
         {
-            Server = settings.Server;
-            Port = settings.Port;
-            Username = settings.Username;
-            Password = settings.Password;
-            UseSsl = settings.UseSsl;
+            if (settings.ImapSettings != null)
+            {
+                Server = settings.ImapSettings.Server;
+                Port = settings.ImapSettings.Port;
+                Username = settings.ImapSettings.Username;
+                Password = settings.ImapSettings.Password;
+                UseSsl = settings.ImapSettings.UseSsl;
+            }
+            Buckets = settings.Buckets;
+            FolderMappings = settings.FolderMappings;
         }
         
-        Buckets = await Api.GetBucketsAsync();
         if (Buckets.Count == 0)
         {
-            Buckets.Add(new Bucket(Guid.NewGuid(), "Work", "Work emails"));
-            Buckets.Add(new Bucket(Guid.NewGuid(), "Personal", "Personal emails"));
+            Buckets =
+            [
+                new BucketDto(Guid.NewGuid(), "Work", "Work emails"),
+                new BucketDto(Guid.NewGuid(), "Personal", "Personal emails")
+            ];
         }
     }
     
@@ -79,13 +127,18 @@
     {
         try
         {
-            await Api.SaveSettingsAsync(new ImapSettings
+            await Api.SaveSettingsAsync(new AppSettingsDto
             {
-                Server = Server,
-                Port = Port,
-                Username = Username,
-                Password = Password,
-                UseSsl = UseSsl
+                ImapSettings = new ImapSettingsDto
+                {
+                    Server = Server,
+                    Port = Port,
+                    Username = Username,
+                    Password = Password,
+                    UseSsl = UseSsl
+                },
+                Buckets = Buckets,
+                FolderMappings = FolderMappings
             });
             StatusMessage = "Settings saved successfully!";
         }
@@ -111,12 +164,46 @@
     
     private void AddBucket()
     {
-        Buckets.Add(new Bucket(Guid.NewGuid(), "", ""));
+        Buckets.Add(new BucketDto(Guid.NewGuid(), "", ""));
+    }
+    
+    private async Task SaveBucket(BucketDto bucket)
+    {
+        try
+        {
+            if (bucket.Id == Guid.Empty)
+            {
+                await Api.CreateBucketAsync(bucket);
+            }
+            else
+            {
+                await Api.UpdateBucketAsync(bucket);
+            }
+            StatusMessage = "Bucket saved!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
     }
     
     private async Task DeleteBucket(Guid id)
     {
-        await Api.DeleteBucketAsync(id);
-        Buckets.RemoveAll(b => b.Id == id);
+        try
+        {
+            await Api.DeleteBucketAsync(id);
+            Buckets.RemoveAll(b => b.Id == id);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    private string GetBucketName(Guid? bucketId)
+    {
+        if (bucketId == null) return "(None)";
+        var bucket = Buckets.FirstOrDefault(b => b.Id == bucketId);
+        return bucket?.Name ?? "(Unknown)";
     }
 }

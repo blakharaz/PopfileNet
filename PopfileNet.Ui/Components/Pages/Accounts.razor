@@ -1,0 +1,95 @@
+@page "/accounts"
+@using PopfileNet.Ui.Services
+
+<FluentCard>
+    <h2>Mail Accounts</h2>
+    
+    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+        @if (AccountsResponse?.Items.Count > 0)
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Server</th>
+                        <th>Port</th>
+                        <th>SSL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var account in AccountsResponse.Items)
+                    {
+                        <tr>
+                            <td>@account.Name</td>
+                            <td>@account.Server</td>
+                            <td>@account.Port</td>
+                            <td>@(account.UseSsl ? "Yes" : "No")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            
+            <FluentStack Orientation="Orientation.Horizontal" Gap="10">
+                <FluentButton @onclick="PreviousPage" Disabled="@(AccountsResponse.Page <= 1)">Previous</FluentButton>
+                <span>Page @AccountsResponse.Page of @AccountsResponse.TotalPages</span>
+                <FluentButton @onclick="NextPage" Disabled="@(!AccountsResponse.HasNext)">Next</FluentButton>
+            </FluentStack>
+        }
+        else
+        {
+            <p>No accounts configured.</p>
+        }
+        
+        @if (!string.IsNullOrEmpty(StatusMessage))
+        {
+            <FluentBadge Appearance="Appearance.Neutral">
+                @StatusMessage
+            </FluentBadge>
+        }
+    </FluentStack>
+</FluentCard>
+
+@code {
+    [Inject]
+    public ApiClient Api { get; set; } = null!;
+    
+    public PagedResponse<AccountDto>? AccountsResponse { get; set; }
+    public string StatusMessage { get; set; } = "";
+    public int CurrentPage { get; set; } = 1;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccounts();
+    }
+    
+    private async Task LoadAccounts()
+    {
+        try
+        {
+            AccountsResponse = await Api.GetAccountsAsync(CurrentPage, 20);
+            StatusMessage = "";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    private async Task PreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await LoadAccounts();
+        }
+    }
+    
+    private async Task NextPage()
+    {
+        if (AccountsResponse?.HasNext == true)
+        {
+            CurrentPage++;
+            await LoadAccounts();
+        }
+    }
+}
