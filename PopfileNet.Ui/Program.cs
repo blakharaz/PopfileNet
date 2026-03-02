@@ -13,7 +13,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var backendUrl = builder.Configuration["services:popfilenet-backend:http:0"] 
-    ?? "http://localhost:5000";
+    ?? throw new InvalidOperationException("Backend service URL not configured");
 
 builder.Services.AddHttpClient<ApiClient>(client =>
 {

@@ -93,8 +93,15 @@
     
     public string StatusMessage { get; set; } = "";
     
-    public List<BucketDto> Buckets { get; set; } = [];
+    public List<EditableBucket> Buckets { get; set; } = [];
     public List<FolderMappingDto> FolderMappings { get; set; } = [];
+    
+    public class EditableBucket
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
     
     protected override async Task OnInitializedAsync()
     {
@@ -109,7 +116,7 @@
                 Password = settings.ImapSettings.Password;
                 UseSsl = settings.ImapSettings.UseSsl;
             }
-            Buckets = settings.Buckets;
+            Buckets = settings.Buckets.Select(b => new EditableBucket { Id = b.Id, Name = b.Name, Description = b.Description }).ToList();
             FolderMappings = settings.FolderMappings;
         }
         
@@ -117,8 +124,8 @@
         {
             Buckets =
             [
-                new BucketDto(Guid.NewGuid(), "Work", "Work emails"),
-                new BucketDto(Guid.NewGuid(), "Personal", "Personal emails")
+                new EditableBucket { Id = Guid.NewGuid(), Name = "Work", Description = "Work emails" },
+                new EditableBucket { Id = Guid.NewGuid(), Name = "Personal", Description = "Personal emails" }
             ];
         }
     }
@@ -137,7 +144,7 @@
                     Password = Password,
                     UseSsl = UseSsl
                 },
-                Buckets = Buckets,
+                Buckets = Buckets.Select(b => new BucketDto(b.Id, b.Name, b.Description)).ToList(),
                 FolderMappings = FolderMappings
             });
             StatusMessage = "Settings saved successfully!";
@@ -164,20 +171,21 @@
     
     private void AddBucket()
     {
-        Buckets.Add(new BucketDto(Guid.NewGuid(), "", ""));
+        Buckets.Add(new EditableBucket { Id = Guid.NewGuid(), Name = "", Description = "" });
     }
     
-    private async Task SaveBucket(BucketDto bucket)
+    private async Task SaveBucket(EditableBucket bucket)
     {
         try
         {
+            var dto = new BucketDto(bucket.Id, bucket.Name, bucket.Description);
             if (bucket.Id == Guid.Empty)
             {
-                await Api.CreateBucketAsync(bucket);
+                await Api.CreateBucketAsync(dto);
             }
             else
             {
-                await Api.UpdateBucketAsync(bucket);
+                await Api.UpdateBucketAsync(dto);
             }
             StatusMessage = "Bucket saved!";
         }
