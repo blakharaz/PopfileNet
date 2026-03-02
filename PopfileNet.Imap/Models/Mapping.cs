@@ -6,14 +6,16 @@ namespace PopfileNet.Imap.Models;
 
 public static class Mapping
 {
-    public static Email ConvertToEmail(UniqueId uid, MimeMessage message)
+    public static Email ConvertToEmail(UniqueId uid, MimeMessage message, string? folderName = null)
     {
         var messageId = message.MessageId ?? Guid.NewGuid().ToString();
+        var imapUid = $"{folderName}:{uid.Validity}:{uid.Id}";
 
         return new Email
         {
             UniqueId = MapToEmailId(uid),
             Id = messageId,
+            ImapUid = imapUid,
             Subject = message.Subject ?? string.Empty,
             FromAddress = message.From.FirstOrDefault()?.ToString() ?? string.Empty,
             ToAddresses = string.Join(";", message.To.Select(static x => x.ToString())),

@@ -32,5 +32,7 @@
       <ProjectReference Include="..\PopfileNet.Classifier\PopfileNet.Classifier.csproj" />
       <ProjectReference Include="..\PopfileNet.Imap\PopfileNet.Imap.csproj" />
     </ItemGroup>
-
+    <ItemGroup>
+      <InternalsVisibleTo Include="PopfileNet.Backend.Tests"/>
+    </ItemGroup>
 </Project>

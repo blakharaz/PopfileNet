@@ -25,8 +25,14 @@ public static class JobsGroupExtensions
         return app;
     }
 
-    private static async Task<Ok<ApiResponse<SyncJobResult>>> SyncAsync(PopfileNetDbContext db, IImapService imapService)
+    private static async Task<IResult> SyncAsync(PopfileNetDbContext db, IImapService imapService)
     {
+        if (!await imapService.IsConfiguredAsync())
+        {
+            return TypedResults.InternalServerError(
+                ApiResponse<SyncJobResult>.Failure("IMAP_NOT_CONFIGURED", "IMAP not configured"));
+        }
+
         var folders = await imapService.GetAllPersonalFoldersAsync();
         var allEmails = new List<Email>();
         

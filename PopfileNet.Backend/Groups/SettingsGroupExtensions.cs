@@ -45,8 +45,14 @@ public static class SettingsGroupExtensions
         return TypedResults.Ok(ApiResponse<bool>.Success(true));
     }
 
-    private static async Task<Ok<ApiResponse<bool>>> TestConnectionAsync(IImapService imapClient)
+    internal static async Task<IResult> TestConnectionAsync(IImapService imapClient)
     {
+        if (!await imapClient.IsConfiguredAsync())
+        {
+            // settings are missing – inform caller instead of throwing
+            return TypedResults.BadRequest(ApiResponse<bool>.Failure("IMAP_NOT_CONFIGURED", "IMAP settings are not configured"));
+        }
+
         var result = await imapClient.TestConnectionAsync();
         return TypedResults.Ok(ApiResponse<bool>.Success(result));
     }

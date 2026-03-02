@@ -99,7 +99,7 @@ public class ImapClientService(
             var mails = await LoadMessagesInParallelAsync(folderName, idList, cancellationToken);
             
             var emails = mails.Select(
-                entry => Mapping.ConvertToEmail(entry.Item1, entry.Item2)).ToList();
+                entry => Mapping.ConvertToEmail(entry.Item1, entry.Item2, folderName)).ToList();
 
             return emails;
         }

@@ -47,36 +47,44 @@ app.Use(async (context, next) =>
 
 app.UseServiceDefaults();
 
-using (var scope = app.Services.CreateScope())
+// allow tests to explicitly disable db initialization by setting a flag
+// note: Program is a partial class, we declare a static property below
+var skipDbInit = Program.SkipDbInitForTests
+    || app.Configuration.GetValue("SkipDbInit", false)
+    || string.Equals(Environment.GetEnvironmentVariable("SKIP_DB_INIT"), "true", StringComparison.OrdinalIgnoreCase);
+if (!skipDbInit && !app.Environment.IsEnvironment("Test"))
 {
-    var db = scope.ServiceProvider.GetRequiredService<PopfileNetDbContext>();
-    
-    if (!await db.Database.CanConnectAsync())
+    using (var scope = app.Services.CreateScope())
     {
-        return;
-    }
-    
-    var historyTableExists = await db.Database.SqlQueryRaw<int>(
-        "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_name = '__EFMigrationsHistory'"
-    ).FirstOrDefaultAsync() > 0;
-    
-    if (!historyTableExists)
-    {
-        var hasAnyTables = await db.Database.SqlQueryRaw<int>(
-            "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE '__%'"
+        var db = scope.ServiceProvider.GetRequiredService<PopfileNetDbContext>();
+        
+        if (!await db.Database.CanConnectAsync())
+        {
+            return;
+        }
+        
+        var historyTableExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_name = '__EFMigrationsHistory'"
         ).FirstOrDefaultAsync() > 0;
         
-        if (hasAnyTables)
+        if (!historyTableExists)
         {
-            throw new InvalidOperationException(
-                "Database exists, but is in legacy format. Please delete the existing database and restart the application.");
+            var hasAnyTables = await db.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE '__%'"
+            ).FirstOrDefaultAsync() > 0;
+            
+            if (hasAnyTables)
+            {
+                throw new InvalidOperationException(
+                    "Database exists, but is in legacy format. Please delete the existing database and restart the application.");
+            }
         }
-    }
-    
-    var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
-    if (pendingMigrations.Any())
-    {
-        await db.Database.MigrateAsync();
+        
+        var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
+        {
+            await db.Database.MigrateAsync();
+        }
     }
 }
 
