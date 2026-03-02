@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
 using PopfileNet.Common;
@@ -18,11 +17,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 
-var connectionString = builder.Configuration.GetConnectionString("popfilenet")
-    ?? "Host=localhost;Database=popfilenet;Username=postgres;Password=postgres";
-
-builder.Services.AddDbContext<PopfileNetDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
 
 var imapSettings = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
     ?? new ImapSettings { Server = "imap.example.com", Username = "", Password = "" };
