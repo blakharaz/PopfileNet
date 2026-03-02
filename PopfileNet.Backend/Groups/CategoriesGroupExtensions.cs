@@ -26,20 +26,13 @@ public static class CategoriesGroupExtensions
     {
         pageSize = Math.Min(pageSize, 100);
         
-        try
-        {
-            var totalCount = await db.Buckets.CountAsync();
-            var buckets = await db.Buckets
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(b => new BucketDto(b.Id, b.Name, b.Description ?? ""))
-                .ToListAsync();
-            
-            return TypedResults.Ok(PagedApiResponse<BucketDto>.Success(buckets, page, pageSize, totalCount));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return TypedResults.Ok(PagedApiResponse<BucketDto>.Failure("CATEGORIES_ERROR", ex.Message));
-        }
+        var totalCount = await db.Buckets.CountAsync();
+        var buckets = await db.Buckets
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(b => new BucketDto(b.Id, b.Name, b.Description ?? ""))
+            .ToListAsync();
+        
+        return TypedResults.Ok(PagedApiResponse<BucketDto>.Success(buckets, page, pageSize, totalCount));
     }
 }

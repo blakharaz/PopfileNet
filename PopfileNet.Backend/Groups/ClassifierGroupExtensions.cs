@@ -38,54 +38,40 @@ public static class ClassifierGroupExtensions
 
     private static async Task<IResult> TrainAsync(PopfileNetDbContext db)
     {
-        try
+        var emails = await db.Emails.ToListAsync();
+        
+        if (!emails.Any())
+            return TypedResults.BadRequest(ApiResponse<bool>.Failure("NO_TRAINING_DATA", "No training data available"));
+
+        var trainingData = new EmailClassificationDataSet();
+        foreach (var email in emails.Where(e => e.Folder != Guid.Empty))
         {
-            var emails = await db.Emails.ToListAsync();
-            
-            if (!emails.Any())
-                return TypedResults.Ok(ApiResponse<bool>.Failure("NO_TRAINING_DATA", "No training data available"));
-
-            var trainingData = new EmailClassificationDataSet();
-            foreach (var email in emails.Where(e => e.Folder != Guid.Empty))
-            {
-                trainingData.AddMail(email, email.Folder.ToString());
-            }
-
-            _classifier = new NaiveBayesianClassifier();
-            _classifier.Train(trainingData);
-            _isTrained = true;
-
-            return TypedResults.Ok(ApiResponse<bool>.Success(true));
+            trainingData.AddMail(email, email.Folder.ToString());
         }
-        catch (InvalidOperationException ex)
-        {
-            return TypedResults.Ok(ApiResponse<bool>.Failure("TRAIN_ERROR", ex.Message));
-        }
+
+        _classifier = new NaiveBayesianClassifier();
+        _classifier.Train(trainingData);
+        _isTrained = true;
+
+        return TypedResults.Ok(ApiResponse<bool>.Success(true));
     }
 
-    private static async Task<Ok<ApiResponse<PredictionResult>>> PredictAsync(PredictRequest request, PopfileNetDbContext db)
+    private static async Task<IResult> PredictAsync(PredictRequest request, PopfileNetDbContext db)
     {
-        try
-        {
-            if (_classifier == null || !_isTrained)
-                return TypedResults.Ok(ApiResponse<PredictionResult>.Success(new PredictionResult("", 0, [])));
+        if (_classifier == null || !_isTrained)
+            return TypedResults.Ok(ApiResponse<PredictionResult>.Success(new PredictionResult("", 0, [])));
 
-            var email = await db.Emails.FindAsync(request.EmailId);
-            if (email == null)
-                return TypedResults.Ok(ApiResponse<PredictionResult>.Failure("EMAIL_NOT_FOUND", "Email not found"));
+        var email = await db.Emails.FindAsync(request.EmailId);
+        if (email == null)
+            return TypedResults.NotFound(ApiResponse<PredictionResult>.Failure("EMAIL_NOT_FOUND", "Email not found"));
 
-            var prediction = _classifier.Predict(email);
-            
-            var result = new PredictionResult(
-                prediction.PredictedLabel, 
-                prediction.Scores.Length > 0 ? prediction.Scores[0] : 0,
-                new Dictionary<string, float> { { prediction.PredictedLabel, prediction.Scores.Length > 0 ? prediction.Scores[0] : 0 } }
-            );
-            return TypedResults.Ok(ApiResponse<PredictionResult>.Success(result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return TypedResults.Ok(ApiResponse<PredictionResult>.Failure("PREDICT_ERROR", ex.Message));
-        }
+        var prediction = _classifier.Predict(email);
+        
+        var result = new PredictionResult(
+            prediction.PredictedLabel, 
+            prediction.Scores.Length > 0 ? prediction.Scores[0] : 0,
+            new Dictionary<string, float> { { prediction.PredictedLabel, prediction.Scores.Length > 0 ? prediction.Scores[0] : 0 } }
+        );
+        return TypedResults.Ok(ApiResponse<PredictionResult>.Success(result));
     }
 }
