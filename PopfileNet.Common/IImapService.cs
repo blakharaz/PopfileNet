@@ -1,6 +1,4 @@
-using PopfileNet.Common;
-
-namespace PopfileNet.Backend.Services;
+namespace PopfileNet.Common;
 
 public interface IImapService
 {

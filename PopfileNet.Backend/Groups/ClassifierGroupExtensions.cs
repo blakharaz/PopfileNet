@@ -44,7 +44,7 @@ public static class ClassifierGroupExtensions
             return TypedResults.BadRequest(ApiResponse<bool>.Failure("NO_TRAINING_DATA", "No training data available"));
 
         var trainingData = new EmailClassificationDataSet();
-        foreach (var email in emails.Where(e => e.Folder != Guid.Empty))
+        foreach (var email in emails)
         {
             trainingData.AddMail(email, email.Folder.ToString());
         }

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
+using PopfileNet.Common;
 using PopfileNet.Database;
 using PopfileNet.Imap.Settings;
 using PopfileNet.ServiceDefaults;
