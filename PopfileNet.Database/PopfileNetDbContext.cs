@@ -8,6 +8,7 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
     public DbSet<Email> Emails { get; set; } = null!;
     public DbSet<Bucket> Buckets { get; set; } = null!;
     public DbSet<MailFolder> MailFolders { get; set; } = null!;
+    public DbSet<Settings> Settings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,6 +78,12 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
                 .WithOne(f => f.Bucket)
                 .HasForeignKey<MailFolder>(f => f.BucketId)
                 .IsRequired(false);
+        });
+
+        modelBuilder.Entity<Settings>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.HasData(new Settings { Id = 1 });
         });
     }
 }

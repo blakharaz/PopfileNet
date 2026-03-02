@@ -10,6 +10,7 @@
         <FluentTextField @bind-Value="Username" Label="Username" Placeholder="user@example.com" />
         <FluentTextField @bind-Value="Password" Label="Password" Type="Password" />
         <FluentSwitch @bind-Checked="UseSsl" Label="Use SSL" />
+        <FluentNumberField @bind-Value="MaxParallelConnections" Label="Max Parallel Connections" Min="1" Max="20" />
         
         <FluentStack Orientation="Orientation.Horizontal" Gap="10">
             <FluentButton Appearance="Appearance.Accent" @onclick="SaveSettings">Save</FluentButton>
@@ -90,6 +91,7 @@
     public string Username { get; set; } = "";
     public string Password { get; set; } = "";
     public bool UseSsl { get; set; } = true;
+    public int MaxParallelConnections { get; set; } = 4;
     
     public string StatusMessage { get; set; } = "";
     
@@ -108,18 +110,10 @@
                 Username = settings.ImapSettings.Username;
                 Password = settings.ImapSettings.Password;
                 UseSsl = settings.ImapSettings.UseSsl;
+                MaxParallelConnections = settings.ImapSettings.MaxParallelConnections;
             }
             Buckets = settings.Buckets.Select(b => new EditableBucket { Id = b.Id, Name = b.Name, Description = b.Description }).ToList();
             FolderMappings = settings.FolderMappings;
-        }
-        
-        if (Buckets.Count == 0)
-        {
-            Buckets =
-            [
-                new EditableBucket { Id = Guid.NewGuid(), Name = "Work", Description = "Work emails" },
-                new EditableBucket { Id = Guid.NewGuid(), Name = "Personal", Description = "Personal emails" }
-            ];
         }
     }
     
@@ -135,7 +129,8 @@
                     Port = Port,
                     Username = Username,
                     Password = Password,
-                    UseSsl = UseSsl
+                    UseSsl = UseSsl,
+                    MaxParallelConnections = MaxParallelConnections
                 },
                 Buckets = Buckets.Select(b => new BucketDto(b.Id, b.Name, b.Description)).ToList(),
                 FolderMappings = FolderMappings

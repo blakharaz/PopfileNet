@@ -3,13 +3,14 @@ using PopfileNet.Imap.Settings;
 
 namespace PopfileNet.Backend.Services;
 
-public class ImapService(ImapSettings settings) : IImapService
+public class ImapService(ISettingsService settingsService) : Common.IImapService
 {
-    private readonly ImapSettings _settings = settings;
+    private readonly ISettingsService _settingsService = settingsService;
 
-    public Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(!string.IsNullOrEmpty(_settings.Server) && !string.IsNullOrEmpty(_settings.Username));
+        var settings = await GetImapSettingsAsync(cancellationToken);
+        return !string.IsNullOrEmpty(settings.Server) && !string.IsNullOrEmpty(settings.Username);
     }
 
     public Task<IList<EmailId>> FetchEmailIdsAsync(string? folderName = null, CancellationToken cancellationToken = default)
@@ -25,5 +26,19 @@ public class ImapService(ImapSettings settings) : IImapService
     public Task<List<FolderInfo>> GetAllPersonalFoldersAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new List<FolderInfo>());
+    }
+
+    private async Task<ImapSettings> GetImapSettingsAsync(CancellationToken ct = default)
+    {
+        var appSettings = await _settingsService.GetSettingsAsync(ct);
+        return new ImapSettings
+        {
+            Server = appSettings.ImapSettings?.Server ?? "",
+            Port = appSettings.ImapSettings?.Port ?? 993,
+            Username = appSettings.ImapSettings?.Username ?? "",
+            Password = appSettings.ImapSettings?.Password ?? "",
+            UseSsl = appSettings.ImapSettings?.UseSsl ?? true,
+            MaxParallelConnections = appSettings.ImapSettings?.MaxParallelConnections ?? 4
+        };
     }
 }

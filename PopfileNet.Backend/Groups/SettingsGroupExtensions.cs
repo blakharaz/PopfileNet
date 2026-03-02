@@ -33,29 +33,15 @@ public static class SettingsGroupExtensions
         return app;
     }
 
-    private static async Task<Ok<ApiResponse<AppSettings>>> GetSettingsAsync(PopfileNetDbContext db)
+    private static async Task<Ok<ApiResponse<AppSettings>>> GetSettingsAsync(ISettingsService settingsService)
     {
-        var buckets = await db.Buckets.ToListAsync();
-        var folders = await db.MailFolders.ToListAsync();
-        
-        var settings = new AppSettings
-        {
-            ImapSettings = new ImapSettingsDto(),
-            Buckets = buckets.Select(b => new BucketDto(b.Id, b.Name, b.Description)).ToList(),
-            FolderMappings = folders.Select(f => new FolderMappingDto(f.Name, f.BucketId)).ToList()
-        };
-        
+        var settings = await settingsService.GetSettingsAsync();
         return TypedResults.Ok(ApiResponse<AppSettings>.Success(settings));
     }
 
-    private static async Task<IResult> SaveSettingsAsync(AppSettings settings, PopfileNetDbContext db, IConfiguration config)
+    private static async Task<IResult> SaveSettingsAsync(AppSettings settings, ISettingsService settingsService)
     {
-        config["ImapSettings:Server"] = settings.ImapSettings?.Server;
-        config["ImapSettings:Port"] = settings.ImapSettings?.Port.ToString();
-        config["ImapSettings:Username"] = settings.ImapSettings?.Username;
-        config["ImapSettings:Password"] = settings.ImapSettings?.Password;
-        config["ImapSettings:UseSsl"] = settings.ImapSettings?.UseSsl.ToString();
-
+        await settingsService.SaveSettingsAsync(settings);
         return TypedResults.Ok(ApiResponse<bool>.Success(true));
     }
 
