@@ -83,7 +83,7 @@
 
 @code {
     [Inject]
-    public ApiClient Api { get; set; } = null!;
+    public required ApiClient Api { get; init; }
     
     public string Server { get; set; } = "";
     public int Port { get; set; } = 993;
@@ -95,13 +95,6 @@
     
     public List<EditableBucket> Buckets { get; set; } = [];
     public List<FolderMappingDto> FolderMappings { get; set; } = [];
-    
-    public class EditableBucket
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = "";
-        public string Description { get; set; } = "";
-    }
     
     protected override async Task OnInitializedAsync()
     {
