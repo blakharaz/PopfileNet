@@ -32,66 +32,48 @@ public static class MailsGroupExtensions
     {
         pageSize = Math.Min(pageSize, 100);
             
-        try
-        {
-            var totalCount = await db.Emails.CountAsync();
-            var emails = await db.Emails
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(e => new EmailDto(e.Id, e.Subject, e.FromAddress, e.ReceivedDate, ""))
-                .ToListAsync();
-            
-            return TypedResults.Ok(PagedApiResponse<EmailDto>.Success(emails, page, pageSize, totalCount));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return TypedResults.Ok(PagedApiResponse<EmailDto>.Failure("MAILS_ERROR", ex.Message));
-        }
+        var totalCount = await db.Emails.CountAsync();
+        var emails = await db.Emails
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(e => new EmailDto(e.Id, e.Subject, e.FromAddress, e.ReceivedDate, 
+                db.Buckets.Where(b => b.Id == e.Folder).Select(b => b.Name).FirstOrDefault() ?? ""))
+            .ToListAsync();
+        
+        return TypedResults.Ok(PagedApiResponse<EmailDto>.Success(emails, page, pageSize, totalCount));
     }
 
-    private static async Task<Ok<ApiResponse<EmailDetailDto>>> GetMailByIdAsync(string id, PopfileNetDbContext db)
+    private static async Task<IResult> GetMailByIdAsync(string id, PopfileNetDbContext db)
     {
-        try
-        {
-            var email = await db.Emails.FindAsync(id);
-            if (email == null)
-                return TypedResults.Ok(ApiResponse<EmailDetailDto>.Failure("NOT_FOUND", "Email not found"));
-            
-            var result = new EmailDetailDto(
-                email.Id,
-                email.Subject,
-                email.FromAddress,
-                email.ToAddresses,
-                email.ReceivedDate,
-                email.Body,
-                ""
-            );
-            return TypedResults.Ok(ApiResponse<EmailDetailDto>.Success(result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return TypedResults.Ok(ApiResponse<EmailDetailDto>.Failure("MAIL_ERROR", ex.Message));
-        }
+        var email = await db.Emails.FindAsync(id);
+        if (email == null)
+            return TypedResults.NotFound(ApiResponse<EmailDetailDto>.Failure("NOT_FOUND", "Email not found"));
+        
+        var bucketName = await db.Buckets.Where(b => b.Id == email.Folder).Select(b => b.Name).FirstOrDefaultAsync();
+        
+        var result = new EmailDetailDto(
+            email.Id,
+            email.Subject,
+            email.FromAddress,
+            email.ToAddresses,
+            email.ReceivedDate,
+            email.Body,
+            bucketName ?? ""
+        );
+        return TypedResults.Ok(ApiResponse<EmailDetailDto>.Success(result));
     }
 
     private static async Task<Ok<PagedApiResponse<FolderDto>>> GetFoldersAsync(PopfileNetDbContext db, int page = 1, int pageSize = 20)
     {
         pageSize = Math.Min(pageSize, 100);
         
-        try
-        {
-            var totalCount = await db.MailFolders.CountAsync();
-            var folders = await db.MailFolders
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(f => new FolderDto(f.Id, f.Name))
-                .ToListAsync();
-            
-            return TypedResults.Ok(PagedApiResponse<FolderDto>.Success(folders, page, pageSize, totalCount));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return TypedResults.Ok(PagedApiResponse<FolderDto>.Failure("FOLDERS_ERROR", ex.Message));
-        }
+        var totalCount = await db.MailFolders.CountAsync();
+        var folders = await db.MailFolders
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(f => new FolderDto(f.Id, f.Name))
+            .ToListAsync();
+        
+        return TypedResults.Ok(PagedApiResponse<FolderDto>.Success(folders, page, pageSize, totalCount));
     }
 }
