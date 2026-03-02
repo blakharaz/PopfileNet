@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PopfileNet.Common;
 using PopfileNet.Imap;
@@ -7,43 +6,42 @@ using PopfileNet.Imap.Settings;
 
 namespace PopfileNet.Backend.Services;
 
-public class ImapService(ISettingsService settingsService, ILogger<ImapClientService> logger, IImapClientFactory clientFactory) : Common.IImapService
+public class ImapService(ISettingsService settingsService, ILogger<ImapClientService> logger, IImapClientFactory clientFactory) : IImapService
 {
-    private readonly ISettingsService _settingsService = settingsService;
-    private readonly ILogger<ImapClientService> _logger = logger;
-    private readonly IImapClientFactory _clientFactory = clientFactory;
-
     public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
+    {
+        var imapClientService = await GetImapClientService(cancellationToken);
+        return await imapClientService.TestConnectionAsync(cancellationToken);
+    }
+
+    private async Task<ImapClientService> GetImapClientService(CancellationToken cancellationToken)
     {
         var settings = await GetImapSettingsAsync(cancellationToken);
         
         if (string.IsNullOrEmpty(settings.Server) || string.IsNullOrEmpty(settings.Username))
         {
-            return false;
+            throw new InvalidDataException("no server or no username set for IMAP");
         }
         
-        var imapClientService = new ImapClientService(Options.Create(settings), _logger, _clientFactory);
-        return await imapClientService.TestConnectionAsync(cancellationToken);
+        var imapClientService = new ImapClientService(Options.Create(settings), logger, clientFactory);
+        return imapClientService;
     }
 
-    public Task<IList<EmailId>> FetchEmailIdsAsync(string? folderName = null, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult<IList<EmailId>>([]);
-    }
+    public async Task<IList<EmailId>> FetchEmailIdsAsync(string? folderName = null, CancellationToken cancellationToken = default) =>
+        await (await GetImapClientService(cancellationToken)).FetchEmailIdsAsync(folderName, cancellationToken);
 
-    public Task<IList<Email>> FetchEmailsAsync(IEnumerable<EmailId> ids, string? folderName = null, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult<IList<Email>>([]);
-    }
+    public async Task<IList<Email>> FetchEmailsAsync(IEnumerable<EmailId> ids, string? folderName = null, CancellationToken cancellationToken = default) =>
+        await (await GetImapClientService(cancellationToken)).FetchEmailsAsync(ids, folderName, cancellationToken);
 
-    public Task<List<FolderInfo>> GetAllPersonalFoldersAsync(CancellationToken cancellationToken = default)
+    public async Task<List<FolderInfo>> GetAllPersonalFoldersAsync(CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new List<FolderInfo>());
+        var folders = await (await GetImapClientService(cancellationToken)).GetAllPersonalFoldersAsync(cancellationToken);
+        return folders.Select(f => new FolderInfo(f.Name, f.Count)).ToList();
     }
 
     private async Task<ImapSettings> GetImapSettingsAsync(CancellationToken ct = default)
     {
-        var imapSettings = await _settingsService.GetImapSettingsOnlyAsync(ct);
+        var imapSettings = await settingsService.GetImapSettingsOnlyAsync(ct);
         return new ImapSettings
         {
             Server = imapSettings.Server,

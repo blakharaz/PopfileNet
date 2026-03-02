@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using PopfileNet.Backend.BackgroundServices;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
+using InvalidDataException = System.IO.InvalidDataException;
+
 using PopfileNet.Imap;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
@@ -22,12 +25,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
 
 var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
-    ?? new ImapSettings { Server = "", Username = "", Password = "", Port = 993, UseSsl = true, MaxParallelConnections = 4 };
+                           ?? throw new InvalidDataException("Missing IMAP settings in app configuration");
 builder.Services.AddSingleton(imapSettingsDefaults);
 
 builder.Services.AddScoped<IImapClientFactory, ImapClientFactory>();
 builder.Services.AddScoped<IImapService, ImapService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
 var app = builder.Build();
 
