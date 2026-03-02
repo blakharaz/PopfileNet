@@ -38,15 +38,21 @@ public static class ClassifierGroupExtensions
 
     private static async Task<IResult> TrainAsync(PopfileNetDbContext db)
     {
-        var emails = await db.Emails.ToListAsync();
-        
-        if (!emails.Any())
+        var emails = await db.Emails
+            .Include(e => e.FolderNavigation)
+            .ThenInclude(f => f!.Bucket)
+            .ToListAsync();
+
+        var validEmails = emails.Where(e => e.FolderNavigation?.Bucket != null).ToList();
+
+        if (!validEmails.Any())
             return TypedResults.BadRequest(ApiResponse<bool>.Failure("NO_TRAINING_DATA", "No training data available"));
 
         var trainingData = new EmailClassificationDataSet();
-        foreach (var email in emails)
+        foreach (var email in validEmails)
         {
-            trainingData.AddMail(email, email.Folder.ToString());
+            var bucketName = email.FolderNavigation!.Bucket!.Name;
+            trainingData.AddMail(email, bucketName);
         }
 
         _classifier = new NaiveBayesianClassifier();

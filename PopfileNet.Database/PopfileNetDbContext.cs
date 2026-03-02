@@ -33,6 +33,12 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
 
             entity.Property(e => e.Folder);
 
+            entity.HasOne(e => e.FolderNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.Folder)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
             entity.Property(e => e.ToAddresses);
 
             entity.HasMany(e => e.Headers)

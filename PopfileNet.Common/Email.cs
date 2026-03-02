@@ -12,4 +12,5 @@ public class Email : IEmail
     public bool IsHtml { get; set; }
     public IList<MailHeader> Headers { get; set; } = [];
     public Guid Folder { get; set; } = Guid.Empty;
+    public MailFolder? FolderNavigation { get; set; }
 }
