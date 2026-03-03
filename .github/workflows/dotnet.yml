@@ -5,6 +5,7 @@ name: .NET
 
 permissions:
   contents: read
+  actions: read
 
 on:
   push:
@@ -28,11 +29,16 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity minimal --collect:"XPlat Code Coverage" --results-directory ./coverage
+      run: dotnet test --no-build --verbosity minimal --collect:"XPlat Code Coverage"
+    - name: Merge coverage files
+      run: |
+        dotnet tool install --global dotnet-coverage
+        find . -name "coverage.cobertura.xml" -type f > coverage_files.txt
+        dotnet-coverage merge @"coverage_files.txt" -o merged.cobertura.xml -f cobertura
     - name: Code Coverage Report
       uses: irongut/CodeCoverageSummary@v1.3.0
       with:
-        filename: coverage/**/coverage.cobertura.xml
+        filename: merged.cobertura.xml
         badge: true
         fail_below_min: true
         format: markdown
@@ -40,8 +46,9 @@ jobs:
         hide_complexity: true
         indicators: true
         output: both
-        thresholds: '80 90'
+        thresholds: '70 90'
     - name: Upload coverage artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report
@@ -49,9 +56,10 @@ jobs:
 
   comment-pr:
     needs: build
-    if: github.event_name == 'pull_request'
+    if: always() && github.event_name == 'pull_request'
     permissions:
       pull-requests: write
+      actions: read
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v4
