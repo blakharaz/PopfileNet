@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using PopfileNet.Backend.Models;
-using PopfileNet.Imap.Settings;
+using PopfileNet.Backend.Services;
 
 namespace PopfileNet.Backend.Groups;
 
@@ -21,23 +21,23 @@ public static class AccountsGroupExtensions
         return app;
     }
 
-    private static IResult GetAccountsAsync(IConfiguration config, int page = 1, int pageSize = 20)
+    private static async Task<IResult> GetAccountsAsync(ISettingsService settingsService, int page = 1, int pageSize = 20)
     {
         pageSize = Math.Min(pageSize, 100);
         
-        var imapSettings = config.GetSection("ImapSettings").Get<ImapSettings>();
+        var settings = await settingsService.GetImapSettingsOnlyAsync();
         
-        if (imapSettings?.Server == null || imapSettings?.Username == null)
+        if (string.IsNullOrEmpty(settings.Server) || string.IsNullOrEmpty(settings.Username))
         {
             return TypedResults.NotFound(PagedApiResponse<AccountDto>.Failure("NO_ACCOUNT", "No IMAP account configured"));
         }
         
         var accounts = new AccountDto(
             "default",
-            imapSettings.Username,
-            imapSettings.Server,
-            imapSettings.Port,
-            imapSettings.UseSsl
+            settings.Username,
+            settings.Server,
+            settings.Port,
+            settings.UseSsl
         );
         
         return TypedResults.Ok(PagedApiResponse<AccountDto>.Success([accounts], page, pageSize, 1));

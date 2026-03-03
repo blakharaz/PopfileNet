@@ -12,8 +12,8 @@ using PopfileNet.Database;
 namespace PopfileNet.Database.Migrations
 {
     [DbContext(typeof(PopfileNetDbContext))]
-    [Migration("20260302205921_AddSettingsTable")]
-    partial class AddSettingsTable
+    [Migration("20260304084517_FixEmailIdMapping")]
+    partial class FixEmailIdMapping
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -78,32 +78,11 @@ namespace PopfileNet.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<long?>("UniqueIdId")
-                        .HasColumnType("bigint");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Folder");
 
-                    b.HasIndex("UniqueIdId");
-
                     b.ToTable("Emails");
-                });
-
-            modelBuilder.Entity("PopfileNet.Common.EmailId", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("Validity")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("EmailId");
                 });
 
             modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
@@ -198,7 +177,7 @@ namespace PopfileNet.Database.Migrations
                             ImapUseSsl = true,
                             ImapUsername = "",
                             MaxParallelConnections = 4,
-                            UpdatedAt = new DateTime(2026, 3, 2, 20, 59, 20, 734, DateTimeKind.Utc).AddTicks(2710)
+                            UpdatedAt = new DateTime(2026, 3, 4, 8, 45, 17, 103, DateTimeKind.Utc).AddTicks(1330)
                         });
                 });
 
@@ -209,9 +188,26 @@ namespace PopfileNet.Database.Migrations
                         .HasForeignKey("Folder")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("PopfileNet.Common.EmailId", "UniqueId")
-                        .WithMany()
-                        .HasForeignKey("UniqueIdId");
+                    b.OwnsOne("PopfileNet.Common.EmailId", "UniqueId", b1 =>
+                        {
+                            b1.Property<string>("EmailId")
+                                .HasColumnType("text");
+
+                            b1.Property<long>("Id")
+                                .HasColumnType("bigint")
+                                .HasColumnName("UniqueId");
+
+                            b1.Property<long>("Validity")
+                                .HasColumnType("bigint")
+                                .HasColumnName("Validity");
+
+                            b1.HasKey("EmailId");
+
+                            b1.ToTable("Emails");
+
+                            b1.WithOwner()
+                                .HasForeignKey("EmailId");
+                        });
 
                     b.Navigation("FolderNavigation");
 

@@ -18,6 +18,12 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
         {
             entity.HasKey(e => e.Id);
             
+            entity.OwnsOne(e => e.UniqueId, uid =>
+            {
+                uid.Property(u => u.Validity).HasColumnName("Validity");
+                uid.Property(u => u.Id).HasColumnName("UniqueId");
+            });
+            
             entity.Property(e => e.Subject)
                 .IsRequired()
                 .HasMaxLength(200);

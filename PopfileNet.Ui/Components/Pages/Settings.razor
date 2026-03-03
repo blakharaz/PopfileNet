@@ -159,7 +159,7 @@
     
     private void AddBucket()
     {
-        Buckets.Add(new EditableBucket { Id = Guid.NewGuid(), Name = "", Description = "" });
+        Buckets.Add(new EditableBucket { Id = Guid.Empty, Name = "", Description = "" });
     }
     
     private async Task SaveBucket(EditableBucket bucket)
@@ -169,7 +169,11 @@
             var dto = new BucketDto(bucket.Id, bucket.Name, bucket.Description);
             if (bucket.Id == Guid.Empty)
             {
-                await Api.CreateBucketAsync(dto);
+                var created = await Api.CreateBucketAsync(dto);
+                if (created != null)
+                {
+                    bucket.Id = created.Id;
+                }
             }
             else
             {
