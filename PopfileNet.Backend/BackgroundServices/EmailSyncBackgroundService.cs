@@ -46,7 +46,7 @@ public class EmailSyncBackgroundService(
         var folders = await imapService.GetAllPersonalFoldersAsync(cancellationToken);
         
         var existingFolders = await db.MailFolders.ToDictionaryAsync(f => f.Name, f => f.Id, cancellationToken);
-        var newFolderNames = folders.Select(f => f.Name).Except(existingFolders.Keys);
+        var newFolderNames = folders.Select(f => f.FullName).Except(existingFolders.Keys);
 
         bool folderAdded = false;
         foreach (var folderName in newFolderNames)
@@ -62,19 +62,19 @@ public class EmailSyncBackgroundService(
             existingFolders = await db.MailFolders.ToDictionaryAsync(f => f.Name, f => f.Id, cancellationToken);
         }
 
-        HashSet<string> existingImapUids = [.. await db.Emails.Select(e => e.ImapUid).ToListAsync(cancellationToken)];
+        HashSet<string> existingImapUids = [.. await db.Emails.Where(e => e.ImapUid != null).Select(e => e.ImapUid!).ToListAsync(cancellationToken)];
 
         List<Email> allEmails = [];
 
         foreach (var folder in folders)
         {
-            var folderId = existingFolders[folder.Name];
-            var ids = await imapService.FetchEmailIdsAsync(folder.Name, cancellationToken);
-            var newIds = ids.Where(id => !existingImapUids.Contains($"{folder.Name}:{id.Validity}:{id.Id}")).ToList();
+            var folderId = existingFolders[folder.FullName];
+            var ids = await imapService.FetchEmailIdsAsync(folder.FullName, cancellationToken);
+            var newIds = ids.Where(id => !existingImapUids.Contains($"{folder.FullName}:{id.Validity}:{id.Id}")).ToList();
 
             if (newIds.Count > 0)
             {
-                var emails = await imapService.FetchEmailsAsync(newIds, folder.Name, cancellationToken);
+                var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName, cancellationToken);
                 foreach (var email in emails)
                 {
                     email.Folder = folderId;

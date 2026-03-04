@@ -87,11 +87,13 @@ public static class SettingsGroupExtensions
         return TypedResults.Created($"/settings/buckets/{newBucket.Id}", ApiResponse<BucketDto>.Success(result));
     }
 
-    private static async Task<IResult> UpdateBucketAsync(Guid id, BucketDto bucket, PopfileNetDbContext db)
+    private static async Task<IResult> UpdateBucketAsync(string id, BucketDto bucket, PopfileNetDbContext db)
     {
         var existing = await db.Buckets.FindAsync(id);
         if (existing == null)
+        {
             return TypedResults.NotFound();
+        }
 
         existing.Name = bucket.Name;
         existing.Description = bucket.Description;
@@ -101,11 +103,13 @@ public static class SettingsGroupExtensions
         return TypedResults.Ok(ApiResponse<BucketDto>.Success(new BucketDto(existing.Id, existing.Name, existing.Description)));
     }
 
-    private static async Task<IResult> DeleteBucketAsync(Guid id, PopfileNetDbContext db)
+    private static async Task<IResult> DeleteBucketAsync(string id, PopfileNetDbContext db)
     {
         var bucket = await db.Buckets.FindAsync(id);
         if (bucket == null)
+        {
             return TypedResults.NotFound();
+        }
 
         db.Buckets.Remove(bucket);
         await db.SaveChangesAsync();

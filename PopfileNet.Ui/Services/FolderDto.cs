@@ -1,3 +1,3 @@
 namespace PopfileNet.Ui.Services;
 
-public record FolderDto(Guid Id, string Name);
+public record FolderDto(string Id, string Name);

@@ -64,7 +64,7 @@ public class MockApiClient : IApiClient
     public virtual Task<BucketDto?> UpdateBucketAsync(BucketDto bucket) =>
         Task.FromResult<BucketDto?>(bucket);
 
-    public virtual Task DeleteBucketAsync(Guid id) => Task.CompletedTask;
+    public virtual Task DeleteBucketAsync(string id) => Task.CompletedTask;
 
     public virtual Task<SyncJobResult?> SyncEmailsAsync() =>
         Task.FromResult<SyncJobResult?>(new SyncJobResult(true, "Sync completed", 0));

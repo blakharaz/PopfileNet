@@ -22,10 +22,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Services\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\PopfileNet.ServiceDefaults\PopfileNet.ServiceDefaults.csproj" />
       <ProjectReference Include="..\PopfileNet.Common\PopfileNet.Common.csproj" />
       <ProjectReference Include="..\PopfileNet.Database\PopfileNet.Database.csproj" />

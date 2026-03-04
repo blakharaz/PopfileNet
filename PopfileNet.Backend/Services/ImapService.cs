@@ -8,13 +8,6 @@ namespace PopfileNet.Backend.Services;
 
 
 // simple domain exception used when the backend has not been configured yet
-public class ImapNotConfiguredException : Exception
-{
-    public ImapNotConfiguredException()
-        : base("IMAP settings are not configured")
-    {
-    }
-}
 
 public class ImapService(ISettingsService settingsService, ILogger<ImapClientService> logger, IImapClientFactory clientFactory) : IImapService
 {
@@ -30,7 +23,9 @@ public class ImapService(ISettingsService settingsService, ILogger<ImapClientSer
     public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
         if (!await IsConfiguredAsync(cancellationToken))
+        {
             return false;
+        }
 
         var imapClientService = await GetImapClientService(cancellationToken);
         return await imapClientService.TestConnectionAsync(cancellationToken);
@@ -53,7 +48,9 @@ public class ImapService(ISettingsService settingsService, ILogger<ImapClientSer
     public async Task<IList<EmailId>> FetchEmailIdsAsync(string? folderName = null, CancellationToken cancellationToken = default)
     {
         if (!await IsConfiguredAsync(cancellationToken))
-            return new List<EmailId>();
+        {
+            return [];
+        }
 
         return await (await GetImapClientService(cancellationToken)).FetchEmailIdsAsync(folderName, cancellationToken);
     }
@@ -69,7 +66,9 @@ public class ImapService(ISettingsService settingsService, ILogger<ImapClientSer
     public async Task<List<FolderInfo>> GetAllPersonalFoldersAsync(CancellationToken cancellationToken = default)
     {
         if (!await IsConfiguredAsync(cancellationToken))
-            return new List<FolderInfo>();
+        {
+            return [];
+        }
 
         var folders = await (await GetImapClientService(cancellationToken)).GetAllPersonalFoldersAsync(cancellationToken);
         return folders.Select(f => new FolderInfo(id: f.Id, fullname: f.FullName, name: f.Name)).ToList();

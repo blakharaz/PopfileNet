@@ -34,20 +34,38 @@ public static class JobsGroupExtensions
         }
 
         var folders = await imapService.GetAllPersonalFoldersAsync();
-        var allEmails = new List<Email>();
+        
+        var existingFolders = await db.MailFolders.ToDictionaryAsync(f => f.Name, f => f.Id);
+        var newFolderNames = folders.Select(f => f.FullName).Except(existingFolders.Keys);
+        
+        foreach (var folderName in newFolderNames)
+        {
+            var newFolder = new MailFolder { Name = folderName };
+            db.MailFolders.Add(newFolder);
+        }
+        
+        if (newFolderNames.Any())
+        {
+            await db.SaveChangesAsync();
+            existingFolders = await db.MailFolders.ToDictionaryAsync(f => f.Name, f => f.Id);
+        }
+
+        HashSet<string> existingImapUids = [.. await db.Emails.Where(e => e.ImapUid != null).Select(e => e.ImapUid!).ToListAsync()];
+        
+        List<Email> allEmails = [];
         
         foreach (var folder in folders)
         {
+            var folderId = existingFolders[folder.FullName];
             var ids = await imapService.FetchEmailIdsAsync(folder.FullName);
-            var existingIdStrings = await db.Emails.Select(e => e.Id).ToListAsync();
-            var newIds = ids.Where(id => !existingIdStrings.Contains($"{id.Validity}:{id.Id}")).ToList();
+            var newIds = ids.Where(id => !existingImapUids.Contains($"{folder.FullName}:{id.Validity}:{id.Id}")).ToList();
             
             if (newIds.Count > 0)
             {
                 var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName);
                 foreach (var email in emails)
                 {
-                    email.Folder = folder.Id;
+                    email.Folder = folderId;
                 }
                 allEmails.AddRange(emails);
             }
