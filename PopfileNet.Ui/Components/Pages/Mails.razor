@@ -1,10 +1,10 @@
 @page "/mails"
 @using PopfileNet.Ui.Services
 
-<FluentCard>
+<FluentCard data-testid="mails-card">
     <h2>Emails</h2>
     
-    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+    <FluentStack Orientation="Orientation.Vertical" Gap="20" data-testid="mails-stack">
         @if (MailsResponse?.Items.Count > 0)
         {
             <table>
@@ -74,7 +74,7 @@
 
 @code {
     [Inject]
-    public ApiClient Api { get; set; } = null!;
+    public IApiClient Api { get; set; } = null!;
     
     public PagedResponse<EmailDto>? MailsResponse { get; set; }
     public EmailDetailDto? SelectedEmail { get; set; }

@@ -31,12 +31,13 @@ public static class TestClassifierCommand
         return testClassifierCommand;
     }
 
-    private static async Task<int> RunAsync(int numClassification, ImapSettings imapSettings, IDictionary<string, string> folderCategories, ILoggerFactory factory)
+    private static async Task<int> RunAsync(int numClassification, ImapSettings imapSettings, IDictionary<string, string> folderCategories, ILoggerFactory loggerFactory)
     {
         var cancellationTokenSource = new CancellationTokenSource();
        
+        var imapClientFactory = new ImapClientFactory();
         var imapService = new ImapClientService(
-            Options.Create(imapSettings), factory.CreateLogger<ImapClientService>());
+            Options.Create(imapSettings), loggerFactory.CreateLogger<ImapClientService>(), imapClientFactory);
 
         var testData = new Dictionary<string, IList<Email>>();
         var dataset = new EmailClassificationDataSet();

@@ -56,3 +56,9 @@ Follow these external guidelines for all code changes:
 - Interfaces in PopfileNet.Common for abstractions
 - Configuration via appsettings.json
 - **One class/record per file** - each type should be in its own file with matching filename
+
+## Git Guidelines
+
+- **Never commit changes unless explicitly requested by the user**
+- Always ask before creating commits
+- Run build and tests before suggesting a commit

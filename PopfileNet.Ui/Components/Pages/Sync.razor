@@ -1,10 +1,10 @@
 @page "/sync"
 @using PopfileNet.Ui.Services
 
-<FluentCard>
+<FluentCard data-testid="sync-card">
     <h2>Mail Sync</h2>
     
-    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+    <FluentStack Orientation="Orientation.Vertical" Gap="20" data-testid="sync-stack">
         <FluentStack Orientation="Orientation.Horizontal" Gap="10">
             <FluentButton Appearance="Appearance.Accent" @onclick="RefreshFolders">Refresh Folders</FluentButton>
             <FluentButton @onclick="SyncAll">Sync All Emails</FluentButton>
@@ -90,7 +90,7 @@
 
 @code {
     [Inject]
-    public ApiClient Api { get; set; } = null!;
+    public IApiClient Api { get; set; } = null!;
     
     public List<FolderDto> Folders { get; set; } = [];
     public PagedResponse<FolderDto>? FoldersResponse { get; set; }

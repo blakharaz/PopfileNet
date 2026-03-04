@@ -20,6 +20,8 @@ builder.Services.AddHttpClient<ApiClient>(client =>
     client.BaseAddress = new Uri(backendUrl);
 });
 
+builder.Services.AddSingleton<IApiClient>(sp => sp.GetRequiredService<ApiClient>());
+
 var app = builder.Build();
 
 

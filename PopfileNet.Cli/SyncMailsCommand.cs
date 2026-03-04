@@ -37,7 +37,8 @@ public static class SyncMailsCommand
     private static async Task<int> Run(ImapSettings settings, ILoggerFactory loggerFactory, IServiceProvider serviceProvider, bool removeDeleted)
     {
         var logger = loggerFactory.CreateLogger("SyncMails");
-        var imapService = new ImapClientService(Options.Create(settings), new Logger<ImapClientService>(loggerFactory));
+        var imapClientFactory = new ImapClientFactory();
+        var imapService = new ImapClientService(Options.Create(settings), loggerFactory.CreateLogger<ImapClientService>(), imapClientFactory);
 
         logger.LogInformation("Testing IMAP connection...");
         await imapService.TestConnectionAsync();

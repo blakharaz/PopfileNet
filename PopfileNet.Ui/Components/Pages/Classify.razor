@@ -109,7 +109,7 @@
 
 @code {
     [Inject]
-    public ApiClient Api { get; set; } = null!;
+    public IApiClient Api { get; set; } = null!;
     
     public ClassifierStatus? Status { get; set; }
     public PagedResponse<EmailDto>? Emails { get; set; }

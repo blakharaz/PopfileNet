@@ -1,10 +1,10 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.FluentUI.AspNetCore.Components;
 using PopfileNet.Ui.Components.Pages;
 using Xunit;
-using Microsoft.FluentUI.AspNetCore.Components;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace PopfileNet.Ui.Tests;
+namespace PopfileNet.Ui.Tests.Components.Pages;
 
 public class HomePageTests : BunitContext
 {
