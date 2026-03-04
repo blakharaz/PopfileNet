@@ -1,15 +1,17 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PopfileNet.Common;
+using PopfileNet.Imap;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 
 namespace PopfileNet.Backend.Services;
 
-public class ImapService(ISettingsService settingsService, ILogger<ImapClientService> logger) : Common.IImapService
+public class ImapService(ISettingsService settingsService, ILogger<ImapClientService> logger, IImapClientFactory clientFactory) : Common.IImapService
 {
     private readonly ISettingsService _settingsService = settingsService;
     private readonly ILogger<ImapClientService> _logger = logger;
+    private readonly IImapClientFactory _clientFactory = clientFactory;
 
     public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
@@ -20,7 +22,7 @@ public class ImapService(ISettingsService settingsService, ILogger<ImapClientSer
             return false;
         }
         
-        var imapClientService = new ImapClientService(Options.Create(settings), _logger);
+        var imapClientService = new ImapClientService(Options.Create(settings), _logger, _clientFactory);
         return await imapClientService.TestConnectionAsync(cancellationToken);
     }
 

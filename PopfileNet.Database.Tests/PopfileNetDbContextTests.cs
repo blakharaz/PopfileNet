@@ -110,11 +110,11 @@ public class PopfileNetDbContextTests
             FromAddress = "from@example.com",
             ToAddresses = "to@example.com",
             ReceivedDate = DateTime.UtcNow,
-            Headers = new List<MailHeader>
-            {
+            Headers =
+            [
                 new() { EmailId = emailId, Name = "Header1", Value = "Value1" },
                 new() { EmailId = emailId, Name = "Header2", Value = "Value2" }
-            }
+            ]
         };
         context.Emails.Add(email);
         await context.SaveChangesAsync();

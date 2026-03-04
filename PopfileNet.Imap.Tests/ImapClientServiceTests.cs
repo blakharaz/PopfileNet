@@ -34,6 +34,18 @@ public class ImapClientServiceTests
             UseSsl = true,
             MaxParallelConnections = 2
         };
+
+        SetupDefaultMockClient(_mockClient);
+    }
+
+    private static void SetupDefaultMockClient(Mock<IImapClient> mockClient)
+    {
+        mockClient.Setup(c => c.ConnectAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        mockClient.Setup(c => c.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        mockClient.Setup(c => c.DisconnectAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
     }
 
     [Fact]
@@ -47,6 +59,10 @@ public class ImapClientServiceTests
         var result = await service.TestConnectionAsync();
 
         result.Should().BeTrue();
+        
+        _mockClient.Verify(c => c.ConnectAsync(_settings.Server, _settings.Port, _settings.UseSsl, It.IsAny<CancellationToken>()), Times.Once);
+        _mockClient.Verify(c => c.AuthenticateAsync(_settings.Username, _settings.Password, It.IsAny<CancellationToken>()), Times.Once);
+        _mockClient.Verify(c => c.DisconnectAsync(true, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -61,6 +77,8 @@ public class ImapClientServiceTests
         var result = await service.TestConnectionAsync();
 
         result.Should().BeFalse();
+        
+        _mockClient.Verify(c => c.DisconnectAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -75,9 +93,10 @@ public class ImapClientServiceTests
         _mockClient.Setup(c => c.GetFolderAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockFolder.Object);
         
-        var uniqueIds = new[] { new UniqueId(1, 1), new UniqueId(1, 2) };
+        mockFolder.Setup(f => f.OpenAsync(It.IsAny<FolderAccess>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(FolderAccess.ReadOnly);
         mockFolder.Setup(f => f.SearchAsync(It.IsAny<MailKit.Search.SearchQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(uniqueIds);
+            .ReturnsAsync([new UniqueId(1, 1), new UniqueId(1, 2)]);
         
         var service = CreateService();
 
@@ -98,6 +117,8 @@ public class ImapClientServiceTests
         _mockClient.Setup(c => c.GetFolderAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockFolder.Object);
         
+        mockFolder.Setup(f => f.OpenAsync(It.IsAny<FolderAccess>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(FolderAccess.ReadOnly);
         mockFolder.Setup(f => f.SearchAsync(It.IsAny<MailKit.Search.SearchQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<UniqueId>());
         
@@ -117,12 +138,14 @@ public class ImapClientServiceTests
         _mockClient.Setup(c => c.IsConnected).Returns(true);
         _mockClient.Setup(c => c.Inbox).Returns(mockInbox.Object);
         
+        mockInbox.Setup(f => f.OpenAsync(It.IsAny<FolderAccess>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(FolderAccess.ReadOnly);
         mockInbox.Setup(f => f.SearchAsync(It.IsAny<MailKit.Search.SearchQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { new UniqueId(1, 1) });
+            .ReturnsAsync([new UniqueId(1, 1)]);
         
         var service = CreateService();
 
-        var result = await service.FetchEmailIdsAsync(null);
+        var result = await service.FetchEmailIdsAsync();
 
         result.Should().HaveCount(1);
     }
@@ -159,9 +182,11 @@ public class ImapClientServiceTests
         
         var service = CreateService();
 
-        var result = await service.FetchEmailsAsync(Array.Empty<EmailId>());
+        var result = await service.FetchEmailsAsync([]);
 
         result.Should().BeEmpty();
+        
+        _mockClient.Verify(c => c.ConnectAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -172,9 +197,9 @@ public class ImapClientServiceTests
         
         _mockFactory.Setup(f => f.Create()).Returns(_mockClient.Object);
         _mockClient.Setup(c => c.IsConnected).Returns(true);
-        _mockClient.Setup(c => c.PersonalNamespaces).Returns(new[] { mockNamespace });
+        _mockClient.Setup(c => c.PersonalNamespaces).Returns([mockNamespace]);
         _mockClient.Setup(c => c.GetFoldersAsync(mockNamespace, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<IMailFolder> { mockFolder.Object });
+            .ReturnsAsync([mockFolder.Object]);
         
         var service = CreateService();
 

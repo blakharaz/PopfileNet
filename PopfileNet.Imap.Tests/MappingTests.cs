@@ -87,11 +87,11 @@ public class MappingTests
     [Fact]
     public void MapToUniqueIds_ValidEmailIds_ReturnsUniqueIds()
     {
-        var emailIds = new List<EmailId>
+        var emailIds = new[]
         {
-            new(Validity: 1, Id: 1),
-            new(Validity: 1, Id: 2),
-            new(Validity: 2, Id: 3)
+            new EmailId(Validity: 1, Id: 1),
+            new EmailId(Validity: 1, Id: 2),
+            new EmailId(Validity: 2, Id: 3)
         };
 
         var result = PopfileNet.Imap.Models.Mapping.MapToUniqueIds(emailIds).ToList();

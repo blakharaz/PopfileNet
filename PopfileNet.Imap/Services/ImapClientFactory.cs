@@ -1,5 +1,4 @@
 using MailKit.Net.Imap;
-using PopfileNet.Imap;
 using PopfileNet.Imap.Adapters;
 
 namespace PopfileNet.Imap.Services;

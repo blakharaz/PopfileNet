@@ -33,6 +33,7 @@ jobs:
     - name: Merge coverage files
       run: |
         dotnet tool install --global dotnet-coverage
+        echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
         find . -name "coverage.cobertura.xml" -type f > coverage_files.txt
         dotnet-coverage merge @"coverage_files.txt" -o merged.cobertura.xml -f cobertura
     - name: Code Coverage Report

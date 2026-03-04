@@ -1,6 +1,6 @@
 using MailKit;
 using MailKit.Net.Imap;
-using PopfileNet.Imap;
+using IMailFolder = MailKit.IMailFolder;
 
 namespace PopfileNet.Imap.Adapters;
 

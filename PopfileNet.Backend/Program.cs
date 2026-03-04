@@ -3,6 +3,8 @@ using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
+using PopfileNet.Imap;
+using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 using PopfileNet.ServiceDefaults;
 
@@ -23,7 +25,8 @@ var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<
     ?? new ImapSettings { Server = "", Username = "", Password = "", Port = 993, UseSsl = true, MaxParallelConnections = 4 };
 builder.Services.AddSingleton(imapSettingsDefaults);
 
-builder.Services.AddScoped<PopfileNet.Common.IImapService, ImapService>();
+builder.Services.AddScoped<IImapClientFactory, ImapClientFactory>();
+builder.Services.AddScoped<IImapService, ImapService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 var app = builder.Build();
