@@ -84,7 +84,7 @@
 
 @code {
     [Inject]
-    public required ApiClient Api { get; init; }
+    public required IApiClient Api { get; init; }
     
     public string Server { get; set; } = "";
     public int Port { get; set; } = 993;

@@ -90,7 +90,7 @@
 
 @code {
     [Inject]
-    public ApiClient Api { get; set; } = null!;
+    public IApiClient Api { get; set; } = null!;
     
     public List<FolderDto> Folders { get; set; } = [];
     public PagedResponse<FolderDto>? FoldersResponse { get; set; }

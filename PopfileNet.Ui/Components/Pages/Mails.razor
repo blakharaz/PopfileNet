@@ -74,7 +74,7 @@
 
 @code {
     [Inject]
-    public ApiClient Api { get; set; } = null!;
+    public IApiClient Api { get; set; } = null!;
     
     public PagedResponse<EmailDto>? MailsResponse { get; set; }
     public EmailDetailDto? SelectedEmail { get; set; }

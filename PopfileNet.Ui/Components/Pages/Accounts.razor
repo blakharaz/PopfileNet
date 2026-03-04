@@ -51,7 +51,7 @@
 
 @code {
     [Inject]
-    public ApiClient Api { get; set; } = null!;
+    public IApiClient Api { get; set; } = null!;
     
     public PagedResponse<AccountDto>? AccountsResponse { get; set; }
     public string StatusMessage { get; set; } = "";

@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace PopfileNet.Ui.Services;
 
-public class ApiClient(HttpClient http)
+public class ApiClient(HttpClient http) : IApiClient
 {
     private readonly HttpClient _http = http;
 
