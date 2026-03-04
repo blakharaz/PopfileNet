@@ -1,10 +1,10 @@
 @page "/settings"
 @using PopfileNet.Ui.Services
 
-<FluentCard>
+<FluentCard data-testid="settings-imap-card">
     <h2>IMAP Settings</h2>
     
-    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+    <FluentStack Orientation="Orientation.Vertical" Gap="20" data-testid="settings-imap-stack">
         <FluentTextField @bind-Value="Server" Label="IMAP Server" Placeholder="imap.example.com" />
         <FluentNumberField @bind-Value="Port" Label="Port" Min="1" Max="65535" />
         <FluentTextField @bind-Value="Username" Label="Username" Placeholder="user@example.com" />
@@ -26,7 +26,7 @@
     </FluentStack>
 </FluentCard>
 
-<FluentCard>
+<FluentCard data-testid="settings-buckets-card">
     <h2>Buckets</h2>
     
     @if (Buckets.Count == 0)
