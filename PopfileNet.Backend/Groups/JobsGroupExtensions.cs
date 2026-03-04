@@ -38,16 +38,16 @@ public static class JobsGroupExtensions
         
         foreach (var folder in folders)
         {
-            var ids = await imapService.FetchEmailIdsAsync(folder.Name);
+            var ids = await imapService.FetchEmailIdsAsync(folder.FullName);
             var existingIdStrings = await db.Emails.Select(e => e.Id).ToListAsync();
             var newIds = ids.Where(id => !existingIdStrings.Contains($"{id.Validity}:{id.Id}")).ToList();
             
             if (newIds.Count > 0)
             {
-                var emails = await imapService.FetchEmailsAsync(newIds, folder.Name);
+                var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName);
                 foreach (var email in emails)
                 {
-                    email.Folder = Guid.Empty;
+                    email.Folder = folder.Id;
                 }
                 allEmails.AddRange(emails);
             }

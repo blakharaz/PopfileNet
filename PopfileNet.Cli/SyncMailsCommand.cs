@@ -7,7 +7,6 @@ using PopfileNet.Common;
 using PopfileNet.Database;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
-using IMailFolder = MailKit.IMailFolder;
 
 namespace PopfileNet.Cli;
 
@@ -56,7 +55,7 @@ public static class SyncMailsCommand
         using var scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<PopfileNetDbContext>();
 
-        var folderIdMap = new Dictionary<string, Guid>();
+        var folderIdMap = new Dictionary<string, string>();
         foreach (var imapFolder in imapFolders)
         {
             var fullName = imapFolder.FullName ?? imapFolder.Name;

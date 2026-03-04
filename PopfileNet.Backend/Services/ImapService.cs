@@ -72,7 +72,7 @@ public class ImapService(ISettingsService settingsService, ILogger<ImapClientSer
             return new List<FolderInfo>();
 
         var folders = await (await GetImapClientService(cancellationToken)).GetAllPersonalFoldersAsync(cancellationToken);
-        return folders.Select(f => new FolderInfo(f.Name, f.Count)).ToList();
+        return folders.Select(f => new FolderInfo(id: f.Id, fullname: f.FullName, name: f.Name)).ToList();
     }
 
     private async Task<ImapSettings> GetImapSettingsAsync(CancellationToken ct = default)

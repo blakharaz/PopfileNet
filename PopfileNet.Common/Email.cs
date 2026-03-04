@@ -12,6 +12,6 @@ public class Email : IEmail
     public DateTime ReceivedDate { get; set; }
     public bool IsHtml { get; set; }
     public IList<MailHeader> Headers { get; set; } = [];
-    public Guid Folder { get; set; } = Guid.Empty;
+    public string? Folder { get; set; }
     public MailFolder? FolderNavigation { get; set; }
 }

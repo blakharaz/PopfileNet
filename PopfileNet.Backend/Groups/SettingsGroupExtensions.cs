@@ -75,7 +75,7 @@ public static class SettingsGroupExtensions
     {
         var newBucket = new Bucket
         {
-            Id = bucket.Id == Guid.Empty ? Guid.NewGuid() : bucket.Id,
+            Id = bucket.Id == string.Empty ? Guid.NewGuid().ToString() : bucket.Id,
             Name = bucket.Name,
             Description = bucket.Description
         };
