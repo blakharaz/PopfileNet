@@ -427,3 +427,8 @@ FodyWeavers.xsd
 riderModule.iml
 /_ReSharper.Caches/
 *.DotSettings.user
+
+# Code Coverage
+merged.cobertura.xml
+coverage_files.txt
+
