@@ -8,4 +8,5 @@ public record ImapSettingsDto(
     int Port = 993,
     string Username = "",
     string Password = "",
-    bool UseSsl = true);
+    bool UseSsl = true,
+    int MaxParallelConnections = 4);

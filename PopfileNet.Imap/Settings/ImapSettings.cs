@@ -8,5 +8,10 @@ public class ImapSettings
     public required string Password { get; init; }
     public bool UseSsl { get; init; } = true;
     
-    public int MaxParallelConnections { get; init; } = 4;
+    private int _maxParallelConnections = 4;
+    public int MaxParallelConnections
+    {
+        get => _maxParallelConnections;
+        init => _maxParallelConnections = Math.Clamp(value, 1, 20);
+    }
 }

@@ -19,10 +19,12 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
 
-var imapSettings = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
-    ?? new ImapSettings { Server = "imap.example.com", Username = "", Password = "" };
-builder.Services.AddSingleton(imapSettings);
-builder.Services.AddScoped<IImapService, ImapService>();
+var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
+    ?? new ImapSettings { Server = "", Username = "", Password = "", Port = 993, UseSsl = true, MaxParallelConnections = 4 };
+builder.Services.AddSingleton(imapSettingsDefaults);
+
+builder.Services.AddScoped<PopfileNet.Common.IImapService, ImapService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 var app = builder.Build();
 
@@ -41,7 +43,34 @@ app.UseServiceDefaults();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<PopfileNetDbContext>();
-    db.Database.EnsureCreated();
+    
+    if (!await db.Database.CanConnectAsync())
+    {
+        return;
+    }
+    
+    var historyTableExists = await db.Database.SqlQueryRaw<int>(
+        "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_name = '__EFMigrationsHistory'"
+    ).FirstOrDefaultAsync() > 0;
+    
+    if (!historyTableExists)
+    {
+        var hasAnyTables = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE '__%'"
+        ).FirstOrDefaultAsync() > 0;
+        
+        if (hasAnyTables)
+        {
+            throw new InvalidOperationException(
+                "Database exists, but is in legacy format. Please delete the existing database and restart the application.");
+        }
+    }
+    
+    var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+    if (pendingMigrations.Any())
+    {
+        await db.Database.MigrateAsync();
+    }
 }
 
 app.AddSettingsGroup()
