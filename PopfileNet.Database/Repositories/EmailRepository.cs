@@ -30,17 +30,17 @@ public class EmailRepository(PopfileNetDbContext dbContext) : IEmailRepository
             {
                 Parameters =
                 {
-                    new() { Value = email.Id },
-                    new() { Value = email.ImapUid ?? (object)DBNull.Value },
-                    new() { Value = email.Subject },
-                    new() { Value = email.FromAddress },
-                    new() { Value = email.ToAddresses },
-                    new() { Value = email.Body },
-                    new() { Value = email.ReceivedDate },
-                    new() { Value = email.IsHtml },
-                    new() { Value = email.Folder ?? (object)DBNull.Value },
-                    new() { Value = email.UniqueId?.Validity ?? 0 },
-                    new() { Value = email.UniqueId?.Id ?? 0 }
+                    new() { ParameterName = "Id", Value = email.Id },
+                    new() { ParameterName = "ImapUid", Value = email.ImapUid ?? (object)DBNull.Value },
+                    new() { ParameterName = "Subject", Value = email.Subject },
+                    new() { ParameterName = "FromAddress", Value = email.FromAddress },
+                    new() { ParameterName = "ToAddresses", Value = email.ToAddresses },
+                    new() { ParameterName = "Body", Value = email.Body },
+                    new() { ParameterName = "ReceivedDate", Value = email.ReceivedDate },
+                    new() { ParameterName = "IsHtml", Value = email.IsHtml },
+                    new() { ParameterName = "Folder", Value = email.Folder ?? (object)DBNull.Value },
+                    new() { ParameterName = "Validity", Value = email.UniqueId?.Validity ?? 0 },
+                    new() { ParameterName = "UniqueId", Value = email.UniqueId?.Id ?? 0 }
                 }
             });
         }

@@ -9,7 +9,7 @@ public static class Mapping
     public static Email ConvertToEmail(UniqueId uid, MimeMessage message, string? folderName = null)
     {
         var messageId = message.MessageId ?? Guid.NewGuid().ToString();
-        var imapUid = $"{folderName}:{uid.Validity}:{uid.Id}";
+        var imapUid = $"{uid.Validity}:{uid.Id}";
 
         return new Email
         {
@@ -38,7 +38,7 @@ public static class Mapping
 
     public static EmailId MapToEmailId(UniqueId uid)
     {
-        return new EmailId(Validity: uid.Validity, Id: uid.Id);
+        return new EmailId(validity: uid.Validity, id: uid.Id);
     }
 
     public static IEnumerable<UniqueId> MapToUniqueIds(IEnumerable<EmailId> ids)

@@ -26,6 +26,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.Imap.Tests", "Po
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.Database.Tests", "PopfileNet.Database.Tests\PopfileNet.Database.Tests.csproj", "{785AD8E2-8C49-4567-855C-5533F98FD291}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.Common.Tests", "PopfileNet.Common.Tests\PopfileNet.Common.Tests.csproj", "{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -192,6 +194,18 @@ Global
 		{785AD8E2-8C49-4567-855C-5533F98FD291}.Release|x64.Build.0 = Release|Any CPU
 		{785AD8E2-8C49-4567-855C-5533F98FD291}.Release|x86.ActiveCfg = Release|Any CPU
 		{785AD8E2-8C49-4567-855C-5533F98FD291}.Release|x86.Build.0 = Release|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Debug|x64.Build.0 = Debug|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Debug|x86.Build.0 = Debug|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Release|x64.ActiveCfg = Release|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Release|x64.Build.0 = Release|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Release|x86.ActiveCfg = Release|Any CPU
+		{A7EDD963-4B7E-41FA-A348-09C38A34BEB7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

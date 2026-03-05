@@ -1,6 +1,4 @@
-using PopfileNet.Backend.Services;
 using PopfileNet.Common;
-using PopfileNet.Database;
 using PopfileNet.Database.Repositories;
 
 namespace PopfileNet.Backend.BackgroundServices;
@@ -56,26 +54,28 @@ public class EmailSyncBackgroundService(
             existingFolders = await emailRepository.GetAllFolderIdByNameAsync(cancellationToken);
         }
 
-            var existingImapUids = await emailRepository.GetExistingImapUidsByFolderAsync(cancellationToken);
+        var existingImapUids = await emailRepository.GetExistingImapUidsByFolderAsync(cancellationToken);
 
-            List<Email> allEmails = [];
+        List<Email> allEmails = [];
 
-            foreach (var folder in folders)
+        foreach (var folder in folders)
+        {
+            var folderId = existingFolders[folder.FullName];
+            var ids = await imapService.FetchEmailIdsAsync(folder.FullName, cancellationToken);
+            var newIds = ids.Where(id => !existingImapUids.ContainsKey(id.ToString())).ToList();
+
+            if (newIds.Count == 0)
             {
-                var folderId = existingFolders[folder.FullName];
-                var ids = await imapService.FetchEmailIdsAsync(folder.FullName, cancellationToken);
-                var newIds = ids.Where(id => !existingImapUids.ContainsKey(id.Id)).ToList();
-
-                if (newIds.Count > 0)
-                {
-                    var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName, cancellationToken);
-                    foreach (var email in emails)
-                    {
-                        email.Folder = folderId;
-                    }
-                    allEmails.AddRange(emails);
-                }
+                continue;
             }
+
+            var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName, cancellationToken);
+            foreach (var email in emails)
+            {
+                email.Folder = folderId;
+            }
+            allEmails.AddRange(emails);
+        }
 
         if (allEmails.Count > 0)
         {
