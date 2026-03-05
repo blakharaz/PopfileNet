@@ -10,7 +10,7 @@ public interface IApiClient
     Task<PagedResponse<BucketDto>?> GetBucketsAsync(int page = 1, int pageSize = 20);
     Task<BucketDto?> CreateBucketAsync(BucketDto bucket);
     Task<BucketDto?> UpdateBucketAsync(BucketDto bucket);
-    Task DeleteBucketAsync(Guid id);
+    Task DeleteBucketAsync(string id);
     Task<SyncJobResult?> SyncEmailsAsync();
     Task<bool> UpdateFolderListAsync();
     Task<PagedResponse<FolderDto>?> GetFoldersAsync(int page = 1, int pageSize = 20);

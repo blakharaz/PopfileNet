@@ -82,10 +82,8 @@ public class ApiClient(HttpClient http) : IApiClient
         return JsonSerializer.Deserialize<ApiResponse<BucketDto>>(content, JsonOptions)?.Value;
     }
 
-    public async Task DeleteBucketAsync(Guid id)
-    {
+    public async Task DeleteBucketAsync(string id) => 
         await _http.DeleteAsync($"/settings/buckets/{id}");
-    }
 
     // Jobs
     public async Task<SyncJobResult?> SyncEmailsAsync() =>

@@ -45,8 +45,14 @@ public static class SettingsGroupExtensions
         return TypedResults.Ok(ApiResponse<bool>.Success(true));
     }
 
-    private static async Task<Ok<ApiResponse<bool>>> TestConnectionAsync(IImapService imapClient)
+    internal static async Task<IResult> TestConnectionAsync(IImapService imapClient)
     {
+        if (!await imapClient.IsConfiguredAsync())
+        {
+            // settings are missing – inform caller instead of throwing
+            return TypedResults.BadRequest(ApiResponse<bool>.Failure("IMAP_NOT_CONFIGURED", "IMAP settings are not configured"));
+        }
+
         var result = await imapClient.TestConnectionAsync();
         return TypedResults.Ok(ApiResponse<bool>.Success(result));
     }
@@ -69,7 +75,7 @@ public static class SettingsGroupExtensions
     {
         var newBucket = new Bucket
         {
-            Id = bucket.Id == Guid.Empty ? Guid.NewGuid() : bucket.Id,
+            Id = bucket.Id == string.Empty ? Guid.NewGuid().ToString() : bucket.Id,
             Name = bucket.Name,
             Description = bucket.Description
         };
@@ -81,11 +87,13 @@ public static class SettingsGroupExtensions
         return TypedResults.Created($"/settings/buckets/{newBucket.Id}", ApiResponse<BucketDto>.Success(result));
     }
 
-    private static async Task<IResult> UpdateBucketAsync(Guid id, BucketDto bucket, PopfileNetDbContext db)
+    private static async Task<IResult> UpdateBucketAsync(string id, BucketDto bucket, PopfileNetDbContext db)
     {
         var existing = await db.Buckets.FindAsync(id);
         if (existing == null)
+        {
             return TypedResults.NotFound();
+        }
 
         existing.Name = bucket.Name;
         existing.Description = bucket.Description;
@@ -95,11 +103,13 @@ public static class SettingsGroupExtensions
         return TypedResults.Ok(ApiResponse<BucketDto>.Success(new BucketDto(existing.Id, existing.Name, existing.Description)));
     }
 
-    private static async Task<IResult> DeleteBucketAsync(Guid id, PopfileNetDbContext db)
+    private static async Task<IResult> DeleteBucketAsync(string id, PopfileNetDbContext db)
     {
         var bucket = await db.Buckets.FindAsync(id);
         if (bucket == null)
+        {
             return TypedResults.NotFound();
+        }
 
         db.Buckets.Remove(bucket);
         await db.SaveChangesAsync();

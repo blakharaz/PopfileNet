@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.EntityFrameworkCore;
 using PopfileNet.Backend.Models;
 using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
+using PopfileNet.Database.Repositories;
 
 namespace PopfileNet.Backend.Groups;
 
@@ -25,23 +25,42 @@ public static class JobsGroupExtensions
         return app;
     }
 
-    private static async Task<Ok<ApiResponse<SyncJobResult>>> SyncAsync(PopfileNetDbContext db, IImapService imapService)
+    private static async Task<IResult> SyncAsync(IEmailRepository emailRepository, IImapService imapService)
     {
+        if (!await imapService.IsConfiguredAsync())
+        {
+            return TypedResults.InternalServerError(
+                ApiResponse<SyncJobResult>.Failure("IMAP_NOT_CONFIGURED", "IMAP not configured"));
+        }
+
         var folders = await imapService.GetAllPersonalFoldersAsync();
-        var allEmails = new List<Email>();
+        
+        var existingFolders = await emailRepository.GetAllFolderIdByNameAsync();
+        var newFolderNames = folders.Select(f => f.FullName).Except(existingFolders.Keys).ToList();
+        
+        if (newFolderNames.Count > 0)
+        {
+            var newFolders = newFolderNames.Select(name => new MailFolder { Name = name });
+            await emailRepository.InsertFoldersAsync(newFolders);
+            existingFolders = await emailRepository.GetAllFolderIdByNameAsync();
+        }
+
+        var existingImapUids = await emailRepository.GetExistingImapUidsByFolderAsync();
+        
+        List<Email> allEmails = [];
         
         foreach (var folder in folders)
         {
-            var ids = await imapService.FetchEmailIdsAsync(folder.Name);
-            var existingIdStrings = await db.Emails.Select(e => e.Id).ToListAsync();
-            var newIds = ids.Where(id => !existingIdStrings.Contains($"{id.Validity}:{id.Id}")).ToList();
+            var folderId = existingFolders[folder.FullName];
+            var ids = await imapService.FetchEmailIdsAsync(folder.FullName);
+            var newIds = ids.Where(id => !existingImapUids.ContainsKey($"{folder.FullName}:{id.Validity}:{id.Id}")).ToList();
             
             if (newIds.Count > 0)
             {
-                var emails = await imapService.FetchEmailsAsync(newIds, folder.Name);
+                var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName);
                 foreach (var email in emails)
                 {
-                    email.Folder = Guid.Empty;
+                    email.Folder = folderId;
                 }
                 allEmails.AddRange(emails);
             }
@@ -49,12 +68,11 @@ public static class JobsGroupExtensions
         
         if (allEmails.Count > 0)
         {
-            db.Emails.AddRange(allEmails);
-            await db.SaveChangesAsync();
+            var insertedCount = await emailRepository.InsertEmailsIgnoringDuplicatesAsync(allEmails);
+            return TypedResults.Ok(ApiResponse<SyncJobResult>.Success(new SyncJobResult(true, $"Synced {insertedCount} emails", insertedCount)));
         }
         
-        var result = new SyncJobResult(true, $"Synced {allEmails.Count} emails", allEmails.Count);
-        return TypedResults.Ok(ApiResponse<SyncJobResult>.Success(result));
+        return TypedResults.Ok(ApiResponse<SyncJobResult>.Success(new SyncJobResult(true, $"Synced {allEmails.Count} emails", allEmails.Count)));
     }
 
     private static Ok<ApiResponse<bool>> UpdateFolderListAsync()

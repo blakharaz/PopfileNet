@@ -68,7 +68,7 @@ public class PopfileNetDbContextTests
 
         var folder = new MailFolder
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.NewGuid().ToString(),
             Name = "TestFolder"
         };
         context.MailFolders.Add(folder);
@@ -133,7 +133,7 @@ public class PopfileNetDbContextTests
 
         var bucket = new Bucket
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.NewGuid().ToString(),
             Name = "Spam",
             Description = "Spam emails"
         };
@@ -154,7 +154,7 @@ public class PopfileNetDbContextTests
 
         var bucket = new Bucket
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.NewGuid().ToString(),
             Name = "Spam",
             Description = "Spam emails"
         };
@@ -163,7 +163,7 @@ public class PopfileNetDbContextTests
 
         var folder = new MailFolder
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.NewGuid().ToString(),
             Name = "Spam",
             BucketId = bucket.Id
         };
@@ -186,7 +186,7 @@ public class PopfileNetDbContextTests
 
         var folder = new MailFolder
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.NewGuid().ToString(),
             Name = "Inbox"
         };
 

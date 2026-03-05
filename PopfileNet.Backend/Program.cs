@@ -1,8 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using PopfileNet.Backend.BackgroundServices;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
+using PopfileNet.Database.DatabaseMaintenance;
+using PopfileNet.Database.Repositories;
+using InvalidDataException = System.IO.InvalidDataException;
+
 using PopfileNet.Imap;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
@@ -22,12 +27,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
 
 var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
-    ?? new ImapSettings { Server = "", Username = "", Password = "", Port = 993, UseSsl = true, MaxParallelConnections = 4 };
+                           ?? throw new InvalidDataException("Missing IMAP settings in app configuration");
 builder.Services.AddSingleton(imapSettingsDefaults);
 
 builder.Services.AddScoped<IImapClientFactory, ImapClientFactory>();
 builder.Services.AddScoped<IImapService, ImapService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddScoped<IEmailRepository, EmailRepository>();
+builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
+builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
 var app = builder.Build();
 
@@ -43,36 +51,28 @@ app.Use(async (context, next) =>
 
 app.UseServiceDefaults();
 
-using (var scope = app.Services.CreateScope())
+// allow tests to explicitly disable db initialization by setting a flag
+// note: Program is a partial class, we declare a static property below
+var skipDbInit = Program.SkipDbInitForTests
+    || app.Configuration.GetValue("SkipDbInit", false)
+    || string.Equals(Environment.GetEnvironmentVariable("SKIP_DB_INIT"), "true", StringComparison.OrdinalIgnoreCase);
+if (!skipDbInit && !app.Environment.IsEnvironment("Test"))
 {
-    var db = scope.ServiceProvider.GetRequiredService<PopfileNetDbContext>();
-    
-    if (!await db.Database.CanConnectAsync())
+    using (var scope = app.Services.CreateScope())
     {
-        return;
-    }
-    
-    var historyTableExists = await db.Database.SqlQueryRaw<int>(
-        "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_name = '__EFMigrationsHistory'"
-    ).FirstOrDefaultAsync() > 0;
-    
-    if (!historyTableExists)
-    {
-        var hasAnyTables = await db.Database.SqlQueryRaw<int>(
-            "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE '__%'"
-        ).FirstOrDefaultAsync() > 0;
+        var migrationChecker = scope.ServiceProvider.GetRequiredService<IMigrationChecker>();
         
-        if (hasAnyTables)
+        var hasLegacy = await migrationChecker.HasLegacyTablesAsync();
+        if (hasLegacy)
         {
             throw new InvalidOperationException(
                 "Database exists, but is in legacy format. Please delete the existing database and restart the application.");
         }
-    }
-    
-    var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
-    if (pendingMigrations.Any())
-    {
-        await db.Database.MigrateAsync();
+        
+        if (await migrationChecker.HasPendingMigrationsAsync())
+        {
+            await migrationChecker.ApplyMigrationsAsync();
+        }
     }
 }
 

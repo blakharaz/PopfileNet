@@ -4,8 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using PopfileNet.Common;
-using PopfileNet.Imap;
-using PopfileNet.Imap.Models;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 using Xunit;
@@ -161,7 +159,7 @@ public class ImapClientServiceTests
             .ReturnsAsync(mockFolder.Object);
         _mockClient.Setup(c => c.Inbox).Returns(mockFolder.Object);
         
-        var emailIds = new List<EmailId> { new(Validity: 1, Id: 1) };
+        var emailIds = new List<EmailId> { new(validity: 1, id: 1) };
         
         var mimeMessage = CreateMimeMessage("Test Subject", "Test Body", "from@example.com");
         mockFolder.Setup(f => f.GetMessage(It.IsAny<UniqueId>(), It.IsAny<CancellationToken>()))

@@ -159,7 +159,7 @@
     
     private void AddBucket()
     {
-        Buckets.Add(new EditableBucket { Id = Guid.Empty, Name = "", Description = "" });
+        Buckets.Add(new EditableBucket { Id = "", Name = "", Description = "" });
     }
     
     private async Task SaveBucket(EditableBucket bucket)
@@ -167,7 +167,7 @@
         try
         {
             var dto = new BucketDto(bucket.Id, bucket.Name, bucket.Description);
-            if (bucket.Id == Guid.Empty)
+            if (string.IsNullOrEmpty(bucket.Id))
             {
                 var created = await Api.CreateBucketAsync(dto);
                 if (created != null)
@@ -187,7 +187,7 @@
         }
     }
     
-    private async Task DeleteBucket(Guid id)
+    private async Task DeleteBucket(string id)
     {
         try
         {
@@ -200,9 +200,12 @@
         }
     }
     
-    private string GetBucketName(Guid? bucketId)
+    private string GetBucketName(string? bucketId)
     {
-        if (bucketId == null) return "(None)";
+        if (bucketId == null)
+        {
+            return "(None)";
+        }
         var bucket = Buckets.FirstOrDefault(b => b.Id == bucketId);
         return bucket?.Name ?? "(Unknown)";
     }

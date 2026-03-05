@@ -18,6 +18,12 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
         {
             entity.HasKey(e => e.Id);
             
+            entity.Property(e => e.ImapUid)
+                .HasMaxLength(500)
+                .IsRequired(false);
+            
+            entity.HasIndex(e => new { e.ImapUid, e.Folder }).IsUnique();
+            
             entity.OwnsOne(e => e.UniqueId, uid =>
             {
                 uid.Property(u => u.Validity).HasColumnName("Validity");
@@ -67,6 +73,8 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
             entity.Property(f => f.Name)
                 .IsRequired()
                 .HasMaxLength(200);
+            
+            entity.HasIndex(f => f.Name).IsUnique();
         });
 
         modelBuilder.Entity<Bucket>(entity =>

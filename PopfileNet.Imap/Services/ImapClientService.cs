@@ -65,7 +65,7 @@ public class ImapClientService(
         return emails;
     }
 
-    private static EmailId ConvertToEmailId(UniqueId arg) => new(Validity: arg.Validity, Id: arg.Id);
+    private static EmailId ConvertToEmailId(UniqueId arg) => new(validity: arg.Validity, id: arg.Id);
     
     private async Task<(IImapClient client, IMailFolder mailFolder)> ConnectAndOpenFolderAsync(string? folderName = null, CancellationToken cancellationToken = default)
     {
@@ -99,7 +99,7 @@ public class ImapClientService(
             var mails = await LoadMessagesInParallelAsync(folderName, idList, cancellationToken);
             
             var emails = mails.Select(
-                entry => Mapping.ConvertToEmail(entry.Item1, entry.Item2)).ToList();
+                entry => Mapping.ConvertToEmail(entry.Item1, entry.Item2, folderName)).ToList();
 
             return emails;
         }
@@ -238,7 +238,7 @@ public class ImapClientService(
                 client.Dispose();
             }
 
-            throw new ImapConnectionException("Verbindung zum IMAP-Server fehlgeschlagen", ex);
+            throw new ImapConnectionException("Connecting IMAP server failed", ex);
         }
     }
 

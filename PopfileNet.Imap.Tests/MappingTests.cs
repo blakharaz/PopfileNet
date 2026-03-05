@@ -89,9 +89,9 @@ public class MappingTests
     {
         var emailIds = new[]
         {
-            new EmailId(Validity: 1, Id: 1),
-            new EmailId(Validity: 1, Id: 2),
-            new EmailId(Validity: 2, Id: 3)
+            new EmailId(validity: 1, id: 1),
+            new EmailId(validity: 1, id: 2),
+            new EmailId(validity: 2, id: 3)
         };
 
         var result = PopfileNet.Imap.Models.Mapping.MapToUniqueIds(emailIds).ToList();

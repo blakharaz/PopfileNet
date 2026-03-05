@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PopfileNet.Cli;
 using PopfileNet.Database;
+using PopfileNet.Database.Repositories;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 
@@ -29,6 +30,7 @@ var services = new ServiceCollection();
 services.AddEmailAnalysisDatabase(connectionString);
 services.AddSingleton(imapSettings);
 services.AddSingleton(factory);
+services.AddScoped<IEmailRepository, EmailRepository>();
 
 var serviceProvider = services.BuildServiceProvider();
 
