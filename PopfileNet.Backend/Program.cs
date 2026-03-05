@@ -4,6 +4,8 @@ using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
+using PopfileNet.Database.DatabaseMaintenance;
+using PopfileNet.Database.Repositories;
 using InvalidDataException = System.IO.InvalidDataException;
 
 using PopfileNet.Imap;
@@ -31,6 +33,8 @@ builder.Services.AddSingleton(imapSettingsDefaults);
 builder.Services.AddScoped<IImapClientFactory, ImapClientFactory>();
 builder.Services.AddScoped<IImapService, ImapService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddScoped<IEmailRepository, EmailRepository>();
+builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
 builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
 var app = builder.Build();
@@ -56,34 +60,18 @@ if (!skipDbInit && !app.Environment.IsEnvironment("Test"))
 {
     using (var scope = app.Services.CreateScope())
     {
-        var db = scope.ServiceProvider.GetRequiredService<PopfileNetDbContext>();
+        var migrationChecker = scope.ServiceProvider.GetRequiredService<IMigrationChecker>();
         
-        if (!await db.Database.CanConnectAsync())
+        var hasLegacy = await migrationChecker.HasLegacyTablesAsync();
+        if (hasLegacy)
         {
-            return;
+            throw new InvalidOperationException(
+                "Database exists, but is in legacy format. Please delete the existing database and restart the application.");
         }
         
-        var historyTableExists = await db.Database.SqlQueryRaw<int>(
-            "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_name = '__EFMigrationsHistory'"
-        ).FirstOrDefaultAsync() > 0;
-        
-        if (!historyTableExists)
+        if (await migrationChecker.HasPendingMigrationsAsync())
         {
-            var hasAnyTables = await db.Database.SqlQueryRaw<int>(
-                "SELECT COUNT(*)::int FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE '__%'"
-            ).FirstOrDefaultAsync() > 0;
-            
-            if (hasAnyTables)
-            {
-                throw new InvalidOperationException(
-                    "Database exists, but is in legacy format. Please delete the existing database and restart the application.");
-            }
-        }
-        
-        var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
-        if (pendingMigrations.Any())
-        {
-            await db.Database.MigrateAsync();
+            await migrationChecker.ApplyMigrationsAsync();
         }
     }
 }

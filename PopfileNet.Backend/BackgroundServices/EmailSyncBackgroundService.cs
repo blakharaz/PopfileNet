@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
+using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
+using PopfileNet.Database.Repositories;
 
 namespace PopfileNet.Backend.BackgroundServices;
 
@@ -34,7 +35,7 @@ public class EmailSyncBackgroundService(
     private async Task SyncEmailsAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<PopfileNetDbContext>();
+        var emailRepository = scope.ServiceProvider.GetRequiredService<IEmailRepository>();
         var imapService = scope.ServiceProvider.GetRequiredService<IImapService>();
 
         if (!await imapService.IsConfiguredAsync(cancellationToken))
@@ -45,49 +46,41 @@ public class EmailSyncBackgroundService(
 
         var folders = await imapService.GetAllPersonalFoldersAsync(cancellationToken);
         
-        var existingFolders = await db.MailFolders.ToDictionaryAsync(f => f.Name, f => f.Id, cancellationToken);
-        var newFolderNames = folders.Select(f => f.FullName).Except(existingFolders.Keys);
+        var existingFolders = await emailRepository.GetAllFolderIdByNameAsync(cancellationToken);
+        var newFolderNames = folders.Select(f => f.FullName).Except(existingFolders.Keys).ToList();
 
-        bool folderAdded = false;
-        foreach (var folderName in newFolderNames)
+        if (newFolderNames.Count > 0)
         {
-            var newFolder = new MailFolder { Name = folderName };
-            db.MailFolders.Add(newFolder);
-            folderAdded = true;
-        }
-        
-        if (folderAdded)
-        {
-            await db.SaveChangesAsync(cancellationToken);
-            existingFolders = await db.MailFolders.ToDictionaryAsync(f => f.Name, f => f.Id, cancellationToken);
+            var newFolders = newFolderNames.Select(name => new MailFolder { Name = name });
+            await emailRepository.InsertFoldersAsync(newFolders, cancellationToken);
+            existingFolders = await emailRepository.GetAllFolderIdByNameAsync(cancellationToken);
         }
 
-        HashSet<string> existingImapUids = [.. await db.Emails.Where(e => e.ImapUid != null).Select(e => e.ImapUid!).ToListAsync(cancellationToken)];
+            var existingImapUids = await emailRepository.GetExistingImapUidsByFolderAsync(cancellationToken);
 
-        List<Email> allEmails = [];
+            List<Email> allEmails = [];
 
-        foreach (var folder in folders)
-        {
-            var folderId = existingFolders[folder.FullName];
-            var ids = await imapService.FetchEmailIdsAsync(folder.FullName, cancellationToken);
-            var newIds = ids.Where(id => !existingImapUids.Contains($"{folder.FullName}:{id.Validity}:{id.Id}")).ToList();
-
-            if (newIds.Count > 0)
+            foreach (var folder in folders)
             {
-                var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName, cancellationToken);
-                foreach (var email in emails)
+                var folderId = existingFolders[folder.FullName];
+                var ids = await imapService.FetchEmailIdsAsync(folder.FullName, cancellationToken);
+                var newIds = ids.Where(id => !existingImapUids.ContainsKey(id.Id)).ToList();
+
+                if (newIds.Count > 0)
                 {
-                    email.Folder = folderId;
+                    var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName, cancellationToken);
+                    foreach (var email in emails)
+                    {
+                        email.Folder = folderId;
+                    }
+                    allEmails.AddRange(emails);
                 }
-                allEmails.AddRange(emails);
             }
-        }
 
         if (allEmails.Count > 0)
         {
-            db.Emails.AddRange(allEmails);
-            await db.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Synced {Count} new emails", allEmails.Count);
+            var insertedCount = await emailRepository.InsertEmailsIgnoringDuplicatesAsync(allEmails, cancellationToken);
+            logger.LogInformation("Synced {Count} new emails", insertedCount);
         }
         else
         {

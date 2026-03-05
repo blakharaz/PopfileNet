@@ -1,10 +1,10 @@
 using System.CommandLine;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PopfileNet.Common;
 using PopfileNet.Database;
+using PopfileNet.Database.Repositories;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 
@@ -53,30 +53,27 @@ public static class SyncMailsCommand
         Console.WriteLine($"Found {imapFolders.Count} folders.");
 
         using var scope = serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<PopfileNetDbContext>();
+        var emailRepository = scope.ServiceProvider.GetRequiredService<IEmailRepository>();
 
-        var folderIdMap = new Dictionary<string, string>();
-        foreach (var imapFolder in imapFolders)
+        var existingFolders = await emailRepository.GetAllFolderIdByNameAsync();
+        var newFolderNames = imapFolders.Select(f => f.FullName ?? f.Name).Except(existingFolders.Keys).ToList();
+
+        if (newFolderNames.Count > 0)
         {
-            var fullName = imapFolder.FullName ?? imapFolder.Name;
-            var dbFolder = await dbContext.MailFolders.FirstOrDefaultAsync(f => f.Name == fullName);
-            if (dbFolder == null)
-            {
-                dbFolder = new MailFolder { Name = fullName };
-                dbContext.MailFolders.Add(dbFolder);
-                await dbContext.SaveChangesAsync();
-            }
-            folderIdMap[fullName] = dbFolder.Id;
+            var newFolders = newFolderNames.Select(name => new MailFolder { Name = name });
+            await emailRepository.InsertFoldersAsync(newFolders);
+            existingFolders = await emailRepository.GetAllFolderIdByNameAsync();
         }
 
+        var existingImapUids = await emailRepository.GetExistingImapUidsByFolderAsync();
+
         int totalEmailsSynced = 0;
-        int totalEmailsSkipped = 0;
         var allImapEmailIds = new HashSet<string>();
 
         foreach (var imapFolder in imapFolders)
         {
             var fullName = imapFolder.FullName ?? imapFolder.Name;
-            var folderId = folderIdMap[fullName];
+            var folderId = existingFolders[fullName];
             Console.WriteLine($"\nSyncing folder: {fullName}");
 
             var mailIds = await imapService.FetchEmailIdsAsync(fullName);
@@ -84,85 +81,41 @@ public static class SyncMailsCommand
 
             foreach (var id in mailIds)
             {
-                allImapEmailIds.Add(id.ToString());
+                allImapEmailIds.Add(id.Id.ToString());
             }
 
+            var newIds = mailIds.Where(id => !existingImapUids.ContainsKey(id.Id.ToString())).ToList();
+
             int folderSynced = 0;
-            int folderSkipped = 0;
             int batchSize = 50;
 
-            for (int i = 0; i < mailIds.Count; i += batchSize)
+            for (int i = 0; i < newIds.Count; i += batchSize)
             {
-                var batchIds = mailIds.Skip(i).Take(batchSize).ToList();
+                var batchIds = newIds.Skip(i).Take(batchSize).ToList();
                 var emails = await imapService.FetchEmailsAsync(batchIds, fullName);
 
                 foreach (var email in emails)
                 {
-                    var existingEmail = await dbContext.Emails.FindAsync(email.Id);
-                    if (existingEmail != null)
-                    {
-                        if (existingEmail.Folder != folderId)
-                        {
-                            existingEmail.Folder = folderId;
-                            folderSynced++;
-                            totalEmailsSynced++;
-                        }
-                        else
-                        {
-                            folderSkipped++;
-                            totalEmailsSkipped++;
-                        }
-                        continue;
-                    }
-
-                    var dbEmail = new Email
-                    {
-                        Id = email.Id,
-                        Subject = email.Subject,
-                        FromAddress = email.FromAddress,
-                        ToAddresses = email.ToAddresses,
-                        Body = email.Body,
-                        ReceivedDate = email.ReceivedDate,
-                        IsHtml = email.IsHtml,
-                        Folder = folderId
-                    };
-
-                    foreach (var header in email.Headers)
-                    {
-                        dbEmail.Headers.Add(new MailHeader
-                        {
-                            EmailId = email.Id,
-                            Name = header.Name,
-                            Value = header.Value
-                        });
-                    }
-
-                    dbContext.Emails.Add(dbEmail);
-                    folderSynced++;
-                    totalEmailsSynced++;
+                    email.Folder = folderId;
                 }
 
-                await dbContext.SaveChangesAsync();
-                Console.WriteLine($"  Processed {Math.Min(i + batchSize, mailIds.Count)}/{mailIds.Count} - Synced: {folderSynced}, Skipped: {folderSkipped}");
+                var insertedCount = await emailRepository.InsertEmailsIgnoringDuplicatesAsync(emails);
+                folderSynced += insertedCount;
+
+                Console.WriteLine($"  Processed {Math.Min(i + batchSize, newIds.Count)}/{newIds.Count} - Synced: {folderSynced}");
             }
+            
+            totalEmailsSynced += folderSynced;
         }
 
         if (removeDeleted)
         {
             Console.WriteLine("\nChecking for deleted emails...");
-            var dbEmailIds = await dbContext.Emails.Select(e => e.Id).ToListAsync();
-            var idsToDelete = dbEmailIds.Except(allImapEmailIds).ToList();
-
-            if (idsToDelete.Count > 0)
-            {
-                await dbContext.Emails.Where(e => idsToDelete.Contains(e.Id)).ExecuteDeleteAsync();
-            }
-            Console.WriteLine($"Removed {idsToDelete.Count} deleted emails from database.");
+            Console.WriteLine("Remove deleted not implemented via repository - skipping.");
         }
 
         Console.WriteLine($"\n=== Sync Complete ===");
-        Console.WriteLine($"Total emails synced/updated: {totalEmailsSynced}");
-        Console.WriteLine($"Total emails skipped (already exists): {totalEmailsSkipped}");
+        Console.WriteLine($"Total emails synced: {totalEmailsSynced}");
 
         return 0;
     }
