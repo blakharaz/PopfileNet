@@ -5,12 +5,13 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <RootNamespace>PopfileNet.Database.UnitTests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="FluentAssertions" Version="8.8.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
-        <PackageReference Include="Moq" Version="4.20.72" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.3" />
         <PackageReference Include="xunit" Version="2.9.3" />
         <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
             <PrivateAssets>all</PrivateAssets>
@@ -23,8 +24,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\PopfileNet.Classifier\PopfileNet.Classifier.csproj" />
-        <ProjectReference Include="..\PopfileNet.Common\PopfileNet.Common.csproj" />
+        <ProjectReference Include="..\..\..\PopfileNet.Database\PopfileNet.Database.csproj" />
+        <ProjectReference Include="..\..\..\PopfileNet.Common\PopfileNet.Common.csproj" />
     </ItemGroup>
 
 </Project>

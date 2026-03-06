@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <RootNamespace>PopfileNet.Imap.UnitTests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -23,8 +24,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\PopfileNet.Imap\PopfileNet.Imap.csproj" />
-        <ProjectReference Include="..\PopfileNet.Common\PopfileNet.Common.csproj" />
+        <ProjectReference Include="..\..\..\PopfileNet.Imap\PopfileNet.Imap.csproj" />
+        <ProjectReference Include="..\..\..\PopfileNet.Common\PopfileNet.Common.csproj" />
     </ItemGroup>
 
 </Project>
