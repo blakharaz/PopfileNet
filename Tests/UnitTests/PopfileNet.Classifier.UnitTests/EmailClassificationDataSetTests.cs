@@ -2,7 +2,7 @@ using FluentAssertions;
 using PopfileNet.Common;
 using Xunit;
 
-namespace PopfileNet.Classifier.Tests;
+namespace PopfileNet.Classifier.UnitTests;
 
 public class EmailClassificationDataSetTests
 {

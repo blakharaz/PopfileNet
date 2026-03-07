@@ -3,11 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FluentUI.AspNetCore.Components;
 using PopfileNet.Ui.Components.Pages;
 using PopfileNet.Ui.Services;
-using PopfileNet.Ui.Tests.TestHelpers;
-using PopfileNet.Ui.Tests.Utils;
+using PopfileNet.Ui.UnitTests.TestHelpers;
+using PopfileNet.Ui.UnitTests.Utils;
 using Xunit;
 
-namespace PopfileNet.Ui.Tests.Components.Pages;
+namespace PopfileNet.Ui.UnitTests.Components.Pages;
 
 public class SettingsPageTests : BunitContext
 {

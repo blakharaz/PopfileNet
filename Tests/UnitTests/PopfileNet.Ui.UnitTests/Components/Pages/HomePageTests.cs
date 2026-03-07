@@ -4,7 +4,7 @@ using Microsoft.FluentUI.AspNetCore.Components;
 using PopfileNet.Ui.Components.Pages;
 using Xunit;
 
-namespace PopfileNet.Ui.Tests.Components.Pages;
+namespace PopfileNet.Ui.UnitTests.Components.Pages;
 
 public class HomePageTests : BunitContext
 {

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PopfileNet.Common;
 using Xunit;
 
-namespace PopfileNet.Database.Tests;
+namespace PopfileNet.Database.UnitTests;
 
 public class PopfileNetDbContextTests
 {

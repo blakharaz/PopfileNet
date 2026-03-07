@@ -1,6 +1,6 @@
 using Bunit;
 
-namespace PopfileNet.Ui.Tests.Utils;
+namespace PopfileNet.Ui.UnitTests.Utils;
 
 public static class FluentUiSetupExtensions
 {

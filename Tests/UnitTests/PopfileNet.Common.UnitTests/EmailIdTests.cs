@@ -1,7 +1,7 @@
 ﻿using FluentAssertions;
 using Xunit;
 
-namespace PopfileNet.Common.Tests;
+namespace PopfileNet.Common.UnitTests;
 
 public class EmailIdTests
 {

@@ -1,6 +1,6 @@
 using PopfileNet.Ui.Services;
 
-namespace PopfileNet.Ui.Tests.TestHelpers;
+namespace PopfileNet.Ui.UnitTests.TestHelpers;
 
 /// <summary>
 /// Mock implementation of IApiClient for testing purposes.

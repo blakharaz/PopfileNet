@@ -4,7 +4,7 @@ using MimeKit;
 using PopfileNet.Common;
 using Xunit;
 
-namespace PopfileNet.Imap.Tests;
+namespace PopfileNet.Imap.UnitTests;
 
 public class MappingTests
 {

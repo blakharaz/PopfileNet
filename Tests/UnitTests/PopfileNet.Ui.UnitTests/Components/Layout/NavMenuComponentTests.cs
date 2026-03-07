@@ -2,7 +2,7 @@ using Bunit;
 using PopfileNet.Ui.Components.Layout;
 using Xunit;
 
-namespace PopfileNet.Ui.Tests.Components.Layout;
+namespace PopfileNet.Ui.UnitTests.Components.Layout;
 
 public class NavMenuComponentTests : BunitContext
 {

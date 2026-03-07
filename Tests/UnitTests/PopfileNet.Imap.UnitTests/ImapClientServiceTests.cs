@@ -9,7 +9,7 @@ using PopfileNet.Imap.Settings;
 using Xunit;
 using IMailFolder = MailKit.IMailFolder;
 
-namespace PopfileNet.Imap.Tests;
+namespace PopfileNet.Imap.UnitTests;
 
 public class ImapClientServiceTests
 {
