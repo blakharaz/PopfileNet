@@ -30,5 +30,6 @@
     </ItemGroup>
     <ItemGroup>
       <InternalsVisibleTo Include="PopfileNet.Backend.Tests"/>
+      <InternalsVisibleTo Include="PopfileNet.IntegrationTests"/>
     </ItemGroup>
 </Project>

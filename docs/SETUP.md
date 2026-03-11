@@ -82,8 +82,54 @@ PopfileNet.Classifier
 ### Running Tests
 
 ```bash
+# Run all tests
 dotnet test
+
+# Run specific test types
+dotnet test Tests/UnitTests
+dotnet test Tests/IntegrationTests
+dotnet test Tests/FunctionalTests
 ```
+
+### Test Categories
+
+| Category | Location | Description |
+|----------|----------|-------------|
+| Unit Tests | `Tests/UnitTests/` | Fast, isolated tests for individual components |
+| Integration Tests | `Tests/IntegrationTests/` | API tests using WebApplicationFactory |
+| Functional Tests | `Tests/FunctionalTests/` | UI tests using Playwright |
+
+### Running Tests with Coverage
+
+```bash
+# Unit tests with coverage
+dotnet test Tests/UnitTests --settings Tests/UnitTests/coverlet.runsettings
+
+# Integration tests with coverage
+dotnet test Tests/IntegrationTests --settings Tests/IntegrationTests/coverlet.runsettings
+
+# Functional tests with coverage
+dotnet test Tests/FunctionalTests --settings Tests/FunctionalTests/coverlet.runsettings
+```
+
+### Playwright Setup
+
+Functional tests require:
+1. **Docker** - Running Docker daemon (for PostgreSQL test container)
+2. **Playwright browsers** - Installed via npm
+
+```bash
+# Install Playwright CLI
+npm install -g playwright
+
+# Install Chromium browser
+npx playwright install chromium
+```
+
+If Playwright browsers are not installed, functional tests will be skipped.
+If Docker is not running, functional tests will fail.
+
+> **Note:** Functional tests automatically start PostgreSQL (via TestContainers) and the Backend/UI applications. No manual startup required.
 
 ### Code Style
 
