@@ -174,7 +174,7 @@ jobs:
     steps:
     - uses: actions/download-artifact@v5
       with:
-        name: coverage
+        name: coverage-unit
         path: .
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
@@ -183,7 +183,7 @@ jobs:
     - name: Check coverage file exists
       id: check_coverage
       run: |
-        if ls *coverage*.xml 1> /dev/null 2>&1; then
+        if ls *.cobertura.xml 1> /dev/null 2>&1; then
           echo "exists=true" >> $GITHUB_OUTPUT
         else
           echo "exists=false" >> $GITHUB_OUTPUT
@@ -192,7 +192,7 @@ jobs:
       if: steps.check_coverage.outputs.exists == 'true'
       run: |
         dotnet tool install --global dotnet-reportgenerator-globaltool
-        reportgenerator -reports:*coverage*.xml -targetdir:report -reporttypes:MarkdownSummaryGithub
+        reportgenerator -reports:*.cobertura.xml -targetdir:report -reporttypes:MarkdownSummaryGithub
         cat report/SummaryGithub.md
     - name: Create PR comment
       if: steps.check_coverage.outputs.exists == 'true'
@@ -227,9 +227,9 @@ jobs:
         dotnet-version: 10.0.x
     - name: Update README with coverage
       run: |
-        if ls *coverage*.xml 1> /dev/null 2>&1; then
+        if ls *.cobertura.xml 1> /dev/null 2>&1; then
           dotnet tool install --global dotnet-reportgenerator-globaltool
-          reportgenerator -reports:*coverage*.xml -targetdir:report -reporttypes:MarkdownSummaryGithub
+          reportgenerator -reports:*.cobertura.xml -targetdir:report -reporttypes:MarkdownSummaryGithub
           COVERAGE_PCT=$(grep -oP '\d+(?=%)' report/SummaryGithub.md | head -1)
           
           cat > coverage_section.md << EOFMARKER
