@@ -4,7 +4,10 @@
 
 ![Code Coverage](https://img.shields.io/badge/coverage--green)
 
-<!-- coverage-table-start -->
+## Code Coverage
+
+![Code Coverage](https://img.shields.io/badge/coverage-1%25-green)
+
 <!-- coverage-table-end -->
 
 An IMAP-based email classification system inspired by [POPFile](https://getpopfile.org). Uses machine learning to automatically categorize emails into folders.
