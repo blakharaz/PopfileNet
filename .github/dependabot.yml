@@ -1,0 +1,50 @@
+# Dependabot configuration for semi-automatic dependency updates
+# See: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    target-branch: "main"
+    open-pull-requests-limit: 10
+    
+    # Review automation settings
+    commit-message:
+      prefix: "deps"
+    
+    # Pull request settings
+    pull-request-branch-name:
+      separator: "-"
+    
+    # Scheduling
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    
+    # Version updates to include
+    versioning-strategy: "increase"
+    
+    # Auto-merge settings (semi-automatic)
+    automerge: false
+    
+    # Reviewers and assignees
+    reviewers:
+      - "blakharaz"
+    assignees:
+      - "blakharaz"
+    
+    # Labels for PRs
+    labels:
+      - "dependencies"
+      - "nuget"
+    
+    # Ignore certain updates (optional)
+    ignore:
+      - dependency-name: "Microsoft.NETCore.App"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.AspNetCore.App"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.EntityFrameworkCore.*"
+        update-types: ["version-update:semver-major"]
