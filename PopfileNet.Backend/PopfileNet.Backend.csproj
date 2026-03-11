@@ -29,7 +29,7 @@
       <ProjectReference Include="..\PopfileNet.Imap\PopfileNet.Imap.csproj" />
     </ItemGroup>
     <ItemGroup>
-      <InternalsVisibleTo Include="PopfileNet.Backend.Tests"/>
+      <InternalsVisibleTo Include="PopfileNet.Backend.UnitTests"/>
       <InternalsVisibleTo Include="PopfileNet.IntegrationTests"/>
     </ItemGroup>
 </Project>
