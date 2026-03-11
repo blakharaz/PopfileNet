@@ -60,7 +60,7 @@ namespace PopfileNet.Backend.UnitTests
 
             (await service.GetAllPersonalFoldersAsync()).Should().BeEmpty();
             (await service.FetchEmailIdsAsync()).Should().BeEmpty();
-            (await service.FetchEmailsAsync(new List<EmailId>())).Should().BeEmpty();
+            (await service.FetchEmailsAsync([])).Should().BeEmpty();
         }
     }
 }

@@ -25,8 +25,8 @@ namespace PopfileNet.Backend.UnitTests
             Assert.IsType<BadRequest<ApiResponse<bool>>>(result);
             var bad = ((BadRequest<ApiResponse<bool>>)result).Value;
             bad.Should().NotBeNull();
-            bad.IsSuccess.Should().BeFalse();
-            bad.Error?.Message.Should().Contain("IMAP settings are not configured");
+            bad!.IsSuccess.Should().BeFalse();
+            bad!.Error?.Message.Should().Contain("IMAP settings are not configured");
         }
     }
 }
