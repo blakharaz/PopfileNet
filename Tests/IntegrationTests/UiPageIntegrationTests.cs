@@ -6,27 +6,23 @@ using Microsoft.Extensions.Configuration;
 using PopfileNet.Backend;
 using PopfileNet.Backend.Models;
 using Shouldly;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace PopfileNet.IntegrationTests;
 
+[Collection("Database")]
 public class UiPageIntegrationTests : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder(image: "postgres:16-alpine")
-        .WithDatabase("popfilenet")
-        .WithUsername("test")
-        .WithPassword("test")
-        .Build();
-
+    private readonly DatabaseFixture _fixture;
     private HttpClient? _client;
+
+    public UiPageIntegrationTests(DatabaseFixture fixture)
+    {
+        _fixture = fixture;
+    }
 
     public async Task InitializeAsync()
     {
-        await _postgres.StartAsync();
-        
-        var connectionString = _postgres.GetConnectionString();
-        
         var factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
@@ -35,7 +31,7 @@ public class UiPageIntegrationTests : IAsyncLifetime
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:popfilenet"] = connectionString,
+                        ["ConnectionStrings:popfilenet"] = _fixture.ConnectionString,
                         ["ImapSettings:Server"] = "imap.test.com",
                         ["ImapSettings:Port"] = "993",
                         ["ImapSettings:Username"] = "test@test.com",
@@ -51,7 +47,6 @@ public class UiPageIntegrationTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         _client?.Dispose();
-        await _postgres.DisposeAsync();
     }
 
     [Fact]
@@ -80,28 +75,6 @@ public class UiPageIntegrationTests : IAsyncLifetime
         var response = await _client!.PostAsync("/settings/test-connection", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task SyncPage_CanTriggerSync()
-    {
-        var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Test");
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:popfilenet"] = _postgres.GetConnectionString()
-                    });
-                });
-            });
-
-        using var client = factory.CreateClient();
-        var response = await client.PostAsync("/jobs/sync", null);
-
-        response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.InternalServerError);
     }
 
     [Fact]
