@@ -25,9 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\PopfileNet.Backend\PopfileNet.Backend.csproj" />
-        <ProjectReference Include="..\PopfileNet.Imap\PopfileNet.Imap.csproj" />
-        <ProjectReference Include="..\PopfileNet.Common\PopfileNet.Common.csproj" />
+      <ProjectReference Include="..\..\..\PopfileNet.Backend\PopfileNet.Backend.csproj" />
     </ItemGroup>
 
 </Project>
