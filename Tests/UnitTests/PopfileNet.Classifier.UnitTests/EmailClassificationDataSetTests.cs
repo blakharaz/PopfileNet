@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using PopfileNet.Common;
 using Xunit;
 
@@ -14,7 +14,7 @@ public class EmailClassificationDataSetTests
 
         dataSet.AddMail(email, "spam");
 
-        dataSet.Data.Should().HaveCount(1);
+        dataSet.Data.Count().ShouldBe(1);
     }
 
     [Fact]
@@ -26,7 +26,7 @@ public class EmailClassificationDataSetTests
         dataSet.AddMail(CreateSampleEmail("Subject 2", "Body 2"), "ham");
         dataSet.AddMail(CreateSampleEmail("Subject 3", "Body 3"), "spam");
 
-        dataSet.Data.Should().HaveCount(3);
+        dataSet.Data.Count().ShouldBe(3);
     }
 
     [Fact]
@@ -39,11 +39,11 @@ public class EmailClassificationDataSetTests
 
         var result = dataSet.Data.ToList();
 
-        result.Should().HaveCount(2);
-        result[0].Subject.Should().Be("Newsletter");
-        result[0].Label.Should().Be("spam");
-        result[1].Subject.Should().Be("Meeting");
-        result[1].Label.Should().Be("ham");
+        result.Count.ShouldBe(2);
+        result[0].Subject.ShouldBe("Newsletter");
+        result[0].Label.ShouldBe("spam");
+        result[1].Subject.ShouldBe("Meeting");
+        result[1].Label.ShouldBe("ham");
     }
 
     [Fact]
@@ -55,9 +55,9 @@ public class EmailClassificationDataSetTests
         dataSet.AddMail(email, "spam");
 
         var result = dataSet.Data.First();
-        result.Subject.Should().Be("Test Subject");
-        result.Content.Should().Be("Test Body Content");
-        result.Label.Should().Be("spam");
+        result.Subject.ShouldBe("Test Subject");
+        result.Content.ShouldBe("Test Body Content");
+        result.Label.ShouldBe("spam");
     }
 
     private static Email CreateSampleEmail(string subject, string body)

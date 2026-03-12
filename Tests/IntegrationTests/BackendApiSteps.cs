@@ -1,5 +1,5 @@
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -55,13 +55,13 @@ public class BackendApiSteps
     [Then("I should receive a successful response")]
     public void ThenIShouldReceiveASuccessfulResponse()
     {
-        _response!.StatusCode.Should().BeOneOf(HttpStatusCode.Redirect, HttpStatusCode.OK);
+        _response!.StatusCode.ShouldBeOneOf(HttpStatusCode.Redirect, HttpStatusCode.OK);
     }
 
     [Then("I should receive an OK response")]
     public void ThenIShouldReceiveAnOkResponse()
     {
-        _response!.StatusCode.Should().Be(HttpStatusCode.OK);
+        _response!.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     [AfterScenario]

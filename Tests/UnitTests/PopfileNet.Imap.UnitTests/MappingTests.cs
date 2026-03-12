@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using MailKit;
 using MimeKit;
 using PopfileNet.Common;
@@ -16,10 +16,10 @@ public class MappingTests
 
         var result = PopfileNet.Imap.Models.Mapping.ConvertToEmail(uid, message);
 
-        result.Should().NotBeNull();
-        result.Subject.Should().Be("Test Subject");
-        result.Body.Should().Be("Test Body");
-        result.FromAddress.Should().Contain("from@example.com");
+        result.ShouldNotBeNull();
+        result.Subject.ShouldBe("Test Subject");
+        result.Body.ShouldBe("Test Body");
+        result.FromAddress.ShouldContain("from@example.com");
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public class MappingTests
 
         var result = PopfileNet.Imap.Models.Mapping.ConvertToEmail(uid, message);
 
-        result.Subject.Should().BeEmpty();
+        result.Subject.ShouldBeEmpty();
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class MappingTests
 
         var result = PopfileNet.Imap.Models.Mapping.ConvertToEmail(uid, message);
 
-        result.FromAddress.Should().BeEmpty();
+        result.FromAddress.ShouldBeEmpty();
     }
 
     [Fact]
@@ -57,8 +57,8 @@ public class MappingTests
 
         var result = PopfileNet.Imap.Models.Mapping.ConvertToEmail(uid, message);
 
-        result.Body.Should().Be("<p>Test HTML</p>");
-        result.IsHtml.Should().BeTrue();
+        result.Body.ShouldBe("<p>Test HTML</p>");
+        result.IsHtml.ShouldBeTrue();
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class MappingTests
 
         var result = PopfileNet.Imap.Models.Mapping.ConvertToEmail(uid, message);
 
-        result.Body.Should().BeEmpty();
+        result.Body.ShouldBeEmpty();
     }
 
     [Fact]
@@ -80,8 +80,8 @@ public class MappingTests
 
         var result = PopfileNet.Imap.Models.Mapping.MapToEmailId(uid);
 
-        result.Validity.Should().Be(1u);
-        result.Id.Should().Be(123u);
+        result.Validity.ShouldBe(1u);
+        result.Id.ShouldBe(123u);
     }
 
     [Fact]
@@ -96,10 +96,10 @@ public class MappingTests
 
         var result = PopfileNet.Imap.Models.Mapping.MapToUniqueIds(emailIds).ToList();
 
-        result.Should().HaveCount(3);
-        result[0].Should().Be(new UniqueId(1, 1));
-        result[1].Should().Be(new UniqueId(1, 2));
-        result[2].Should().Be(new UniqueId(2, 3));
+        result.Count.ShouldBe(3);
+        result[0].ShouldBe(new UniqueId(1, 1));
+        result[1].ShouldBe(new UniqueId(1, 2));
+        result[2].ShouldBe(new UniqueId(2, 3));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class MappingTests
 
         var result = PopfileNet.Imap.Models.Mapping.ConvertToEmail(uid, message);
 
-        result.Headers.Should().NotBeEmpty();
+        result.Headers.ShouldNotBeEmpty();
     }
 
     private static MimeMessage CreateMimeMessage(string subject, string body, string from)

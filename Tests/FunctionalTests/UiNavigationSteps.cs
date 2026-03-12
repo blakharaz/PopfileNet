@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using Microsoft.Playwright;
 using Reqnroll;
 using Xunit;
@@ -46,7 +46,7 @@ public class UiNavigationSteps
         }
 
         var content = await _page!.ContentAsync();
-        content.Should().NotBeNullOrEmpty();
+        content.ShouldNotBeNullOrEmpty();
     }
 
     [BeforeScenario]

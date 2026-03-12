@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using MailKit;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -56,7 +56,7 @@ public class ImapClientServiceTests
 
         var result = await service.TestConnectionAsync();
 
-        result.Should().BeTrue();
+        result.ShouldBeTrue();
         
         _mockClient.Verify(c => c.ConnectAsync(_settings.Server, _settings.Port, _settings.UseSsl, It.IsAny<CancellationToken>()), Times.Once);
         _mockClient.Verify(c => c.AuthenticateAsync(_settings.Username, _settings.Password, It.IsAny<CancellationToken>()), Times.Once);
@@ -74,7 +74,7 @@ public class ImapClientServiceTests
 
         var result = await service.TestConnectionAsync();
 
-        result.Should().BeFalse();
+        result.ShouldBeFalse();
         
         _mockClient.Verify(c => c.DisconnectAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -100,9 +100,9 @@ public class ImapClientServiceTests
 
         var result = await service.FetchEmailIdsAsync("Inbox");
 
-        result.Should().HaveCount(2);
-        result[0].Validity.Should().Be(1u);
-        result[0].Id.Should().Be(1u);
+        result.Count.ShouldBe(2);
+        result[0].Validity.ShouldBe(1u);
+        result[0].Id.ShouldBe(1u);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class ImapClientServiceTests
 
         var result = await service.FetchEmailIdsAsync("Inbox");
 
-        result.Should().BeEmpty();
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class ImapClientServiceTests
 
         var result = await service.FetchEmailIdsAsync();
 
-        result.Should().HaveCount(1);
+        result.Count.ShouldBe(1);
     }
 
     [Fact]
@@ -169,8 +169,8 @@ public class ImapClientServiceTests
 
         var result = await service.FetchEmailsAsync(emailIds, "INBOX");
 
-        result.Should().HaveCount(1);
-        result[0].Subject.Should().Be("Test Subject");
+        result.Count.ShouldBe(1);
+        result[0].Subject.ShouldBe("Test Subject");
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public class ImapClientServiceTests
 
         var result = await service.FetchEmailsAsync([]);
 
-        result.Should().BeEmpty();
+        result.ShouldBeEmpty();
         
         _mockClient.Verify(c => c.ConnectAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -203,7 +203,7 @@ public class ImapClientServiceTests
 
         var result = await service.GetAllPersonalFoldersAsync();
 
-        result.Should().HaveCount(1);
+        result.Count.ShouldBe(1);
     }
 
     private ImapClientService CreateService()

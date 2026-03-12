@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Moq;
 using PopfileNet.Backend.Groups;
@@ -24,9 +24,9 @@ namespace PopfileNet.Backend.UnitTests
             // assert
             Assert.IsType<BadRequest<ApiResponse<bool>>>(result);
             var bad = ((BadRequest<ApiResponse<bool>>)result).Value;
-            bad.Should().NotBeNull();
-            bad!.IsSuccess.Should().BeFalse();
-            bad!.Error?.Message.Should().Contain("IMAP settings are not configured");
+            bad.ShouldNotBeNull();
+            bad!.IsSuccess.ShouldBeFalse();
+            bad!.Error?.Message.ShouldContain("IMAP settings are not configured");
         }
     }
 }

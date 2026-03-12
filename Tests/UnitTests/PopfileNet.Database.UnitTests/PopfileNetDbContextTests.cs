@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using Microsoft.EntityFrameworkCore;
 using PopfileNet.Common;
 using Xunit;
@@ -34,7 +34,7 @@ public class PopfileNetDbContextTests
         context.Emails.Add(email);
         await context.SaveChangesAsync();
 
-        context.Emails.Should().HaveCount(1);
+        context.Emails.Count().ShouldBe(1);
     }
 
     [Fact]
@@ -57,8 +57,8 @@ public class PopfileNetDbContextTests
 
         var result = await context.Emails.FindAsync("unique-email-id");
 
-        result.Should().NotBeNull();
-        result!.Subject.Should().Be("Test Subject");
+        result.ShouldNotBeNull();
+        result!.Subject.ShouldBe("Test Subject");
     }
 
     [Fact]
@@ -91,9 +91,9 @@ public class PopfileNetDbContextTests
             .Include(e => e.FolderNavigation)
             .FirstOrDefaultAsync(e => e.Id == email.Id);
 
-        result.Should().NotBeNull();
-        result!.FolderNavigation.Should().NotBeNull();
-        result.FolderNavigation!.Name.Should().Be("TestFolder");
+        result.ShouldNotBeNull();
+        result!.FolderNavigation.ShouldNotBeNull();
+        result.FolderNavigation!.Name.ShouldBe("TestFolder");
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class PopfileNetDbContextTests
         await context.SaveChangesAsync();
 
         var result = await context.Emails.FirstOrDefaultAsync(e => e.Id == emailId);
-        result.Should().BeNull();
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -143,8 +143,8 @@ public class PopfileNetDbContextTests
 
         var result = await context.Buckets.FindAsync(bucket.Id);
 
-        result.Should().NotBeNull();
-        result!.Name.Should().Be("Spam");
+        result.ShouldNotBeNull();
+        result!.Name.ShouldBe("Spam");
     }
 
     [Fact]
@@ -174,9 +174,9 @@ public class PopfileNetDbContextTests
             .Include(f => f.Bucket)
             .FirstOrDefaultAsync(f => f.Id == folder.Id);
 
-        result.Should().NotBeNull();
-        result!.Bucket.Should().NotBeNull();
-        result.Bucket!.Name.Should().Be("Spam");
+        result.ShouldNotBeNull();
+        result!.Bucket.ShouldNotBeNull();
+        result.Bucket!.Name.ShouldBe("Spam");
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class PopfileNetDbContextTests
 
         var result = await context.MailFolders.FindAsync(folder.Id);
 
-        result.Should().NotBeNull();
-        result!.Name.Should().Be("Inbox");
+        result.ShouldNotBeNull();
+        result!.Name.ShouldBe("Inbox");
     }
 }
