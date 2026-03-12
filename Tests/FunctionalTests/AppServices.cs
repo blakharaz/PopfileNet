@@ -11,20 +11,33 @@ public class AppServices : IAsyncLifetime
         get
         {
             var githubWorkspace = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE");
-            if (!string.IsNullOrEmpty(githubWorkspace) && Directory.Exists(githubWorkspace))
-            {
-                return githubWorkspace;
-            }
-            
-            var path = AppContext.BaseDirectory;
-            for (var i = 0; i < 6; i++)
-            {
-                var parent = Directory.GetParent(path);
-                if (parent == null) break;
-                path = parent.FullName;
-            }
-            return path;
+            var startPath = !string.IsNullOrEmpty(githubWorkspace) && Directory.Exists(githubWorkspace)
+                ? githubWorkspace
+                : AppContext.BaseDirectory;
+
+            return FindRoot(startPath);
         }
+    }
+
+    private static string FindRoot(string startPath)
+    {
+        var path = startPath;
+        while (path != null)
+        {
+            if (Directory.GetFiles(path, "*.sln").Length > 0)
+            {
+                return path;
+            }
+
+            var parent = Directory.GetParent(path);
+            if (parent == null)
+            {
+                break;
+            }
+            path = parent.FullName;
+        }
+
+        throw new InvalidOperationException($"Could not find solution root starting from {startPath}");
     }
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder(image: "postgres:16-alpine")
@@ -38,88 +51,104 @@ public class AppServices : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await _postgres.StartAsync();
+        var postgresStarted = false;
+        var backendStarted = false;
 
-        var connectionString = _postgres.GetConnectionString();
-        
-        var backendUrl = "http://localhost:5180";
-        UiUrl = "http://localhost:5181";
-
-        Console.WriteLine($"Solution root: {SolutionRoot}");
-
-        var backendStartInfo = new ProcessStartInfo
+        try
         {
-            FileName = "dotnet",
-            Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls {backendUrl} --environment Test",
-            WorkingDirectory = SolutionRoot,
-            UseShellExecute = false,
-            RedirectStandardOutput = false,
-            RedirectStandardError = false,
-            CreateNoWindow = true,
-            EnvironmentVariables =
+            await _postgres.StartAsync();
+            postgresStarted = true;
+
+            var connectionString = _postgres.GetConnectionString();
+
+            var backendUrl = "http://localhost:5180";
+            UiUrl = "http://localhost:5181";
+
+            Console.WriteLine($"Solution root: {SolutionRoot}");
+
+            var backendStartInfo = new ProcessStartInfo
             {
-                ["ASPNETCORE_ENVIRONMENT"] = "Test",
-                ["ConnectionStrings__DefaultConnection"] = connectionString,
-                ["SKIP_DB_INIT"] = "true",
-                ["ImapSettings__Server"] = "imap.test.com",
-                ["ImapSettings__Port"] = "993",
-                ["ImapSettings__Username"] = "test@test.com",
-                ["ImapSettings__Password"] = "test",
-                ["ImapSettings__UseSsl"] = "true"
-            }
-        };
-
-        _backendProcess = Process.Start(backendStartInfo);
-        if (_backendProcess == null)
-        {
-            throw new InvalidOperationException("Failed to start backend process");
-        }
-
-        var uiStartInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Ui/PopfileNet.Ui.csproj\" --urls {UiUrl} --environment Test",
-            WorkingDirectory = SolutionRoot,
-            UseShellExecute = false,
-            RedirectStandardOutput = false,
-            RedirectStandardError = false,
-            CreateNoWindow = true,
-            EnvironmentVariables =
-            {
-                ["ASPNETCORE_ENVIRONMENT"] = "Test",
-                ["services__popfilenet-backend__http__0"] = backendUrl,
-                ["ConnectionStrings__DefaultConnection"] = connectionString,
-                ["SKIP_DB_INIT"] = "true"
-            }
-        };
-
-        _uiProcess = Process.Start(uiStartInfo);
-        if (_uiProcess == null)
-        {
-            throw new InvalidOperationException("Failed to start UI process");
-        }
-
-        const int maxAttempts = 60;
-        for (var i = 0; i < maxAttempts; i++)
-        {
-            try
-            {
-                using var client = new HttpClient();
-                var response = await client.GetAsync(UiUrl);
-                if (response.IsSuccessStatusCode)
+                FileName = "dotnet",
+                Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls {backendUrl} --environment Test",
+                WorkingDirectory = SolutionRoot,
+                UseShellExecute = false,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
+                CreateNoWindow = true,
+                EnvironmentVariables =
                 {
-                    Console.WriteLine($"UI is ready at {UiUrl}");
-                    return;
+                    ["ASPNETCORE_ENVIRONMENT"] = "Test",
+                    ["ConnectionStrings__popfilenet"] = connectionString,
+                    ["SkipDbInit"] = "true"
                 }
-            }
-            catch (Exception ex)
+            };
+
+            _backendProcess = Process.Start(backendStartInfo);
+            if (_backendProcess == null)
             {
-                Console.WriteLine($"Attempt {i + 1}: {ex.Message}");
+                throw new InvalidOperationException("Failed to start backend process");
             }
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            backendStarted = true;
+
+            var uiStartInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Ui/PopfileNet.Ui.csproj\" --urls {UiUrl} --environment Test",
+                WorkingDirectory = SolutionRoot,
+                UseShellExecute = false,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
+                CreateNoWindow = true,
+                EnvironmentVariables =
+                {
+                    ["ASPNETCORE_ENVIRONMENT"] = "Test",
+                    ["ConnectionStrings__popfilenet"] = connectionString,
+                    ["SkipDbInit"] = "true",
+                    ["services__popfilenet-backend__http__0"] = backendUrl
+                }
+            };
+
+            _uiProcess = Process.Start(uiStartInfo);
+            if (_uiProcess == null)
+            {
+                throw new InvalidOperationException("Failed to start UI process");
+            }
+
+            const int maxAttempts = 60;
+            for (var i = 0; i < maxAttempts; i++)
+            {
+                try
+                {
+                    using var client = new HttpClient();
+                    var response = await client.GetAsync(UiUrl);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine($"UI is ready at {UiUrl}");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Attempt {i + 1}: {ex.Message}");
+                }
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+
+            throw new InvalidOperationException($"UI failed to start at {UiUrl} after {maxAttempts} seconds");
         }
-        
-        throw new InvalidOperationException($"UI failed to start at {UiUrl} after {maxAttempts} seconds");
+        catch
+        {
+            if (backendStarted)
+            {
+                _backendProcess?.Kill(true);
+                _backendProcess?.Dispose();
+            }
+            if (postgresStarted)
+            {
+                await _postgres.DisposeAsync();
+            }
+            throw;
+        }
     }
 
     public async Task DisposeAsync()
