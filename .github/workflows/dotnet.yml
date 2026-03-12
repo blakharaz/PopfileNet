@@ -62,7 +62,7 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportsPaths="TestResults/UnitTests/merged.cobertura.xml"
+        dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportsPaths="TestResults/UnitTests/merged.cobertura.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.sources="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,*.md" /d:sonar.coverage.exclusions="**/*.Tests/**,**/TestResults/**"
         dotnet build --no-restore
         dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
