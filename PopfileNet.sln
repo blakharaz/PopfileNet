@@ -42,6 +42,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.FunctionalTests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.Backend.UnitTests", "Tests\UnitTests\PopfileNet.Backend.UnitTests\PopfileNet.Backend.UnitTests.csproj", "{4ABB314D-BD1A-4B44-8951-F7EC2D8CF7F3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PopfileNet.Database.IntegrationTests", "Tests\IntegrationTests\PopfileNet.Database.IntegrationTests\PopfileNet.Database.IntegrationTests.csproj", "{5D73A685-F309-48D3-8415-A9111AE1E259}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -256,6 +258,18 @@ Global
 		{4ABB314D-BD1A-4B44-8951-F7EC2D8CF7F3}.Release|x64.Build.0 = Release|Any CPU
 		{4ABB314D-BD1A-4B44-8951-F7EC2D8CF7F3}.Release|x86.ActiveCfg = Release|Any CPU
 		{4ABB314D-BD1A-4B44-8951-F7EC2D8CF7F3}.Release|x86.Build.0 = Release|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Debug|x64.Build.0 = Debug|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Debug|x86.Build.0 = Debug|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Release|x64.ActiveCfg = Release|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Release|x64.Build.0 = Release|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Release|x86.ActiveCfg = Release|Any CPU
+		{5D73A685-F309-48D3-8415-A9111AE1E259}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -272,5 +286,6 @@ Global
 		{08C9E1BB-0988-BD0B-E94F-1E38E0DB7406} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{F500A70C-732F-43B5-9E12-4A46753E79BC} = {08C9E1BB-0988-BD0B-E94F-1E38E0DB7406}
 		{4ABB314D-BD1A-4B44-8951-F7EC2D8CF7F3} = {394A81D9-3C45-9818-BB26-23F2B85056FF}
+		{5D73A685-F309-48D3-8415-A9111AE1E259} = {30785934-E017-5D9F-2777-3D61460A5281}
 	EndGlobalSection
 EndGlobal
