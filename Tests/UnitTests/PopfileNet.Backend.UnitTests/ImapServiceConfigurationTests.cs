@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using Microsoft.Extensions.Logging;
 using Moq;
 using PopfileNet.Backend.Services;
@@ -40,7 +40,7 @@ namespace PopfileNet.Backend.UnitTests
 
             var configured = await service.IsConfiguredAsync();
 
-            configured.Should().BeFalse();
+            configured.ShouldBeFalse();
         }
 
         [Fact]
@@ -50,7 +50,7 @@ namespace PopfileNet.Backend.UnitTests
 
             var result = await service.TestConnectionAsync();
 
-            result.Should().BeFalse();
+            result.ShouldBeFalse();
         }
 
         [Fact]
@@ -58,9 +58,9 @@ namespace PopfileNet.Backend.UnitTests
         {
             var service = CreateService(new AppSettings());
 
-            (await service.GetAllPersonalFoldersAsync()).Should().BeEmpty();
-            (await service.FetchEmailIdsAsync()).Should().BeEmpty();
-            (await service.FetchEmailsAsync([])).Should().BeEmpty();
+            (await service.GetAllPersonalFoldersAsync()).ShouldBeEmpty();
+            (await service.FetchEmailIdsAsync()).ShouldBeEmpty();
+            (await service.FetchEmailsAsync([])).ShouldBeEmpty();
         }
     }
 }

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using PopfileNet.Common;
 using Xunit;
 
@@ -18,7 +18,7 @@ public class NaiveBayesianClassifierTests
 
         classifier.Train(trainingData);
 
-        classifier.Should().NotBeNull();
+        classifier.ShouldNotBeNull();
     }
 
     [Fact]
@@ -28,8 +28,7 @@ public class NaiveBayesianClassifierTests
 
         var action = () => classifier.Train(null!);
 
-        action.Should().Throw<ArgumentNullException>()
-            .WithParameterName("trainingData");
+        action.ShouldThrow<ArgumentNullException>();
     }
 
     [Fact]
@@ -40,8 +39,8 @@ public class NaiveBayesianClassifierTests
 
         var action = () => classifier.Train(trainingData);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Training data is empty*");
+        action.ShouldThrow<InvalidOperationException>()
+            .Message.ShouldContain("Training data is empty");
     }
 
     [Fact]
@@ -55,7 +54,7 @@ public class NaiveBayesianClassifierTests
 
         classifier.Train(trainingData);
 
-        classifier.Should().NotBeNull();
+        classifier.ShouldNotBeNull();
     }
 
     [Fact]
@@ -71,7 +70,7 @@ public class NaiveBayesianClassifierTests
 
         classifier.Train(trainingData);
 
-        classifier.Should().NotBeNull();
+        classifier.ShouldNotBeNull();
     }
 
     [Fact]
@@ -88,9 +87,9 @@ public class NaiveBayesianClassifierTests
         var email = CreateSampleEmail("New meeting", "Let's meet next week");
         var result = classifier.Predict(email);
 
-        result.Should().NotBeNull();
-        result.PredictedLabel.Should().NotBeNullOrEmpty();
-        result.Scores.Should().NotBeEmpty();
+        result.ShouldNotBeNull();
+        result.PredictedLabel.ShouldNotBeNullOrEmpty();
+        result.Scores.ShouldNotBeEmpty();
     }
 
     [Fact]
@@ -101,8 +100,8 @@ public class NaiveBayesianClassifierTests
 
         var action = () => classifier.Predict(email);
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Model not trained*");
+        action.ShouldThrow<InvalidOperationException>()
+            .Message.ShouldContain("Model not trained");
     }
 
     [Fact]
@@ -116,7 +115,7 @@ public class NaiveBayesianClassifierTests
 
         var action = () => classifier.Predict(null!);
 
-        action.Should().Throw<ArgumentNullException>();
+        action.ShouldThrow<ArgumentNullException>();
     }
 
     [Fact]
@@ -133,9 +132,9 @@ public class NaiveBayesianClassifierTests
         var email = CreateSampleEmail("New meeting", "Let's meet next week");
         var result = classifier.Predict(email);
 
-        result.Scores.Should().NotBeEmpty();
-        result.Scores.Length.Should().Be(2);
-        result.PredictedLabel.Should().BeOneOf("spam", "ham");
+        result.Scores.ShouldNotBeEmpty();
+        result.Scores.Length.ShouldBe(2);
+        result.PredictedLabel.ShouldBeOneOf("spam", "ham");
     }
 
     [Fact]
@@ -152,8 +151,8 @@ public class NaiveBayesianClassifierTests
         var email = new Email { Subject = "", Body = "" };
         var result = classifier.Predict(email);
 
-        result.Should().NotBeNull();
-        result.PredictedLabel.Should().NotBeNullOrEmpty();
+        result.ShouldNotBeNull();
+        result.PredictedLabel.ShouldNotBeNullOrEmpty();
     }
 
     private static Email CreateSampleEmail(string subject, string body)

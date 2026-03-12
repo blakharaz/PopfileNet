@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+﻿using Shouldly;
 using Xunit;
 
 namespace PopfileNet.Common.UnitTests;
@@ -10,7 +10,7 @@ public class EmailIdTests
     {
         var sut = new EmailId(validity: 5u, id: 7u);
 
-        sut.ToString().Should().Be("5:7");
+        sut.ToString().ShouldBe("5:7");
     }
 
     [Fact]
@@ -18,7 +18,7 @@ public class EmailIdTests
     {
         var sut = new EmailId("5:7");
 
-        sut.Validity.Should().Be(5u);
-        sut.Id.Should().Be(7u);
+        sut.Validity.ShouldBe(5u);
+        sut.Id.ShouldBe(7u);
     }
 }

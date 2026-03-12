@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using PopfileNet.Common;
 using Xunit;
 
@@ -18,10 +18,10 @@ public class MappingTests
 
         var result = PopfileNet.Classifier.Mapping.MapToTrainingData(email, label);
 
-        result.Should().NotBeNull();
-        result.Subject.Should().Be("Test Subject");
-        result.Content.Should().Be("Test Body Content");
-        result.Label.Should().Be("spam");
+        result.ShouldNotBeNull();
+        result.Subject.ShouldBe("Test Subject");
+        result.Content.ShouldBe("Test Body Content");
+        result.Label.ShouldBe("spam");
     }
 
     [Fact]
@@ -35,9 +35,9 @@ public class MappingTests
 
         var result = PopfileNet.Classifier.Mapping.MapToInput(email);
 
-        result.Should().NotBeNull();
-        result.Subject.Should().Be("Test Subject");
-        result.Content.Should().Be("Test Body Content");
+        result.ShouldNotBeNull();
+        result.Subject.ShouldBe("Test Subject");
+        result.Content.ShouldBe("Test Body Content");
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class MappingTests
 
         var action = () => PopfileNet.Classifier.Mapping.MapToTrainingData(null!, label);
 
-        action.Should().Throw<ArgumentNullException>();
+        action.ShouldThrow<ArgumentNullException>();
     }
 
     [Fact]
@@ -55,6 +55,6 @@ public class MappingTests
     {
         var action = () => PopfileNet.Classifier.Mapping.MapToInput(null!);
 
-        action.Should().Throw<ArgumentNullException>();
+        action.ShouldThrow<ArgumentNullException>();
     }
 }
