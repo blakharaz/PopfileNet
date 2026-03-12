@@ -1,63 +1,25 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
-using PopfileNet.Backend;
 using PopfileNet.Backend.Models;
 using Shouldly;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace PopfileNet.IntegrationTests;
 
-public class ClassifierApiTests : IAsyncLifetime
+[Collection("Database")]
+public class ClassifierApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixture)
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder(image: "postgres:16-alpine")
-        .WithDatabase("popfilenet")
-        .WithUsername("test")
-        .WithPassword("test")
-        .Build();
-
-    private HttpClient? _client;
-
-    public async Task InitializeAsync()
+    protected override Task SetupClientAsync()
     {
-        await _postgres.StartAsync();
-        
-        var connectionString = _postgres.GetConnectionString();
-        
-        var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Test");
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:popfilenet"] = connectionString,
-                        ["ImapSettings:Server"] = "imap.test.com",
-                        ["ImapSettings:Port"] = "993",
-                        ["ImapSettings:Username"] = "test@test.com",
-                        ["ImapSettings:Password"] = "test",
-                        ["ImapSettings:UseSsl"] = "true"
-                    });
-                });
-            });
-
-        _client = factory.CreateClient();
+        var factory = CreateWebApplicationFactory(Fixture.ConnectionString);
+        Client = factory.CreateClient();
+        return Task.CompletedTask;
     }
-
-    public async Task DisposeAsync()
-    {
-        _client?.Dispose();
-        await _postgres.DisposeAsync();
-    }
-
+    
     [Fact]
     public async Task GetStatus_ReturnsNotTrained()
     {
-        var response = await _client!.GetAsync("/classifier/status");
+        var response = await Client.GetAsync("/classifier/status");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -71,7 +33,7 @@ public class ClassifierApiTests : IAsyncLifetime
     [Fact]
     public async Task Train_WithNoData_ReturnsBadRequest()
     {
-        var response = await _client!.PostAsync("/classifier/train", null);
+        var response = await Client.PostAsync("/classifier/train", null);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         
@@ -83,7 +45,7 @@ public class ClassifierApiTests : IAsyncLifetime
     [Fact]
     public async Task Predict_WithoutTraining_ReturnsSuccessWithEmptyResult()
     {
-        var response = await _client!.PostAsJsonAsync("/classifier/predict", new PredictRequest("some-email-id"));
+        var response = await Client.PostAsJsonAsync("/classifier/predict", new PredictRequest("some-email-id"));
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         

@@ -7,12 +7,8 @@ using Xunit;
 namespace PopfileNet.IntegrationTests;
 
 [Collection("Database")]
-public class SettingsApiTests : DatabaseTestBase
+public class SettingsApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixture)
 {
-    public SettingsApiTests(DatabaseFixture fixture) : base(fixture)
-    {
-    }
-
     protected override Task SetupClientAsync()
     {
         var factory = CreateWebApplicationFactory(Fixture.ConnectionString);
