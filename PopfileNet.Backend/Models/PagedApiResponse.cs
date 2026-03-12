@@ -51,7 +51,7 @@ public class PagedApiResponse<T>
     /// </summary>
     public bool IsSuccess => Error == null;
 
-    private PagedApiResponse() { }
+    public PagedApiResponse() { }
 
     /// <summary>
     /// Creates a successful paged response.

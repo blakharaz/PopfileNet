@@ -21,7 +21,7 @@ public class ApiResponse<T>
     /// </summary>
     public bool IsSuccess => Error == null;
 
-    private ApiResponse() { }
+    public ApiResponse() { }
 
     /// <summary>
     /// Creates a successful response with the specified value.
