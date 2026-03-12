@@ -51,18 +51,20 @@ jobs:
     - name: Merge coverage files
       run: |
         dotnet-coverage merge "TestResults/UnitTests/**/*.cobertura.xml" -o TestResults/UnitTests/merged.cobertura.xml --output-format cobertura
-    - name: SonarCloud Scan
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: |
-        dotnet sonarscanner begin /k:"PopfileNet" /o:"popfilenet" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportsPaths="TestResults/UnitTests/merged.cobertura.xml" /d:sonar.cs.opencover.reportsPaths="TestResults/UnitTests/merged.cobertura.xml"
-        dotnet build --no-restore
-        dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
     - name: Upload unit coverage
       uses: actions/upload-artifact@v5
+      if: always()
       with:
         name: coverage-unit
         path: TestResults/UnitTests/merged.cobertura.xml
+    - name: SonarCloud Scan
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportsPaths="TestResults/UnitTests/merged.cobertura.xml"
+        dotnet build --no-restore
+        dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
   test-integration:
     needs: build
