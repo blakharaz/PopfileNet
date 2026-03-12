@@ -18,8 +18,6 @@ public class BackendApiSteps
     [Given("the API is running")]
     public void GivenTheApiIsRunning()
     {
-        Environment.SetEnvironmentVariable("SKIP_DB_INIT", "true");
-        
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {

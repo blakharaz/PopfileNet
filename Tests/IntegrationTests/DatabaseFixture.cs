@@ -35,7 +35,12 @@ public class DatabaseFixture : IAsyncLifetime
         optionsBuilder.UseNpgsql(ConnectionString);
         
         await using var dbContext = new PopfileNetDbContext(optionsBuilder.Options);
-        await dbContext.Database.EnsureCreatedAsync();
+        
+        var pending = await dbContext.Database.GetPendingMigrationsAsync();
+        if (pending.Any())
+        {
+            await dbContext.Database.MigrateAsync();
+        }
     }
 
     private async Task InitializeRespawnerAsync()
@@ -45,14 +50,17 @@ public class DatabaseFixture : IAsyncLifetime
         
         _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
-            TablesToIgnore = new Table[] { new Table("__EFMigrationsHistory") },
+            TablesToIgnore = [new Table("__EFMigrationsHistory")],
             WithReseed = false
         });
     }
 
     public async Task ResetDatabaseAsync()
     {
-        if (_respawner == null) return;
+        if (_respawner == null)
+        {
+            return;
+        }
         
         await using var connection = new NpgsqlConnection(ConnectionString);
         await connection.OpenAsync();
@@ -63,9 +71,4 @@ public class DatabaseFixture : IAsyncLifetime
     {
         await Postgres.DisposeAsync();
     }
-}
-
-[CollectionDefinition("Database")]
-public class DatabaseCollection : ICollectionFixture<DatabaseFixture>
-{
 }
