@@ -12,11 +12,11 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
@@ -26,26 +26,38 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
 
-  test-unit:
+  test-unit-and-sonar:
     needs: build
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: 10.0.x
-    - name: Install dotnet-coverage
-      run: dotnet tool install -g dotnet-coverage
+    - name: Install tools
+      run: |
+        dotnet tool install --global dotnet-sonarscanner
+        dotnet tool install -g dotnet-coverage
     - name: Restore
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Unit Tests
-      run: dotnet test PopfileNet.sln --no-build --filter "FullyQualifiedName~.UnitTests." --settings Tests/UnitTests/coverlet.runsettings --logger "console;verbosity=minimal" --results-directory ./TestResults/UnitTests
+    - name: Run unit tests with coverage
+      run: |
+        dotnet test PopfileNet.sln --no-build --filter "FullyQualifiedName~.UnitTests." --settings Tests/UnitTests/coverlet.runsettings --logger "console;verbosity=minimal" --results-directory ./TestResults/UnitTests /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
     - name: Merge coverage files
       run: |
         dotnet-coverage merge "TestResults/UnitTests/**/*.cobertura.xml" -o TestResults/UnitTests/merged.cobertura.xml --output-format cobertura
+    - name: SonarCloud Scan
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        dotnet sonarscanner begin /k:"PopfileNet" /o:"popfilenet" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportsPaths="TestResults/UnitTests/merged.cobertura.xml" /d:sonar.cs.opencover.reportsPaths="TestResults/UnitTests/merged.cobertura.xml"
+        dotnet build --no-restore
+        dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
     - name: Upload unit coverage
       uses: actions/upload-artifact@v5
       with:
@@ -65,13 +77,8 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Integration Tests
-      run: dotnet test Tests/IntegrationTests/PopfileNet.IntegrationTests.csproj --no-build --settings Tests/IntegrationTests/coverlet.runsettings --logger "console;verbosity=minimal" --results-directory ./TestResults/IntegrationTests
-    - name: Upload integration coverage
-      uses: actions/upload-artifact@v5
-      with:
-        name: coverage-integration
-        path: TestResults/IntegrationTests/
+    - name: Run integration tests
+      run: dotnet test Tests/IntegrationTests/PopfileNet.IntegrationTests.csproj --no-build --logger "console;verbosity=minimal" --results-directory ./TestResults/IntegrationTests
 
   test-functional:
     needs: build
@@ -90,17 +97,11 @@ jobs:
       run: |
         npm install -g playwright
         npx playwright install chromium
-    - name: Functional Tests
-      run: dotnet test Tests/FunctionalTests/PopfileNet.FunctionalTests.csproj --no-build --settings Tests/FunctionalTests/coverlet.runsettings --logger "console;verbosity=minimal" --results-directory ./TestResults/FunctionalTests
-    - name: Upload functional coverage
-      uses: actions/upload-artifact@v5
-      if: always()
-      with:
-        name: coverage-functional
-        path: TestResults/FunctionalTests/
+    - name: Run functional tests
+      run: dotnet test Tests/FunctionalTests/PopfileNet.FunctionalTests.csproj --no-build --logger "console;verbosity=minimal" --results-directory ./TestResults/FunctionalTests
 
   coverage-report:
-    needs: [test-unit, test-integration, test-functional]
+    needs: [test-unit-and-sonar, test-integration, test-functional]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
@@ -113,16 +114,6 @@ jobs:
       with:
         name: coverage-unit
         path: ./coverage-unit
-    - name: Download integration coverage
-      uses: actions/download-artifact@v5
-      with:
-        name: coverage-integration
-        path: ./coverage-integration
-    - name: Download functional coverage
-      uses: actions/download-artifact@v5
-      with:
-        name: coverage-functional
-        path: ./coverage-functional
     - name: Generate unit coverage report
       if: hashFiles('./coverage-unit/merged.cobertura.xml')
       run: |
@@ -147,22 +138,6 @@ jobs:
       with:
         name: coverage
         path: ./coverage-unit/
-    - name: Upload integration coverage reports
-      if: always()
-      uses: actions/upload-artifact@v5
-      with:
-        name: coverage-integration-reports
-        path: |
-          ./coverage-integration/
-          ./coveragereport-integration/
-    - name: Upload functional coverage reports
-      if: always()
-      uses: actions/upload-artifact@v5
-      with:
-        name: coverage-functional-reports
-        path: |
-          ./coverage-functional/
-          ./coveragereport-functional/
 
   comment-pr:
     needs: coverage-report
