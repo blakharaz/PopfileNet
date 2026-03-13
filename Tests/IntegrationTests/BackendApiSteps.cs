@@ -1,19 +1,27 @@
 using System.Net;
-using Shouldly;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using PopfileNet.Backend;
 using Reqnroll;
+using Shouldly;
+using Xunit;
 
 namespace PopfileNet.IntegrationTests;
 
 [Binding]
-public class BackendApiSteps
+[Collection("Database")]
+public class BackendApiSteps : IAsyncLifetime
 {
+    private readonly DatabaseFixture _fixture;
     private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
     private HttpResponseMessage? _response;
+
+    public BackendApiSteps(DatabaseFixture fixture)
+    {
+        _fixture = fixture;
+    }
 
     [Given("the API is running")]
     public void GivenTheApiIsRunning()
@@ -26,6 +34,7 @@ public class BackendApiSteps
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
+                        ["ConnectionStrings:popfilenet"] = _fixture.ConnectionString,
                         ["ImapSettings:Server"] = "imap.test.com",
                         ["ImapSettings:Port"] = "993",
                         ["ImapSettings:Username"] = "test@test.com",
@@ -67,5 +76,14 @@ public class BackendApiSteps
     {
         _client?.Dispose();
         _factory?.Dispose();
+    }
+
+    public async Task InitializeAsync()
+    {
+        await _fixture.ResetDatabaseAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
     }
 }
