@@ -9,19 +9,19 @@ public class ApiResponse<T>
     /// <summary>
     /// Gets the value of the response if successful.
     /// </summary>
-    public T? Value { get; private set; }
+    public T? Value { get; set; }
 
     /// <summary>
     /// Gets the error information if the response failed.
     /// </summary>
-    public ApiError? Error { get; private set; }
+    public ApiError? Error { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the response was successful.
     /// </summary>
     public bool IsSuccess => Error == null;
 
-    private ApiResponse() { }
+    public ApiResponse() { }
 
     /// <summary>
     /// Creates a successful response with the specified value.

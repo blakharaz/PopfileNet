@@ -9,22 +9,10 @@ public class PagedApiResponse<T>
     /// <summary>
     /// Gets the collection of items for the current page.
     /// </summary>
-    public IEnumerable<T> Items { get; private set; } = [];
-
-    /// <summary>
-    /// Gets the current page number (1-based).
-    /// </summary>
-    public int Page { get; private set; }
-
-    /// <summary>
-    /// Gets the number of items per page.
-    /// </summary>
-    public int PageSize { get; private set; }
-
-    /// <summary>
-    /// Gets the total number of items across all pages.
-    /// </summary>
-    public int TotalCount { get; private set; }
+    public IEnumerable<T> Items { get; set; } = [];
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
 
     /// <summary>
     /// Gets the total number of pages.
@@ -44,14 +32,14 @@ public class PagedApiResponse<T>
     /// <summary>
     /// Gets the error information if the response failed.
     /// </summary>
-    public ApiError? Error { get; private set; }
+    public ApiError? Error { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the response was successful.
     /// </summary>
     public bool IsSuccess => Error == null;
 
-    private PagedApiResponse() { }
+    public PagedApiResponse() { }
 
     /// <summary>
     /// Creates a successful paged response.
