@@ -1,9 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
-using PopfileNet.Backend;
 using PopfileNet.Backend.Models;
 using Shouldly;
 using Xunit;
@@ -11,42 +7,17 @@ using Xunit;
 namespace PopfileNet.IntegrationTests;
 
 [Collection("Database")]
-public class UiPageIntegrationTests : IAsyncLifetime
+public class UiPageIntegrationTests : DatabaseTestBase
 {
-    private readonly DatabaseFixture _fixture;
-    private HttpClient? _client;
-
-    public UiPageIntegrationTests(DatabaseFixture fixture)
+    public UiPageIntegrationTests(DatabaseFixture fixture) : base(fixture)
     {
-        _fixture = fixture;
     }
 
-    public async Task InitializeAsync()
+    protected override Task SetupClientAsync()
     {
-        var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Test");
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:popfilenet"] = _fixture.ConnectionString,
-                        ["ImapSettings:Server"] = "imap.test.com",
-                        ["ImapSettings:Port"] = "993",
-                        ["ImapSettings:Username"] = "test@test.com",
-                        ["ImapSettings:Password"] = "test",
-                        ["ImapSettings:UseSsl"] = "true"
-                    });
-                });
-            });
-
-        _client = factory.CreateClient();
-    }
-
-    public async Task DisposeAsync()
-    {
-        _client?.Dispose();
+        var factory = CreateWebApplicationFactory(Fixture.ConnectionString);
+        Client = factory.CreateClient();
+        return Task.CompletedTask;
     }
 
     [Fact]
@@ -64,7 +35,7 @@ public class UiPageIntegrationTests : IAsyncLifetime
             }
         };
 
-        var response = await _client!.PostAsJsonAsync("/settings", settings);
+        var response = await Client!.PostAsJsonAsync("/settings", settings);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
@@ -72,7 +43,7 @@ public class UiPageIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task SettingsPage_CanTestConnection()
     {
-        var response = await _client!.PostAsync("/settings/test-connection", null);
+        var response = await Client!.PostAsync("/settings/test-connection", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
     }
@@ -80,7 +51,7 @@ public class UiPageIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ClassifyPage_CanGetStatus()
     {
-        var response = await _client!.GetAsync("/classifier/status");
+        var response = await Client!.GetAsync("/classifier/status");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
@@ -88,7 +59,7 @@ public class UiPageIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task ClassifyPage_CanTrain()
     {
-        var response = await _client!.PostAsync("/classifier/train", null);
+        var response = await Client!.PostAsync("/classifier/train", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
     }
@@ -96,7 +67,7 @@ public class UiPageIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task MailsPage_CanViewMails()
     {
-        var response = await _client!.GetAsync("/mails");
+        var response = await Client!.GetAsync("/mails");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
@@ -104,7 +75,7 @@ public class UiPageIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task MailsPage_CanPaginate()
     {
-        var response = await _client!.GetAsync("/mails?page=1&pageSize=10");
+        var response = await Client!.GetAsync("/mails?page=1&pageSize=10");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -116,7 +87,7 @@ public class UiPageIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task HomePage_CanAccessRoot()
     {
-        var response = await _client!.GetAsync("/");
+        var response = await Client!.GetAsync("/");
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.Redirect);
     }
