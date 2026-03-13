@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using PopfileNet.Backend;
+using PopfileNet.Database;
 using Xunit;
 
 namespace PopfileNet.IntegrationTests;
@@ -35,10 +38,13 @@ public abstract class DatabaseTestBase : IAsyncLifetime
             .WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Test");
-                builder.ConfigureAppConfiguration((_, config) =>
+                
+                // Add connection string BEFORE the app is built so Program.Main sees it
+                builder.ConfigureAppConfiguration((context, config) =>
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
+                        ["ConnectionStrings:popfilenet"] = connectionString,
                         ["ImapSettings:Server"] = "",
                         ["ImapSettings:Port"] = "993",
                         ["ImapSettings:Username"] = "",
