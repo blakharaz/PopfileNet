@@ -11,7 +11,8 @@ namespace PopfileNet.IntegrationTests;
 public class DatabaseFixture : IAsyncLifetime
 {
     public PostgreSqlContainer Postgres { get; private set; } = null!;
-    public string ConnectionString => Postgres.GetConnectionString();
+    private string? _connectionString;
+    public string ConnectionString => _connectionString ?? throw new InvalidOperationException("Database not initialized");
     
     private Respawner? _respawner;
 
@@ -25,6 +26,8 @@ public class DatabaseFixture : IAsyncLifetime
 
         await Postgres.StartAsync();
 
+        _connectionString = Postgres.GetConnectionString();
+        
         await InitializeDatabaseAsync();
         await InitializeRespawnerAsync();
     }
