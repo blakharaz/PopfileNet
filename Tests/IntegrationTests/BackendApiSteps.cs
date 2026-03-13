@@ -13,14 +13,13 @@ namespace PopfileNet.IntegrationTests;
 [Collection("Database")]
 public class BackendApiSteps : IAsyncLifetime
 {
-    private readonly DatabaseFixture _fixture;
+    private readonly DatabaseFixture _fixture = DatabaseFixture.Instance;
     private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
     private HttpResponseMessage? _response;
 
-    public BackendApiSteps(DatabaseFixture fixture)
+    public BackendApiSteps()
     {
-        _fixture = fixture;
     }
 
     [Given("the API is running")]

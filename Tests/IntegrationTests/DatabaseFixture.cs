@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 using PopfileNet.Database;
 using Respawn;
@@ -10,13 +11,19 @@ namespace PopfileNet.IntegrationTests;
 
 public class DatabaseFixture : IAsyncLifetime
 {
+    private static readonly Lazy<Task<DatabaseFixture>> _lazyInstance = new(() => new DatabaseFixture().InitializeAsyncCore());
+    
+    public static DatabaseFixture Instance => _lazyInstance.Value.Result;
+
     public PostgreSqlContainer Postgres { get; private set; } = null!;
     private string? _connectionString;
     public string ConnectionString => _connectionString ?? throw new InvalidOperationException("Database not initialized");
     
     private Respawner? _respawner;
 
-    public async Task InitializeAsync()
+    private DatabaseFixture() { }
+
+    private async Task<DatabaseFixture> InitializeAsyncCore()
     {
         Postgres = new PostgreSqlBuilder(image: "postgres:16-alpine")
             .WithDatabase("popfilenet")
@@ -28,14 +35,28 @@ public class DatabaseFixture : IAsyncLifetime
 
         _connectionString = Postgres.GetConnectionString();
         
-        await InitializeDatabaseAsync();
-        await InitializeRespawnerAsync();
+        try
+        {
+            await InitializeDatabaseAsync();
+            await InitializeRespawnerAsync();
+        }
+        catch
+        {
+            await DisposeAsync();
+            throw;
+        }
+
+        return this;
     }
+
+    public Task InitializeAsync() => InitializeAsyncCore();
 
     private async Task InitializeDatabaseAsync()
     {
         var optionsBuilder = new DbContextOptionsBuilder<PopfileNetDbContext>();
-        optionsBuilder.UseNpgsql(ConnectionString);
+        optionsBuilder
+            .UseNpgsql(ConnectionString)
+            .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
         
         await using var dbContext = new PopfileNetDbContext(optionsBuilder.Options);
         
@@ -54,7 +75,8 @@ public class DatabaseFixture : IAsyncLifetime
         _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             TablesToIgnore = [new Table("__EFMigrationsHistory")],
-            WithReseed = false
+            WithReseed = false,
+            DbAdapter = DbAdapter.Postgres
         });
     }
 

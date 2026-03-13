@@ -166,19 +166,6 @@ namespace PopfileNet.Database.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Settings");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            ImapPassword = "",
-                            ImapPort = 993,
-                            ImapServer = "",
-                            ImapUseSsl = true,
-                            ImapUsername = "",
-                            MaxParallelConnections = 4,
-                            UpdatedAt = new DateTime(2026, 3, 4, 8, 45, 17, 103, DateTimeKind.Utc).AddTicks(1330)
-                        });
                 });
 
             modelBuilder.Entity("PopfileNet.Common.Email", b =>

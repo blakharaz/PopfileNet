@@ -59,12 +59,17 @@ namespace PopfileNet.Database.Migrations
                 oldClrType: typeof(Guid),
                 oldType: "uuid");
 
-            migrationBuilder.UpdateData(
-                table: "Settings",
-                keyColumn: "Id",
-                keyValue: 1,
-                column: "UpdatedAt",
-                value: new DateTime(2026, 3, 5, 7, 39, 48, 780, DateTimeKind.Utc).AddTicks(7130));
+            migrationBuilder.CreateIndex(
+                name: "IX_MailFolders_Name",
+                table: "MailFolders",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Emails_ImapUid_Folder",
+                table: "Emails",
+                columns: new[] { "ImapUid", "Folder" },
+                unique: true);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_MailFolders_Buckets_BucketId",
@@ -80,18 +85,6 @@ namespace PopfileNet.Database.Migrations
                 principalTable: "MailFolders",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MailFolders_Name",
-                table: "MailFolders",
-                column: "Name",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Emails_ImapUid_Folder",
-                table: "Emails",
-                columns: new[] { "ImapUid", "Folder" },
-                unique: true);
         }
 
         /// <inheritdoc />
@@ -158,13 +151,6 @@ namespace PopfileNet.Database.Migrations
                 principalTable: "MailFolders",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
-
-            migrationBuilder.UpdateData(
-                table: "Settings",
-                keyColumn: "Id",
-                keyValue: 1,
-                column: "UpdatedAt",
-                value: new DateTime(2026, 3, 4, 8, 45, 17, 103, DateTimeKind.Utc).AddTicks(1330));
         }
     }
 }

@@ -97,7 +97,6 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
         modelBuilder.Entity<Settings>(entity =>
         {
             entity.HasKey(s => s.Id);
-            entity.HasData(new Settings { Id = 1 });
         });
     }
 }
