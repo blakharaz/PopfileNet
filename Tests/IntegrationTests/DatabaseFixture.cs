@@ -11,17 +11,17 @@ namespace PopfileNet.IntegrationTests;
 
 public class DatabaseFixture : IAsyncLifetime
 {
-    private static readonly Lazy<Task<DatabaseFixture>> _lazyInstance = new(() => new DatabaseFixture().InitializeAsyncCore());
+    private static readonly Lazy<Task<DatabaseFixture>> LazyInstance = new(() => new DatabaseFixture().InitializeAsyncCore());
     
-    public static DatabaseFixture Instance => _lazyInstance.Value.Result;
+    public static DatabaseFixture Instance => LazyInstance.Value.Result;
 
-    public PostgreSqlContainer Postgres { get; private set; } = null!;
+    public PostgreSqlContainer? Postgres { get; private set; }
+
     private string? _connectionString;
     public string ConnectionString => _connectionString ?? throw new InvalidOperationException("Database not initialized");
     
     private Respawner? _respawner;
-
-    private DatabaseFixture() { }
+    private bool _disposed;
 
     private async Task<DatabaseFixture> InitializeAsyncCore()
     {
@@ -94,6 +94,16 @@ public class DatabaseFixture : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await Postgres.DisposeAsync();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        
+        if (Postgres != null)
+        {
+            await Postgres.DisposeAsync();
+        }
     }
 }
