@@ -64,6 +64,7 @@ public partial class Program
             builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
             builder.Services.AddHostedService<EmailSyncBackgroundService>();
         }
+        builder.Services.AddScoped<IDatabaseFacade, EfCoreDatabaseFacadeWrapper>();
 
         var app = builder.Build();
 
