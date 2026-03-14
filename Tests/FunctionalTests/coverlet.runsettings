@@ -1,18 +1,13 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <RunSettings>
   <DataCollectionRunSettings>
     <DataCollectors>
       <DataCollector friendlyName="XPlat code coverage">
         <Configuration>
           <Format>cobertura</Format>
-          <Include>PopfileNet.Ui.*</Include>
-          <Exclude>[*.Tests]*,[*.AppHost]*</Exclude>
-          <ExcludeByAttribute>Obsolete,CompilerGenerated,GeneratedCode,ExcludeFromCodeCoverage</ExcludeByAttribute>
-          <ExcludeByFile>**/Migrations/*.cs,**/Program.cs</ExcludeByFile>
-          <UseSourceLink>true</UseSourceLink>
-          <DeterministicReport>true</DeterministicReport>
+          <UseSourceLink>false</UseSourceLink>
+          <ExcludeByFile>**/Migrations/*.cs</ExcludeByFile>
           <IncludeTestAssembly>false</IncludeTestAssembly>
-          <SkipAutoProps>true</SkipAutoProps>
         </Configuration>
       </DataCollector>
     </DataCollectors>

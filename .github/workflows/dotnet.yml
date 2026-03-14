@@ -47,7 +47,7 @@ jobs:
       run: dotnet build --no-restore
     - name: Run unit tests with coverage
       run: |
-        dotnet test PopfileNet.sln --no-build --filter "FullyQualifiedName~.UnitTests." --settings Tests/UnitTests/coverlet.runsettings --logger "console;verbosity=minimal" --results-directory ./TestResults/UnitTests /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
+        dotnet test PopfileNet.sln --no-build --no-restore --filter "FullyQualifiedName~.UnitTests." --settings Tests/UnitTests/coverlet.runsettings --logger "console;verbosity=minimal" --results-directory ./TestResults/UnitTests /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
     - name: Merge coverage files
       run: |
         dotnet-coverage merge "TestResults/UnitTests/**/*.cobertura.xml" -o TestResults/UnitTests/merged.cobertura.xml --output-format cobertura
@@ -62,7 +62,7 @@ jobs:
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportsPaths="TestResults/UnitTests/merged.cobertura.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.sources="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,*.md" /d:sonar.coverage.exclusions="**/*.Tests/**,**/TestResults/**,**/Migrations/**"
+        dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportsPaths="TestResults/UnitTests/merged.cobertura.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.sources="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,*.md" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
         dotnet build --no-restore
         dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 

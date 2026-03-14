@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using PopfileNet.Backend.BackgroundServices;
 using PopfileNet.Backend.Groups;
@@ -13,6 +14,7 @@ using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 using PopfileNet.ServiceDefaults;
 
+[ExcludeFromCodeCoverage]
 public partial class Program
 {
     public static async Task Main(string[] args)
