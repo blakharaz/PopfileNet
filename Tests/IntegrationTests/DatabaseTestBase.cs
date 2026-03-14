@@ -12,7 +12,7 @@ namespace PopfileNet.IntegrationTests;
 public abstract class DatabaseTestBase : IAsyncLifetime
 {
     protected readonly DatabaseFixture Fixture;
-    protected HttpClient? Client;
+    protected HttpClient Client = null!;
 
     protected DatabaseTestBase(DatabaseFixture fixture)
     {

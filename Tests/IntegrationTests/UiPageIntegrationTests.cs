@@ -35,7 +35,7 @@ public class UiPageIntegrationTests : DatabaseTestBase
             }
         };
 
-        var response = await Client!.PostAsJsonAsync("/settings", settings);
+        var response = await Client.PostAsJsonAsync("/settings", settings);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
@@ -43,7 +43,7 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task SettingsPage_CanTestConnection()
     {
-        var response = await Client!.PostAsync("/settings/test-connection", null);
+        var response = await Client.PostAsync("/settings/test-connection", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
     }
@@ -51,7 +51,7 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task ClassifyPage_CanGetStatus()
     {
-        var response = await Client!.GetAsync("/classifier/status");
+        var response = await Client.GetAsync("/classifier/status");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
@@ -59,7 +59,7 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task ClassifyPage_CanTrain()
     {
-        var response = await Client!.PostAsync("/classifier/train", null);
+        var response = await Client.PostAsync("/classifier/train", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
     }
@@ -67,7 +67,7 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task MailsPage_CanViewMails()
     {
-        var response = await Client!.GetAsync("/mails");
+        var response = await Client.GetAsync("/mails");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
@@ -75,7 +75,7 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task MailsPage_CanPaginate()
     {
-        var response = await Client!.GetAsync("/mails?page=1&pageSize=10");
+        var response = await Client.GetAsync("/mails?page=1&pageSize=10");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -87,7 +87,7 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task HomePage_CanAccessRoot()
     {
-        var response = await Client!.GetAsync("/");
+        var response = await Client.GetAsync("/");
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.Redirect);
     }

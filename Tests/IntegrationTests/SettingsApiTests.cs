@@ -23,7 +23,7 @@ public class SettingsApiTests : DatabaseTestBase
     [Fact]
     public async Task GetSettings_ReturnsCurrentSettings()
     {
-        var response = await Client!.GetAsync("/settings");
+        var response = await Client.GetAsync("/settings");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -47,7 +47,7 @@ public class SettingsApiTests : DatabaseTestBase
             }
         };
 
-        var response = await Client!.PostAsJsonAsync("/settings", settings);
+        var response = await Client.PostAsJsonAsync("/settings", settings);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -59,7 +59,7 @@ public class SettingsApiTests : DatabaseTestBase
     [Fact]
     public async Task TestConnection_WithConfiguration_ReturnsOk()
     {
-        var response = await Client!.PostAsync("/settings/test-connection", null);
+        var response = await Client.PostAsync("/settings/test-connection", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
     }
@@ -67,7 +67,7 @@ public class SettingsApiTests : DatabaseTestBase
     [Fact]
     public async Task GetBuckets_ReturnsPagedResults()
     {
-        var response = await Client!.GetAsync("/settings/buckets");
+        var response = await Client.GetAsync("/settings/buckets");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -81,7 +81,7 @@ public class SettingsApiTests : DatabaseTestBase
     {
         var bucket = new BucketDto("", "Test Bucket", "Test Description");
 
-        var response = await Client!.PostAsJsonAsync("/settings/buckets", bucket);
+        var response = await Client.PostAsJsonAsync("/settings/buckets", bucket);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         
@@ -95,7 +95,7 @@ public class SettingsApiTests : DatabaseTestBase
     [Fact]
     public async Task UpdateBucket_ReturnsSuccess()
     {
-        var createResponse = await Client!.PostAsJsonAsync("/settings/buckets", 
+        var createResponse = await Client.PostAsJsonAsync("/settings/buckets", 
             new BucketDto("", "Original Name", "Original Description"));
         var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<BucketDto>>();
         
@@ -113,7 +113,7 @@ public class SettingsApiTests : DatabaseTestBase
     [Fact]
     public async Task DeleteBucket_ReturnsNoContent()
     {
-        var createResponse = await Client!.PostAsJsonAsync("/settings/buckets", 
+        var createResponse = await Client.PostAsJsonAsync("/settings/buckets", 
             new BucketDto("", "To Delete", "Description"));
         var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<BucketDto>>();
         
