@@ -1,6 +1,5 @@
 using Moq;
-using PopfileNet.Database.DatabaseMaintenance;
-using PopfileNet.Database.Migration;
+using PopfileNet.Database.Maintenance;
 using Shouldly;
 using Xunit;
 

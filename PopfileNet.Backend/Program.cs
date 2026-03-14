@@ -4,8 +4,7 @@ using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
-using PopfileNet.Database.DatabaseMaintenance;
-using PopfileNet.Database.Migration;
+using PopfileNet.Database.Maintenance;
 using PopfileNet.Database.Repositories;
 using InvalidDataException = System.IO.InvalidDataException;
 

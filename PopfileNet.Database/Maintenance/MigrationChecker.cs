@@ -1,7 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using PopfileNet.Database.Migration;
-
-namespace PopfileNet.Database.DatabaseMaintenance;
+namespace PopfileNet.Database.Maintenance;
 
 public class MigrationChecker(IDatabaseFacade database) : IMigrationChecker
 {

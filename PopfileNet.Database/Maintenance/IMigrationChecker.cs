@@ -1,4 +1,4 @@
-namespace PopfileNet.Database.DatabaseMaintenance;
+namespace PopfileNet.Database.Maintenance;
 
 public interface IMigrationChecker
 {

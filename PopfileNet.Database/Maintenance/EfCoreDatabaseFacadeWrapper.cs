@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
-namespace PopfileNet.Database.Migration;
+namespace PopfileNet.Database.Maintenance;
 
 [ExcludeFromCodeCoverage(Justification = "Thin wrapper for testable database operations, not worth testing directly.")]
 public class EfCoreDatabaseFacadeWrapper(PopfileNetDbContext dbContext) : IDatabaseFacade

@@ -1,4 +1,4 @@
-namespace PopfileNet.Database.Migration;
+namespace PopfileNet.Database.Maintenance;
 
 public interface IDatabaseFacade
 {
