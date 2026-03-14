@@ -1,8 +1,11 @@
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using PopfileNet.Backend;
+using PopfileNet.Database;
 using Reqnroll;
 using Shouldly;
 using Xunit;
@@ -25,6 +28,8 @@ public class BackendApiSteps : IAsyncLifetime
     [Given("the API is running")]
     public void GivenTheApiIsRunning()
     {
+        var connectionString = _fixture.ConnectionString;
+        
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
@@ -34,13 +39,21 @@ public class BackendApiSteps : IAsyncLifetime
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:popfilenet"] = _fixture.ConnectionString,
+                        ["ConnectionStrings:popfilenet"] = connectionString,
                         ["ImapSettings:Server"] = "",
                         ["ImapSettings:Port"] = "993",
                         ["ImapSettings:Username"] = "",
                         ["ImapSettings:Password"] = "",
                         ["ImapSettings:UseSsl"] = "true",
                         ["SyncInterval"] = "01:00:00"
+                    });
+                });
+
+                builder.ConfigureServices(services =>
+                {
+                    services.AddDbContext<PopfileNetDbContext>(options =>
+                    {
+                        options.UseNpgsql(connectionString);
                     });
                 });
             });

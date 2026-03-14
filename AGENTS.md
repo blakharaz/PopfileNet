@@ -57,6 +57,23 @@ Follow these external guidelines for all code changes:
 - Configuration via appsettings.json
 - **One class/record per file** - each type should be in its own file with matching filename
 
+## Testing
+
+### Integration Tests
+Integration tests use **Testcontainers** to spin up a real PostgreSQL database in a Docker/Podman container. Tests are in `Tests/IntegrationTests/`.
+
+To run integration tests:
+```bash
+dotnet test Tests/IntegrationTests
+```
+
+**Requirements:**
+- Docker or Podman must be running
+- Testcontainers for .NET must be able to create containers
+
+### Unit Tests
+Unit tests are in `Tests/UnitTests/` and don't require external dependencies.
+
 ## Git Guidelines
 
 - **Never commit changes unless explicitly requested by the user**

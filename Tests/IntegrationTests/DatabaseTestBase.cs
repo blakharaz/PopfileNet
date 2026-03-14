@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PopfileNet.Backend;
@@ -39,7 +40,6 @@ public abstract class DatabaseTestBase : IAsyncLifetime
             {
                 builder.UseEnvironment("Test");
                 
-                // Add connection string BEFORE the app is built so Program.Main sees it
                 builder.ConfigureAppConfiguration((context, config) =>
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -51,6 +51,14 @@ public abstract class DatabaseTestBase : IAsyncLifetime
                         ["ImapSettings:Password"] = "",
                         ["ImapSettings:UseSsl"] = "true",
                         ["SyncInterval"] = "01:00:00"
+                    });
+                });
+
+                builder.ConfigureServices(services =>
+                {
+                    services.AddDbContext<PopfileNetDbContext>(options =>
+                    {
+                        options.UseNpgsql(connectionString);
                     });
                 });
             });

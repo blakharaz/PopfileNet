@@ -13,15 +13,8 @@ using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 using PopfileNet.ServiceDefaults;
 
-// needs to be partial to allow tests to toggle behaviour
 public partial class Program
 {
-    /// <summary>
-    /// When true the database initialization block in <c>Program</c> is skipped.
-    /// Tests set this flag before constructing a <see cref="WebApplicationFactory{Program}"/>.
-    /// </summary>
-    public static bool SkipDbInitForTests { get; set; }
-
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
