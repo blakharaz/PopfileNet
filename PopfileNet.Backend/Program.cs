@@ -5,6 +5,7 @@ using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
 using PopfileNet.Database.DatabaseMaintenance;
+using PopfileNet.Database.Migration;
 using PopfileNet.Database.Repositories;
 using InvalidDataException = System.IO.InvalidDataException;
 
@@ -30,25 +31,12 @@ public partial class Program
 
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
-            options.SerializerOptions.TypeInfoResolverChain.Insert(0, PopfileNet.Backend.Models.AppJsonSerializerContext.Default);
+            options.SerializerOptions.TypeInfoResolverChain.Insert(0,
+                PopfileNet.Backend.Models.AppJsonSerializerContext.Default);
         });
 
         builder.Services.AddEndpointsApiExplorer();
-
-        var skipDbInit = SkipDbInitForTests
-            || builder.Configuration.GetValue("SkipDbInit", false)
-            || string.Equals(Environment.GetEnvironmentVariable("SKIP_DB_INIT"), "true", StringComparison.OrdinalIgnoreCase)
-            || builder.Environment.IsEnvironment("Test");
-
-        if (!skipDbInit)
-        {
-            builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
-        }
-        else
-        {
-            builder.Services.AddDbContext<PopfileNetDbContext>(options =>
-                options.UseInMemoryDatabase("TestDb"));
-        }
+        builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
 
         var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
                                    ?? throw new InvalidDataException("Missing IMAP settings in app configuration");
@@ -57,14 +45,10 @@ public partial class Program
         builder.Services.AddScoped<IImapClientFactory, ImapClientFactory>();
         builder.Services.AddScoped<IImapService, ImapService>();
         builder.Services.AddScoped<ISettingsService, SettingsService>();
-        
-        if (!skipDbInit)
-        {
-            builder.Services.AddScoped<IEmailRepository, EmailRepository>();
-            builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
-            builder.Services.AddHostedService<EmailSyncBackgroundService>();
-        }
         builder.Services.AddScoped<IDatabaseFacade, EfCoreDatabaseFacadeWrapper>();
+        builder.Services.AddScoped<IEmailRepository, EmailRepository>();
+        builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
+        builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
         var app = builder.Build();
 
@@ -75,28 +59,26 @@ public partial class Program
                 context.Response.Redirect("/mails");
                 return;
             }
+
             await next();
         });
 
         app.UseServiceDefaults();
 
-        if (!skipDbInit)
+        using (var scope = app.Services.CreateScope())
         {
-            using (var scope = app.Services.CreateScope())
+            var migrationChecker = scope.ServiceProvider.GetRequiredService<IMigrationChecker>();
+
+            var hasLegacy = await migrationChecker.HasLegacyTablesAsync();
+            if (hasLegacy)
             {
-                var migrationChecker = scope.ServiceProvider.GetRequiredService<IMigrationChecker>();
-                
-                var hasLegacy = await migrationChecker.HasLegacyTablesAsync();
-                if (hasLegacy)
-                {
-                    throw new InvalidOperationException(
-                        "Database exists, but is in legacy format. Please delete the existing database and restart the application.");
-                }
-                
-                if (await migrationChecker.HasPendingMigrationsAsync())
-                {
-                    await migrationChecker.ApplyMigrationsAsync();
-                }
+                throw new InvalidOperationException(
+                    "Database exists, but is in legacy format. Please delete the existing database and restart the application.");
+            }
+
+            if (await migrationChecker.HasPendingMigrationsAsync())
+            {
+                await migrationChecker.ApplyMigrationsAsync();
             }
         }
 
@@ -107,6 +89,6 @@ public partial class Program
             .AddCategoriesGroup()
             .AddAccountsGroup();
 
-        app.Run();
+        await app.RunAsync();
     }
 }
