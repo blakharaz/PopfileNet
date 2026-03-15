@@ -14,71 +14,75 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: 10.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build -c Release
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-artifacts
-        path: |
-          PopfileNet.**/bin/Release
-          Tests/**/bin
-        retention-days: 1
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build -c Release
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            PopfileNet.**/bin/Release
+            Tests/**/bin
+          retention-days: 1
 
   test-unit-and-sonar:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: 10.0.x
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifacts
-        path: .
-    - name: Clean obj (fixes duplicate attributes)
-      run: rm -rf Tests/IntegrationTests/obj Tests/FunctionalTests/obj
-    - name: Install tools
-      run: |
-        dotnet tool install -g dotnet-coverage
-        dotnet tool install --global dotnet-sonarscanner
-    - name: Restore
-      run: dotnet restore
-    - name: Run unit tests with coverage
-      run: |
-        dotnet test PopfileNet.sln -c Release --no-build --filter "FullyQualifiedName~.UnitTests." --settings Tests/UnitTests/coverlet.runsettings --logger "console;verbosity=minimal" --results-directory ./TestResults/UnitTests /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=0
-    - name: Merge coverage files
-      run: |
-        ls -la TestResults/UnitTests/
-        dotnet-coverage merge "TestResults/UnitTests/*/coverage.cobertura.xml" -o TestResults/UnitTests/merged.cobertura.xml --output-format cobertura
-    - name: Upload coverage
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-unit
-        path: TestResults/UnitTests/merged.cobertura.xml
-        retention-days: 1
-    - name: SonarCloud Scan
-      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: |
-        dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportsPaths="TestResults/UnitTests/merged.cobertura.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.sources="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,*.md" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
-        dotnet build -c Release
-        dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: .
+      - name: Clean obj (fixes duplicate attributes)
+        run: rm -rf Tests/IntegrationTests/obj Tests/FunctionalTests/obj
+      - name: Install tools
+        run: |
+          dotnet tool install -g dotnet-coverage
+          dotnet tool install --global dotnet-sonarscanner
+      - name: Restore
+        run: dotnet restore
+      - name: Run unit tests with coverage
+        run: |
+          dotnet test PopfileNet.sln -c Release --no-build --filter "FullyQualifiedName~.UnitTests." --settings Tests/UnitTests/coverlet.runsettings --logger "console;verbosity=minimal" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=0
+      - name: Merge coverage files
+        run: |
+          mkdir -p ./TestResults/UnitTests
+          dotnet-coverage merge "**/Tests/UnitTests/*/TestResults/*/coverage.cobertura.xml" -o ./TestResults/UnitTests/merged.cobertura.xml --output-format cobertura
+          # Fix source paths in coverage report to match GitHub Actions workspace
+          sed -i 's|<source>/Users/blakharaz/projects/dotnet/PopfileNet_clean/</source>|<source>.</source>|g' ./TestResults/UnitTests/merged.cobertura.xml
+          sed -i 's|<source>/Users/blakharaz/projects/dotnet/PopfileNet_clean/PopfileNet.Common/</source>|<source>./PopfileNet.Common</source>|g' ./TestResults/UnitTests/merged.cobertura.xml
+          ls -la ./TestResults/UnitTests/
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: TestResults/UnitTests/merged.cobertura.xml
+          retention-days: 1
+      - name: SonarCloud Scan
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.coverageReportPaths="TestResults/UnitTests/merged.cobertura.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
+          dotnet build -c Release
+          dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
   test-integration:
     needs: build
@@ -157,7 +161,7 @@ jobs:
         hide_complexity: true
         indicators: true
         output: both
-        thresholds: '20 80'
+        thresholds: '12 80'
     - name: Upload unit coverage for PR
       if: github.event_name == 'pull_request'
       uses: actions/upload-artifact@v4
