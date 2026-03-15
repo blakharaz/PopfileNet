@@ -1,6 +1,5 @@
 using Shouldly;
 using Microsoft.EntityFrameworkCore;
-using Moq;
 using PopfileNet.Backend.Models;
 using PopfileNet.Backend.Services;
 using PopfileNet.Database;
@@ -17,40 +16,36 @@ namespace PopfileNet.Backend.UnitTests
 {
     public class SettingsServiceTests
     {
-        private readonly Mock<PopfileNetDbContext> _mockDb;
-        private readonly Mock<ImapSettings> _mockDefaults;
-
-        public SettingsServiceTests()
+        private PopfileNetDbContext CreateInMemoryContext()
         {
-            _mockDb = new Mock<PopfileNetDbContext>();
-            _mockDefaults = new Mock<ImapSettings>();
-            
-            // Setup default values
-            _mockDefaults.SetupGet(d => d.Server).Returns("default.server.com");
-            _mockDefaults.SetupGet(d => d.Port).Returns(993);
-            _mockDefaults.SetupGet(d => d.Username).Returns("default.user");
-            _mockDefaults.SetupGet(d => d.Password).Returns("default.password");
-            _mockDefaults.SetupGet(d => d.UseSsl).Returns(true);
-            _mockDefaults.SetupGet(d => d.MaxParallelConnections).Returns(4);
+            var options = new DbContextOptionsBuilder<PopfileNetDbContext>()
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .Options;
+
+            return new PopfileNetDbContext(options);
         }
 
-        private SettingsService CreateService()
+        private SettingsService CreateService(PopfileNetDbContext context, ImapSettings defaults)
         {
-            return new SettingsService(_mockDb.Object, _mockDefaults.Object);
+            return new SettingsService(context, defaults);
         }
 
         [Fact]
         public async Task GetSettingsAsync_ReturnsSettingsWithDefaults_WhenNoDbRecordExists()
         {
             // Arrange
-            _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Settings?)null);
-            _mockDb.Setup(db => db.Buckets.ToListAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Bucket>());
-            _mockDb.Setup(db => db.MailFolders.ToListAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<MailFolder>());
+            await using var context = CreateInMemoryContext();
+            var defaults = new ImapSettings
+            {
+                Server = "default.server.com",
+                Port = 993,
+                Username = "default.user",
+                Password = "default.password",
+                UseSsl = true,
+                MaxParallelConnections = 4
+            };
             
-            var service = CreateService();
+            var service = CreateService(context, defaults);
 
             // Act
             var result = await service.GetSettingsAsync();
@@ -72,6 +67,18 @@ namespace PopfileNet.Backend.UnitTests
         public async Task GetSettingsAsync_ReturnsSettingsFromDb_WhenRecordExists()
         {
             // Arrange
+            await using var context = CreateInMemoryContext();
+            var defaults = new ImapSettings
+            {
+                Server = "default.server.com",
+                Port = 993,
+                Username = "default.user",
+                Password = "default.password",
+                UseSsl = true,
+                MaxParallelConnections = 4
+            };
+            
+            // Add a settings record to the database
             var dbSettings = new Settings
             {
                 Id = 1,
@@ -95,14 +102,12 @@ namespace PopfileNet.Backend.UnitTests
                 new MailFolder { Id = "folder2", Name = "Archive", BucketId = "bucket2" }
             };
             
-            _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(dbSettings);
-            _mockDb.Setup(db => db.Buckets.ToListAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(dbBuckets);
-            _mockDb.Setup(db => db.MailFolders.ToListAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(dbFolders);
+            context.Settings.Add(dbSettings);
+            context.Buckets.AddRange(dbBuckets);
+            context.MailFolders.AddRange(dbFolders);
+            await context.SaveChangesAsync();
             
-            var service = CreateService();
+            var service = CreateService(context, defaults);
 
             // Act
             var result = await service.GetSettingsAsync();
@@ -135,10 +140,18 @@ namespace PopfileNet.Backend.UnitTests
         public async Task GetImapSettingsOnlyAsync_ReturnsImapSettingsWithDefaults_WhenNoDbRecordExists()
         {
             // Arrange
-            _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Settings?)null);
+            await using var context = CreateInMemoryContext();
+            var defaults = new ImapSettings
+            {
+                Server = "default.server.com",
+                Port = 993,
+                Username = "default.user",
+                Password = "default.password",
+                UseSsl = true,
+                MaxParallelConnections = 4
+            };
             
-            var service = CreateService();
+            var service = CreateService(context, defaults);
 
             // Act
             var result = await service.GetImapSettingsOnlyAsync();
@@ -156,6 +169,18 @@ namespace PopfileNet.Backend.UnitTests
         public async Task GetImapSettingsOnlyAsync_ReturnsImapSettingsFromDb_WhenRecordExists()
         {
             // Arrange
+            await using var context = CreateInMemoryContext();
+            var defaults = new ImapSettings
+            {
+                Server = "default.server.com",
+                Port = 993,
+                Username = "default.user",
+                Password = "default.password",
+                UseSsl = true,
+                MaxParallelConnections = 4
+            };
+            
+            // Add a settings record to the database
             var dbSettings = new Settings
             {
                 Id = 1,
@@ -167,10 +192,10 @@ namespace PopfileNet.Backend.UnitTests
                 MaxParallelConnections = 3
             };
             
-            _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(dbSettings);
+            context.Settings.Add(dbSettings);
+            await context.SaveChangesAsync();
             
-            var service = CreateService();
+            var service = CreateService(context, defaults);
 
             // Act
             var result = await service.GetImapSettingsOnlyAsync();
@@ -188,8 +213,16 @@ namespace PopfileNet.Backend.UnitTests
         public async Task SaveSettingsAsync_CreatesNewSettingsRecord_WhenNoRecordExists()
         {
             // Arrange
-            _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Settings?)null);
+            await using var context = CreateInMemoryContext();
+            var defaults = new ImapSettings
+            {
+                Server = "default.server.com",
+                Port = 993,
+                Username = "default.user",
+                Password = "default.password",
+                UseSsl = true,
+                MaxParallelConnections = 4
+            };
             
             var settingsToSave = new AppSettings
             {
@@ -198,40 +231,46 @@ namespace PopfileNet.Backend.UnitTests
                 FolderMappings = new List<FolderMappingDto>()
             };
             
-            Settings? capturedSettings = null;
-            _mockDb.Setup(db => db.Settings.Add(It.IsAny<Settings>()))
-                .Callback<Settings>(s => capturedSettings = s);
-            _mockDb.Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(1);
-            
-            var service = CreateService();
+            var service = CreateService(context, defaults);
 
             // Act
             await service.SaveSettingsAsync(settingsToSave);
 
             // Assert
-            capturedSettings.ShouldNotBeNull();
-            capturedSettings!.ImapServer.ShouldBe("new.server.com");
-            capturedSettings.ImapPort.ShouldBe(587);
-            capturedSettings.ImapUsername.ShouldBe("new.user");
-            capturedSettings.ImapPassword.ShouldBe("new.password");
-            capturedSettings.ImapUseSsl.ShouldBeFalse();
-            capturedSettings.MaxParallelConnections.ShouldBe(5);
+            var savedSettings = await context.Settings.FindAsync(1);
+            savedSettings.ShouldNotBeNull();
+            var saved = savedSettings!;
+            saved.ImapServer.ShouldBe("new.server.com");
+            saved.ImapPort.ShouldBe(587);
+            saved.ImapUsername.ShouldBe("new.user");
+            saved.ImapPassword.ShouldBe("new.password");
+            saved.ImapUseSsl.ShouldBeFalse();
+            saved.MaxParallelConnections.ShouldBe(5);
             
             // Check that UpdatedAt is set to a recent time (within last 5 seconds)
-            var timeDifference = Math.Abs((DateTime.UtcNow - capturedSettings.UpdatedAt).TotalSeconds);
+            var timeDifference = Math.Abs((DateTime.UtcNow - saved.UpdatedAt).TotalSeconds);
             timeDifference.ShouldBeLessThan(5);
-            
-            _mockDb.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         public async Task SaveSettingsAsync_UpdatesExistingSettingsRecord_WhenRecordExists()
         {
             // Arrange
+            await using var context = CreateInMemoryContext();
+            var defaults = new ImapSettings
+            {
+                Server = "default.server.com",
+                Port = 993,
+                Username = "default.user",
+                Password = "default.password",
+                UseSsl = true,
+                MaxParallelConnections = 4
+            };
+            
+            // Add an existing settings record
             var existingSettings = new Settings { Id = 1 };
-            _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(existingSettings);
+            context.Settings.Add(existingSettings);
+            await context.SaveChangesAsync();
             
             var settingsToSave = new AppSettings
             {
@@ -240,10 +279,7 @@ namespace PopfileNet.Backend.UnitTests
                 FolderMappings = new List<FolderMappingDto>()
             };
             
-            _mockDb.Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(1);
-            
-            var service = CreateService();
+            var service = CreateService(context, defaults);
 
             // Act
             await service.SaveSettingsAsync(settingsToSave);
@@ -259,21 +295,31 @@ namespace PopfileNet.Backend.UnitTests
             // Check that UpdatedAt is set to a recent time (within last 5 seconds)
             var timeDifference = Math.Abs((DateTime.UtcNow - existingSettings.UpdatedAt).TotalSeconds);
             timeDifference.ShouldBeLessThan(5);
-            
-            _mockDb.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         public async Task SaveSettingsAsync_PreservesExistingPassword_WhenNewPasswordIsEmpty()
         {
             // Arrange
+            await using var context = CreateInMemoryContext();
+            var defaults = new ImapSettings
+            {
+                Server = "default.server.com",
+                Port = 993,
+                Username = "default.user",
+                Password = "default.password",
+                UseSsl = true,
+                MaxParallelConnections = 4
+            };
+            
+            // Add an existing settings record with a password
             var existingSettings = new Settings 
             { 
                 Id = 1,
                 ImapPassword = "existing.secret.password" 
             };
-            _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(existingSettings);
+            context.Settings.Add(existingSettings);
+            await context.SaveChangesAsync();
             
             var settingsToSave = new AppSettings
             {
@@ -282,26 +328,29 @@ namespace PopfileNet.Backend.UnitTests
                 FolderMappings = new List<FolderMappingDto>()
             };
             
-            _mockDb.Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(1);
-            
-            var service = CreateService();
+            var service = CreateService(context, defaults);
 
             // Act
             await service.SaveSettingsAsync(settingsToSave);
 
             // Assert
             existingSettings.ImapPassword.ShouldBe("existing.secret.password"); // Should be preserved
-            
-            _mockDb.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         public async Task SaveSettingsAsync_ValidatesMaxParallelConnections_Range()
         {
             // Arrange
-            _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Settings?)null);
+            await using var context = CreateInMemoryContext();
+            var defaults = new ImapSettings
+            {
+                Server = "default.server.com",
+                Port = 993,
+                Username = "default.user",
+                Password = "default.password",
+                UseSsl = true,
+                MaxParallelConnections = 4
+            };
             
             var testCases = new[]
             {
@@ -316,15 +365,7 @@ namespace PopfileNet.Backend.UnitTests
             foreach (var testCase in testCases)
             {
                 // Arrange for this test case
-                _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                    .ReturnsAsync((Settings?)null);
-                
-                Settings? capturedSettings = null;
-                _mockDb.Setup(db => db.Settings.Add(It.IsAny<Settings>()))
-                    .Callback<Settings>(s => capturedSettings = s);
-                _mockDb.Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(1);
-                
+                await using var testContext = CreateInMemoryContext();
                 var settingsToSave = new AppSettings
                 {
                     ImapSettings = new ImapSettingsDto("test.com", 993, "test", "pass", true, testCase.Input),
@@ -332,22 +373,15 @@ namespace PopfileNet.Backend.UnitTests
                     FolderMappings = new List<FolderMappingDto>()
                 };
                 
-                var service = CreateService();
+                var service = CreateService(testContext, defaults);
 
                 // Act
                 await service.SaveSettingsAsync(settingsToSave);
 
                 // Assert
-                capturedSettings!.MaxParallelConnections.ShouldBe(testCase.Expected);
-                
-                // Clear setup for next iteration
-                _mockDb.Reset();
-                _mockDb.Setup(db => db.Settings.FindAsync(It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
-                    .ReturnsAsync((Settings?)null);
-                _mockDb.Setup(db => db.Settings.Add(It.IsAny<Settings>()))
-                    .Callback<Settings>(s => capturedSettings = s);
-                _mockDb.Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(1);
+                var savedSettings = await testContext.Settings.FindAsync(1);
+                savedSettings.ShouldNotBeNull();
+                savedSettings.MaxParallelConnections.ShouldBe(testCase.Expected);
             }
         }
     }

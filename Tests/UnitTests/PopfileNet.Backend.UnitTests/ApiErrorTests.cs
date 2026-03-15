@@ -1,5 +1,6 @@
 using Shouldly;
 using PopfileNet.Backend.Models;
+using System.Reflection;
 using Xunit;
 
 namespace PopfileNet.Backend.UnitTests
@@ -29,7 +30,16 @@ namespace PopfileNet.Backend.UnitTests
             var message = "Test message";
             var error = new ApiError(code, message);
 
-            // Act & Assert - Should not be able to modify after construction
+            // Assert - Verify properties are read-only (no setter)
+            var codeProperty = typeof(ApiError).GetProperty(nameof(ApiError.Code));
+            codeProperty.ShouldNotBeNull();
+            codeProperty.SetMethod.ShouldBeNull();
+
+            var messageProperty = typeof(ApiError).GetProperty(nameof(ApiError.Message));
+            messageProperty.ShouldNotBeNull();
+            messageProperty.SetMethod.ShouldBeNull();
+            
+            // Also verify the values are correct
             error.Code.ShouldBe(code);
             error.Message.ShouldBe(message);
         }

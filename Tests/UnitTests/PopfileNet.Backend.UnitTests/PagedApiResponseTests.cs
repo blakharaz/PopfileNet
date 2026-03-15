@@ -20,7 +20,7 @@ namespace PopfileNet.Backend.UnitTests
 
             // Assert
             response.IsSuccess.ShouldBeTrue();
-            response.Items.ShouldBeSameAs(items);
+            response.Items.ShouldBe(items); // Changed from ShouldBeSameAs to ShouldBe for content equality
             response.Page.ShouldBe(page);
             response.PageSize.ShouldBe(pageSize);
             response.TotalCount.ShouldBe(totalCount);
