@@ -4,5 +4,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <CoverletExclude>Program.cs</CoverletExclude>
+  </PropertyGroup>
 </Project>
 

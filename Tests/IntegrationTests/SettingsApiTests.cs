@@ -1,9 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
-using PopfileNet.Backend;
 using PopfileNet.Backend.Models;
 using Shouldly;
 using Xunit;
@@ -11,48 +7,23 @@ using Xunit;
 namespace PopfileNet.IntegrationTests;
 
 [Collection("Database")]
-public class SettingsApiTests : IAsyncLifetime
+public class SettingsApiTests : DatabaseTestBase
 {
-    private readonly DatabaseFixture _fixture;
-    private HttpClient? _client;
-
-    public SettingsApiTests(DatabaseFixture fixture)
+    public SettingsApiTests(DatabaseFixture fixture) : base(fixture)
     {
-        _fixture = fixture;
     }
 
-    public async Task InitializeAsync()
+    protected override Task SetupClientAsync()
     {
-        var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Test");
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:popfilenet"] = _fixture.ConnectionString,
-                        ["ImapSettings:Server"] = "imap.test.com",
-                        ["ImapSettings:Port"] = "993",
-                        ["ImapSettings:Username"] = "test@test.com",
-                        ["ImapSettings:Password"] = "test",
-                        ["ImapSettings:UseSsl"] = "true"
-                    });
-                });
-            });
-
-        _client = factory.CreateClient();
-    }
-
-    public async Task DisposeAsync()
-    {
-        _client?.Dispose();
+        var factory = CreateWebApplicationFactory(Fixture.ConnectionString);
+        Client = factory.CreateClient();
+        return Task.CompletedTask;
     }
 
     [Fact]
     public async Task GetSettings_ReturnsCurrentSettings()
     {
-        var response = await _client!.GetAsync("/settings");
+        var response = await Client.GetAsync("/settings");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -76,7 +47,7 @@ public class SettingsApiTests : IAsyncLifetime
             }
         };
 
-        var response = await _client!.PostAsJsonAsync("/settings", settings);
+        var response = await Client.PostAsJsonAsync("/settings", settings);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -88,7 +59,7 @@ public class SettingsApiTests : IAsyncLifetime
     [Fact]
     public async Task TestConnection_WithConfiguration_ReturnsOk()
     {
-        var response = await _client!.PostAsync("/settings/test-connection", null);
+        var response = await Client.PostAsync("/settings/test-connection", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
     }
@@ -96,7 +67,7 @@ public class SettingsApiTests : IAsyncLifetime
     [Fact]
     public async Task GetBuckets_ReturnsPagedResults()
     {
-        var response = await _client!.GetAsync("/settings/buckets");
+        var response = await Client.GetAsync("/settings/buckets");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -110,7 +81,7 @@ public class SettingsApiTests : IAsyncLifetime
     {
         var bucket = new BucketDto("", "Test Bucket", "Test Description");
 
-        var response = await _client!.PostAsJsonAsync("/settings/buckets", bucket);
+        var response = await Client.PostAsJsonAsync("/settings/buckets", bucket);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         
@@ -124,12 +95,12 @@ public class SettingsApiTests : IAsyncLifetime
     [Fact]
     public async Task UpdateBucket_ReturnsSuccess()
     {
-        var createResponse = await _client!.PostAsJsonAsync("/settings/buckets", 
+        var createResponse = await Client.PostAsJsonAsync("/settings/buckets", 
             new BucketDto("", "Original Name", "Original Description"));
         var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<BucketDto>>();
         
         var update = new BucketDto(created!.Value!.Id, "Updated Name", "Updated Description");
-        var updateResponse = await _client!.PutAsJsonAsync($"/settings/buckets/{created.Value.Id}", update);
+        var updateResponse = await Client.PutAsJsonAsync($"/settings/buckets/{created.Value.Id}", update);
 
         updateResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -142,11 +113,11 @@ public class SettingsApiTests : IAsyncLifetime
     [Fact]
     public async Task DeleteBucket_ReturnsNoContent()
     {
-        var createResponse = await _client!.PostAsJsonAsync("/settings/buckets", 
+        var createResponse = await Client.PostAsJsonAsync("/settings/buckets", 
             new BucketDto("", "To Delete", "Description"));
         var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<BucketDto>>();
         
-        var deleteResponse = await _client!.DeleteAsync($"/settings/buckets/{created!.Value!.Id}");
+        var deleteResponse = await Client.DeleteAsync($"/settings/buckets/{created!.Value!.Id}");
 
         deleteResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
     }
