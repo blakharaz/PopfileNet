@@ -66,24 +66,24 @@ jobs:
         run: |
           mkdir -p ./TestResults/UnitTests
           dotnet-coverage merge "**/Tests/UnitTests/*/TestResults/*/coverage.cobertura.xml" -o ./TestResults/UnitTests/merged.cobertura.xml
-      - name: Convert to OpenCover format for SonarQube
+      - name: Convert to JaCoCo format for SonarQube
         run: |
           dotnet tool install --global dotnet-reportgenerator-globaltool
           reportgenerator -reports:'./TestResults/UnitTests/merged.cobertura.xml' \
             -targetdir:'./TestResults/UnitTests/' \
-            -reporttypes:'OpenCover'
+            -reporttypes:'JaCoCo'
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-unit
-          path: TestResults/UnitTests/merged.opencover.xml
+          path: TestResults/UnitTests/merged.jacoco.xml
           retention-days: 1
       - name: SonarCloud Scan
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.csharp.opencover.reportPaths="TestResults/UnitTests/merged.opencover.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md,**/Migrations/**" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
+          dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.jacoco.reportPaths="TestResults/UnitTests/merged.jacoco.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md,**/Migrations/**" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
           dotnet build -c Release
           dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
