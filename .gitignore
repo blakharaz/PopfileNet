@@ -430,5 +430,5 @@ riderModule.iml
 
 # Code Coverage
 merged.cobertura.xml
+merged.vscoverage.xml
 coverage_files.txt
-

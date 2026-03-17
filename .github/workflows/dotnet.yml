@@ -65,25 +65,20 @@ jobs:
       - name: Merge coverage files (Cobertura format)
         run: |
           mkdir -p ./TestResults/UnitTests
-          dotnet-coverage merge "**/Tests/UnitTests/*/TestResults/*/coverage.cobertura.xml" -o ./TestResults/UnitTests/merged.cobertura.xml
-      - name: Convert to JaCoCo format for SonarQube
-        run: |
-          dotnet tool install --global dotnet-reportgenerator-globaltool
-          reportgenerator -reports:'./TestResults/UnitTests/merged.cobertura.xml' \
-            -targetdir:'./TestResults/UnitTests/' \
-            -reporttypes:'JaCoCo'
+          dotnet-coverage merge "**/Tests/UnitTests/*/TestResults/*/coverage.cobertura.xml" --output ./TestResults/UnitTests/merged.vscoverage.xml --output-format xml
+          dotnet-coverage merge "**/Tests/UnitTests/*/TestResults/*/coverage.cobertura.xml" --output ./TestResults/UnitTests/merged.cobertura.xml --output-format cobertura 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-unit
-          path: TestResults/UnitTests/merged.jacoco.xml
+          path: TestResults/UnitTests/merged.*.xml
           retention-days: 1
       - name: SonarCloud Scan
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.jacoco.reportPaths="TestResults/UnitTests/merged.jacoco.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md,**/Migrations/**" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
+          dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/UnitTests/merged.vscoverage.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md,**/Migrations/**" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
           dotnet build -c Release
           dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
@@ -148,10 +143,10 @@ jobs:
         name: coverage-unit
         path: ./coverage-unit
     - name: Code Coverage Summary (Unit Tests Only)
-      if: hashFiles('./coverage-unit/merged.opencover.xml')
+      if: hashFiles('./coverage-unit/merged.cobertura.xml')
       uses: irongut/CodeCoverageSummary@v1.3.0
       with:
-        filename: ./coverage-unit/merged.opencover.xml
+        filename: ./coverage-unit/merged.cobertura.xml
         badge: true
         fail_below_min: true
         format: markdown
@@ -187,7 +182,7 @@ jobs:
     - name: Check coverage file exists
       id: check_coverage
       run: |
-        if ls *.opencover.xml 1> /dev/null 2>&1; then
+        if ls *.cobertura.xml 1> /dev/null 2>&1; then
           echo "exists=true" >> $GITHUB_OUTPUT
         else
           echo "exists=false" >> $GITHUB_OUTPUT
@@ -196,7 +191,7 @@ jobs:
       if: steps.check_coverage.outputs.exists == 'true'
       run: |
         dotnet tool install --global dotnet-reportgenerator-globaltool
-        reportgenerator -reports:*.opencover.xml -targetdir:report -reporttypes:MarkdownSummaryGithub
+        reportgenerator -reports:*.cobertura.xml -targetdir:report -reporttypes:MarkdownSummaryGithub
         {
           echo "## Code Coverage (Unit Tests)"
           echo ""
@@ -277,9 +272,9 @@ jobs:
         dotnet-version: 10.0.x
     - name: Update README with coverage
       run: |
-        if ls *.opencover.xml 1> /dev/null 2>&1; then
+        if ls *.cobertura.xml 1> /dev/null 2>&1; then
           dotnet tool install --global dotnet-reportgenerator-globaltool
-          reportgenerator -reports:*.opencover.xml -targetdir:report -reporttypes:MarkdownSummaryGithub
+          reportgenerator -reports:*.cobertura.xml -targetdir:report -reporttypes:MarkdownSummaryGithub
           COVERAGE_PCT=$(grep -oP '\d+(?=%)' report/SummaryGithub.md | head -1)
           
           cat > coverage_section.md << EOFMARKER
