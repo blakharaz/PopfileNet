@@ -62,22 +62,22 @@ jobs:
       - name: Run unit tests with coverage
         run: |
           dotnet test PopfileNet.sln -c Release --filter "FullyQualifiedName~.UnitTests." --settings Tests/UnitTests/coverlet.runsettings --logger "console;verbosity=minimal" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=0
-      - name: Merge coverage files
+      - name: Merge coverage files (OpenCover format)
         run: |
           mkdir -p ./TestResults/UnitTests
-          dotnet-coverage merge "**/Tests/UnitTests/*/TestResults/*/coverage.cobertura.xml" -o ./TestResults/UnitTests/merged.cobertura.xml --output-format cobertura
+          dotnet-coverage merge "**/Tests/UnitTests/*/TestResults/*/coverage.cobertura.xml" -o ./TestResults/UnitTests/merged.opencover.xml --output-format opencover
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-unit
-          path: TestResults/UnitTests/merged.cobertura.xml
+          path: TestResults/UnitTests/merged.opencover.xml
           retention-days: 1
       - name: SonarCloud Scan
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/UnitTests/merged.cobertura.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md,**/Migrations/**" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
+          dotnet sonarscanner begin /k:"blakharaz_PopfileNet" /o:"blakharaz" /d:sonar.token="$SONAR_TOKEN" /d:sonar.csharp.opencover.reportPaths="TestResults/UnitTests/merged.opencover.xml" /d:sonar.projectBaseDir="$GITHUB_WORKSPACE" /d:sonar.exclusions="**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md,**/Migrations/**" /d:sonar.coverage.exclusions="**/*.Tests/**,**/Migrations/**"
           dotnet build -c Release
           dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
@@ -142,15 +142,15 @@ jobs:
         name: coverage-unit
         path: ./coverage-unit
     - name: Generate unit coverage report
-      if: hashFiles('./coverage-unit/merged.cobertura.xml')
+      if: hashFiles('./coverage-unit/merged.opencover.xml')
       run: |
         dotnet tool install --global dotnet-reportgenerator-globaltool
-        reportgenerator -reports:'./coverage-unit/merged.cobertura.xml' -targetdir:coveragereport-unit -reporttypes:'Cobertura'
+        reportgenerator -reports:'./coverage-unit/merged.opencover.xml' -targetdir:coveragereport-unit -reporttypes:'Cobertura'
     - name: Code Coverage Summary (Unit Tests Only)
-      if: hashFiles('./coverage-unit/merged.cobertura.xml')
+      if: hashFiles('./coverage-unit/merged.opencover.xml')
       uses: irongut/CodeCoverageSummary@v1.3.0
       with:
-        filename: ./coverage-unit/merged.cobertura.xml
+        filename: ./coverage-unit/merged.opencover.xml
         badge: true
         fail_below_min: true
         format: markdown
