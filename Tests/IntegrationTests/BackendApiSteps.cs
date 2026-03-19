@@ -14,90 +14,59 @@ namespace PopfileNet.IntegrationTests;
 
 [Binding]
 [Collection("Database")]
-public class BackendApiSteps : IAsyncLifetime
+public class BackendApiSteps(DatabaseFixture fixture) : DatabaseTestBase(fixture)
 {
-    private readonly DatabaseFixture _fixture = DatabaseFixture.Instance;
-    private WebApplicationFactory<Program>? _factory;
-    private HttpClient? _client;
     private HttpResponseMessage? _response;
 
-    public BackendApiSteps()
+    protected override Task SetupClientAsync()
     {
+        var factory = CreateWebApplicationFactory(Fixture.ConnectionString);
+        Client = factory.CreateClient();
+        return Task.CompletedTask;
     }
 
     [Given("the API is running")]
     public void GivenTheApiIsRunning()
     {
-        var connectionString = _fixture.ConnectionString;
-        
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Test");
-                
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:popfilenet"] = connectionString,
-                        ["ImapSettings:Server"] = "",
-                        ["ImapSettings:Port"] = "993",
-                        ["ImapSettings:Username"] = "",
-                        ["ImapSettings:Password"] = "",
-                        ["ImapSettings:UseSsl"] = "true",
-                        ["SyncInterval"] = "01:00:00"
-                    });
-                });
-
-                builder.ConfigureServices(services =>
-                {
-                    services.AddDbContext<PopfileNetDbContext>(options =>
-                    {
-                        options.UseNpgsql(connectionString);
-                    });
-                });
-            });
-        
-        _client = _factory.CreateClient();
+        // Client is already initialized by DatabaseTestBase.InitializeAsync()
     }
 
     [When("I request the root endpoint {string}")]
     public async Task WhenIRequestTheRootEndpoint(string endpoint)
     {
-        _response = await _client!.GetAsync(endpoint);
+        Client.ShouldNotBeNull();
+        _response = await Client.GetAsync(endpoint);
     }
 
     [When("I request the accounts endpoint {string}")]
     public async Task WhenIRequestTheAccountsEndpoint(string endpoint)
     {
-        _response = await _client!.GetAsync(endpoint);
+        Client.ShouldNotBeNull();
+        _response = await Client.GetAsync(endpoint);
     }
 
     [Then("I should receive a successful response")]
     public void ThenIShouldReceiveASuccessfulResponse()
     {
-        _response!.StatusCode.ShouldBeOneOf(HttpStatusCode.Redirect, HttpStatusCode.OK);
+        _response.ShouldNotBeNull();
+        _response.StatusCode.ShouldBeOneOf(HttpStatusCode.Redirect, HttpStatusCode.OK);
     }
 
     [Then("I should receive an OK response")]
     public void ThenIShouldReceiveAnOkResponse()
     {
-        _response!.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound);
+        _response.ShouldNotBeNull();
+        _response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound);
     }
 
     [AfterScenario]
     public void Cleanup()
     {
-        _client?.Dispose();
-        _factory?.Dispose();
+        // Client is disposed by DatabaseTestBase.DisposeAsync()
     }
 
-    public async Task InitializeAsync()
+    public new async Task InitializeAsync()
     {
-        await _fixture.ResetDatabaseAsync();
-    }
-
-    public async Task DisposeAsync()
-    {
+        await base.InitializeAsync();
     }
 }
