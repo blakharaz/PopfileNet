@@ -16,7 +16,7 @@ namespace PopfileNet.Backend.UnitTests
 {
     public class SettingsServiceTests
     {
-        private PopfileNetDbContext CreateInMemoryContext()
+        private static PopfileNetDbContext CreateInMemoryContext()
         {
             var options = new DbContextOptionsBuilder<PopfileNetDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -25,7 +25,7 @@ namespace PopfileNet.Backend.UnitTests
             return new PopfileNetDbContext(options);
         }
 
-        private SettingsService CreateService(PopfileNetDbContext context, ImapSettings defaults)
+        private static SettingsService CreateService(PopfileNetDbContext context, ImapSettings defaults)
         {
             return new SettingsService(context, defaults);
         }
