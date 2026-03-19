@@ -11,8 +11,8 @@ public class SettingsApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixtur
 {
     protected override Task SetupClientAsync()
     {
-        var factory = CreateWebApplicationFactory(Fixture.ConnectionString);
-        Client = factory.CreateClient();
+        Factory = CreateWebApplicationFactory(Fixture.ConnectionString);
+        Client = Factory.CreateClient();
         return Task.CompletedTask;
     }
 
@@ -94,8 +94,10 @@ public class SettingsApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixtur
         var createResponse = await Client.PostAsJsonAsync("/settings/buckets", 
             new BucketDto("", "Original Name", "Original Description"));
         var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<BucketDto>>();
+        created.ShouldNotBeNull();
         
-        var update = new BucketDto(created!.Value!.Id, "Updated Name", "Updated Description");
+        var update = new BucketDto(created.Value!.Id, "Updated Name", "Updated Description");
+        created.Value.ShouldNotBeNull();
         var updateResponse = await Client.PutAsJsonAsync($"/settings/buckets/{created.Value.Id}", update);
 
         updateResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -112,8 +114,9 @@ public class SettingsApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixtur
         var createResponse = await Client.PostAsJsonAsync("/settings/buckets", 
             new BucketDto("", "To Delete", "Description"));
         var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<BucketDto>>();
+        created.ShouldNotBeNull();
         
-        var deleteResponse = await Client.DeleteAsync($"/settings/buckets/{created!.Value!.Id}");
+        var deleteResponse = await Client.DeleteAsync($"/settings/buckets/{created.Value!.Id}");
 
         deleteResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
     }
