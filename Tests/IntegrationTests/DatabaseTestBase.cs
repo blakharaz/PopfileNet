@@ -13,8 +13,8 @@ namespace PopfileNet.IntegrationTests;
 public abstract class DatabaseTestBase : IAsyncLifetime
 {
     protected readonly DatabaseFixture Fixture;
-    protected HttpClient? Client;
-    protected WebApplicationFactory<Program>? Factory;
+    protected HttpClient Client = null!;
+    protected WebApplicationFactory<Program> Factory = null!;
 
     protected DatabaseTestBase(DatabaseFixture fixture)
     {
@@ -31,11 +31,8 @@ public abstract class DatabaseTestBase : IAsyncLifetime
 
     public virtual async Task DisposeAsync()
     {
-        Client?.Dispose();
-        if (Factory is not null)
-        {
-            await Factory.DisposeAsync();
-        }
+        Client.Dispose();
+        await Factory.DisposeAsync();
     }
 
     protected static WebApplicationFactory<Program> CreateWebApplicationFactory(string connectionString)

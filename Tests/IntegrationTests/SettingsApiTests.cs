@@ -11,8 +11,8 @@ public class SettingsApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixtur
 {
     protected override Task SetupClientAsync()
     {
-        var factory = CreateWebApplicationFactory(Fixture.ConnectionString);
-        Client = factory.CreateClient();
+        Factory = CreateWebApplicationFactory(Fixture.ConnectionString);
+        Client = Factory.CreateClient();
         return Task.CompletedTask;
     }
 
