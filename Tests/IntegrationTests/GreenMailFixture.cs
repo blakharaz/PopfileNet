@@ -27,7 +27,7 @@ public class GreenMailFixture : IAsyncLifetime
     public IContainer Container { get; }
 
     public int ImapPortValue => Container.GetMappedPublicPort(ImapPort);
-    public string ImapHost => "localhost";
+    private const string ImapHost = "localhost";
 
     public string ImapConnectionString => $"imap://localhost:{ImapPortValue}";
     public string SmtpConnectionString => $"smtp://localhost:{Container.GetMappedPublicPort(SmtpPort)}";
@@ -40,7 +40,8 @@ public class GreenMailFixture : IAsyncLifetime
         {
             await Container.StartAsync();
             Thread.Sleep(2000); // Wait for GreenMail to fully initialize
-            _logger.LogInformation("GreenMail is ready at localhost:{Port}", ImapPortValue);
+            int imapPortValue = ImapPortValue;
+            _logger.LogInformation("GreenMail is ready at localhost:{Port}", imapPortValue);
         }
         catch (Exception ex)
         {

@@ -569,8 +569,10 @@ public class ImapClientServiceTests
     {
         _mockFactory.Setup(f => f.Create()).Returns(_mockClient.Object);
         _mockClient.Setup(c => c.IsConnected).Returns(true);
+#pragma warning disable CS8620, CS8619
         _mockClient.Setup(c => c.GetFolderAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IMailFolder?)null); // Folder doesn't exist
+            .ReturnsAsync((IMailFolder)null!);
+#pragma warning restore CS8620, CS8619
         
         var service = CreateService();
 
@@ -693,7 +695,7 @@ public class ImapClientServiceTests
         var result = await service.FetchEmailsAsync(emailIds, "INBOX");
 
         result.Count.ShouldBe(3);
-        result.Select(e => e.Subject).ToList().ShouldBe(new[] { "Test Subject", "Test Subject", "Test Subject" });
+        result.Select(e => e.Subject).ToList().ShouldBe(TestSubjectsArray);
     }
 
     [Fact]
@@ -761,9 +763,16 @@ public class ImapClientServiceTests
         };
 
         await service.FetchEmailsAsync(emailIds);
+
+        // Verify that the factory was called exactly twice (MaxParallelConnections = 2)
+        _mockFactory.Verify(f => f.Create(), Times.Exactly(2));
+        
+        // Verify both clients were disconnected
+        client1.Verify(c => c.DisconnectAsync(true, It.IsAny<CancellationToken>()), Times.Once);
+        client2.Verify(c => c.DisconnectAsync(true, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private void SetupMockClient(Mock<IImapClient> mock)
+    private static void SetupMockClient(Mock<IImapClient> mock)
     {
         mock.Setup(c => c.IsConnected).Returns(true);
         mock.Setup(c => c.GetFolderAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -778,6 +787,8 @@ public class ImapClientServiceTests
             _mockLogger.Object,
             _mockFactory.Object);
     }
+
+    private static readonly string[] TestSubjectsArray = ["Test Subject", "Test Subject", "Test Subject"];
 
     private static MimeKit.MimeMessage CreateMimeMessage(string subject, string body, string from)
     {

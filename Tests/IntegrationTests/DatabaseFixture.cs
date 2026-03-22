@@ -30,11 +30,28 @@ public class DatabaseFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await Postgres.StartAsync();
-        _connectionString = Postgres.GetConnectionString();
-        
-        await InitializeDatabaseAsync();
-        await InitializeRespawnerAsync();
+        try
+        {
+            await Postgres.StartAsync();
+            _connectionString = Postgres.GetConnectionString();
+            
+            await InitializeDatabaseAsync();
+            await InitializeRespawnerAsync();
+        }
+        catch (Exception)
+        {
+            // Clean up the container on any failure after it was started
+            try
+            {
+                await DisposeAsync();
+            }
+            catch
+            {
+                // Ignore cleanup errors - we want to throw the original exception
+            }
+            
+            throw;
+        }
     }
 
     private async Task InitializeDatabaseAsync()
