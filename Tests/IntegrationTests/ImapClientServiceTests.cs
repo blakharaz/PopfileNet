@@ -1,23 +1,22 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PopfileNet.Imap.Exceptions;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 using Shouldly;
 using Xunit;
 
-namespace PopfileNet.Imap.IntegrationTests;
+namespace PopfileNet.IntegrationTests;
 
 [Collection("GreenMailTests")]
 public class ImapClientServiceTests(GreenMailFixture fixture)
 {
-    private readonly GreenMailFixture _fixture = fixture;
-
     private ImapClientService CreateService()
     {
         var settings = new ImapSettings
         {
             Server = "localhost",
-            Port = 3143,
+            Port = fixture.ImapPortValue,
             Username = "test",
             Password = "test123",
             UseSsl = false,
@@ -44,7 +43,7 @@ public class ImapClientServiceTests(GreenMailFixture fixture)
         var settings = new ImapSettings
         {
             Server = "localhost",
-            Port = 3143,
+            Port = fixture.ImapPortValue,
             Username = "test",
             Password = "wrongpassword",
             UseSsl = false
@@ -86,5 +85,13 @@ public class ImapClientServiceTests(GreenMailFixture fixture)
         var result = await service.FetchEmailsAsync([], "INBOX");
 
         result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task FetchEmailIdsAsync_WithNonExistentFolder_Throws()
+    {
+        var service = CreateService();
+        
+        await Should.ThrowAsync<ImapOperationException>(() => service.FetchEmailIdsAsync("NONEXISTENT"));
     }
 }

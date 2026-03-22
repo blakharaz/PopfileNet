@@ -4,17 +4,41 @@ using PopfileNet.Database.Repositories;
 using Shouldly;
 using Xunit;
 
-namespace PopfileNet.Database.IntegrationTests;
+namespace PopfileNet.IntegrationTests;
 
 [Collection("DatabaseTests")]
-public class FolderRepositoryTests(TestDatabaseFixture fixture)
+public class FolderRepositoryTests(DatabaseFixture fixture)
 {
-    private readonly TestDatabaseFixture _fixture = fixture;
+    private readonly DatabaseFixture _fixture = fixture;
+
+    private async Task ClearTablesAsync()
+    {
+        await using var context = _fixture.CreateDbContext();
+        try
+        {
+#pragma warning disable EF1002 // Hardcoded table names, safe in test context
+            var tables = new[] { "\"Emails\"", "\"MailFolders\"", "\"Buckets\"", "\"EmailHeaders\"" };
+            foreach (var table in tables)
+            {
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE {table} CASCADE");
+                }
+                catch
+                {
+                }
+            }
+#pragma warning restore EF1002
+        }
+        catch
+        {
+        }
+    }
 
     [Fact]
     public async Task InsertFolders_SavesSuccessfully()
     {
-        await _fixture.ClearTablesAsync();
+        await ClearTablesAsync();
         
         await using var context = _fixture.CreateDbContext();
         await context.Database.EnsureCreatedAsync();
@@ -37,7 +61,7 @@ public class FolderRepositoryTests(TestDatabaseFixture fixture)
     [Fact]
     public async Task GetAllFolderIdByNameAsync_ReturnsCorrectMapping()
     {
-        await _fixture.ClearTablesAsync();
+        await ClearTablesAsync();
         
         await using var context = _fixture.CreateDbContext();
         await context.Database.EnsureCreatedAsync();

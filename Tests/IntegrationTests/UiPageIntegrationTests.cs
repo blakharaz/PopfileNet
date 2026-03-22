@@ -6,7 +6,7 @@ using Xunit;
 
 namespace PopfileNet.IntegrationTests;
 
-[Collection("Database")]
+[Collection("DatabaseTests")]
 public class UiPageIntegrationTests : DatabaseTestBase
 {
     public UiPageIntegrationTests(DatabaseFixture fixture) : base(fixture)

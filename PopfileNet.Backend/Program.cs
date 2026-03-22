@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.EntityFrameworkCore;
 using PopfileNet.Backend.BackgroundServices;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.Services;
@@ -7,15 +6,16 @@ using PopfileNet.Common;
 using PopfileNet.Database;
 using PopfileNet.Database.Maintenance;
 using PopfileNet.Database.Repositories;
-using InvalidDataException = System.IO.InvalidDataException;
-
 using PopfileNet.Imap;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 using PopfileNet.ServiceDefaults;
+using InvalidDataException = System.IO.InvalidDataException;
+
+namespace PopfileNet.Backend;
 
 [ExcludeFromCodeCoverage]
-public partial class Program
+public class Program
 {
     public static async Task Main(string[] args)
     {
@@ -26,7 +26,7 @@ public partial class Program
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.TypeInfoResolverChain.Insert(0,
-                PopfileNet.Backend.Models.AppJsonSerializerContext.Default);
+                Models.AppJsonSerializerContext.Default);
         });
 
         builder.Services.AddEndpointsApiExplorer();

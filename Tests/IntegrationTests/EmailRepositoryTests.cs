@@ -4,12 +4,36 @@ using PopfileNet.Database.Repositories;
 using Shouldly;
 using Xunit;
 
-namespace PopfileNet.Database.IntegrationTests;
+namespace PopfileNet.IntegrationTests;
 
 [Collection("DatabaseTests")]
-public class EmailRepositoryTests(TestDatabaseFixture fixture)
+public class EmailRepositoryTests(DatabaseFixture fixture)
 {
-    private readonly TestDatabaseFixture _fixture = fixture;
+    private readonly DatabaseFixture _fixture = fixture;
+
+    private async Task ClearTablesAsync()
+    {
+        await using var context = _fixture.CreateDbContext();
+        try
+        {
+#pragma warning disable EF1002 // Hardcoded table names, safe in test context
+            var tables = new[] { "\"Emails\"", "\"MailFolders\"", "\"Buckets\"", "\"EmailHeaders\"" };
+            foreach (var table in tables)
+            {
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE {table} CASCADE");
+                }
+                catch
+                {
+                }
+            }
+#pragma warning restore EF1002
+        }
+        catch
+        {
+        }
+    }
 
     [Fact]
     public async Task InsertEmailsIgnoringDuplicates_EmptyList_ReturnsZero()
@@ -27,7 +51,7 @@ public class EmailRepositoryTests(TestDatabaseFixture fixture)
     [Fact]
     public async Task GetExistingImapUidsByFolderAsync_WithEmails_ReturnsCorrectMapping()
     {
-        await _fixture.ClearTablesAsync();
+        await ClearTablesAsync();
         
         await using var context = _fixture.CreateDbContext();
         await context.Database.EnsureCreatedAsync();

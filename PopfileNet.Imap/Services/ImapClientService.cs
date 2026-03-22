@@ -228,10 +228,14 @@ public class ImapClientService(
             try
             {
                 if (client.IsConnected)
+                {
                     await client.DisconnectAsync(true, cancellationToken);
+                }
             }
-            catch
+            catch (Exception disconnectEx)
             {
+                // Nothing to do when having exceptions while disconnecting, but we should log them
+                logger.LogError(disconnectEx, "Fehler beim Trennen der IMAP-Verbindung nach Verbindungsfehler");
             }
             finally
             {
@@ -241,7 +245,6 @@ public class ImapClientService(
             throw new ImapConnectionException("Connecting IMAP server failed", ex);
         }
     }
-
 
     public async Task<IList<IMailFolder>> GetAllPersonalFoldersAsync(CancellationToken cancellationToken = default)
     {
