@@ -97,8 +97,3 @@ public class DatabaseFixture : IAsyncLifetime
         await Postgres.DisposeAsync();
     }
 }
-
-[CollectionDefinition("DatabaseTests")]
-public class DatabaseTestsCollection : ICollectionFixture<DatabaseFixture>
-{
-}
