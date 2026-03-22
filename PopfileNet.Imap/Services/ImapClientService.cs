@@ -189,11 +189,14 @@ public class ImapClientService(
                 var folder = string.IsNullOrEmpty(folderName) ? client.Inbox : await client.GetFolderAsync(folderName, cancellationToken);
                 if (!folder.IsOpen)
                 {
-                    folder.Open(FolderAccess.ReadOnly, cancellationToken);
+                    await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
                 }
 
                 var message = folder.GetMessage(uid, cancellationToken);
-                messages.Add((uid, message));
+                if (message != null)
+                {
+                    messages.Add((uid, message));
+                }
             }
             finally
             {
