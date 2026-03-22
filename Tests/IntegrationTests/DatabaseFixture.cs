@@ -11,11 +11,7 @@ namespace PopfileNet.IntegrationTests;
 
 public class DatabaseFixture : IAsyncLifetime
 {
-    private static readonly Lazy<Task<DatabaseFixture>> LazyInstance = new(() => new DatabaseFixture().InitializeAsyncCore());
-    
-    public static DatabaseFixture Instance => LazyInstance.Value.Result;
-
-    public PostgreSqlContainer? Postgres { get; private set; }
+    public PostgreSqlContainer Postgres { get; }
 
     private string? _connectionString;
     public string ConnectionString => _connectionString ?? throw new InvalidOperationException("Database not initialized");
@@ -23,33 +19,40 @@ public class DatabaseFixture : IAsyncLifetime
     private Respawner? _respawner;
     private bool _disposed;
 
-    private async Task<DatabaseFixture> InitializeAsyncCore()
+    public DatabaseFixture()
     {
         Postgres = new PostgreSqlBuilder(image: "postgres:16-alpine")
             .WithDatabase("popfilenet")
             .WithUsername("test")
             .WithPassword("test")
             .Build();
+    }
 
-        await Postgres.StartAsync();
-
-        _connectionString = Postgres.GetConnectionString();
-        
+    public async Task InitializeAsync()
+    {
         try
         {
+            await Postgres.StartAsync();
+            _connectionString = Postgres.GetConnectionString();
+            
             await InitializeDatabaseAsync();
             await InitializeRespawnerAsync();
         }
-        catch
+        catch (Exception)
         {
-            await DisposeAsync();
+            // Clean up the container on any failure after it was started
+            try
+            {
+                await DisposeAsync();
+            }
+            catch
+            {
+                // Ignore cleanup errors - we want to throw the original exception
+            }
+            
             throw;
         }
-
-        return this;
     }
-
-    public Task InitializeAsync() => InitializeAsyncCore();
 
     private async Task InitializeDatabaseAsync()
     {
@@ -80,6 +83,14 @@ public class DatabaseFixture : IAsyncLifetime
         });
     }
 
+    public PopfileNetDbContext CreateDbContext()
+    {
+        var options = new DbContextOptionsBuilder<PopfileNetDbContext>()
+            .UseNpgsql(ConnectionString)
+            .Options;
+        return new PopfileNetDbContext(options);
+    }
+
     public async Task ResetDatabaseAsync()
     {
         if (_respawner == null)
@@ -100,10 +111,6 @@ public class DatabaseFixture : IAsyncLifetime
         }
 
         _disposed = true;
-        
-        if (Postgres != null)
-        {
-            await Postgres.DisposeAsync();
-        }
+        await Postgres.DisposeAsync();
     }
 }

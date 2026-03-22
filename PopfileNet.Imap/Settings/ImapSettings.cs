@@ -1,6 +1,6 @@
 namespace PopfileNet.Imap.Settings;
 
-public class ImapSettings
+public record ImapSettings
 {
     public required string Server { get; init; }
     public int Port { get; init; } = 993;

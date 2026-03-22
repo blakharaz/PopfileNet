@@ -6,7 +6,7 @@ using Xunit;
 
 namespace PopfileNet.IntegrationTests;
 
-[Collection("Database")]
+[Collection("DatabaseTests")]
 public class SettingsApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixture)
 {
     protected override Task SetupClientAsync()

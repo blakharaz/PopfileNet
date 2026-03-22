@@ -189,11 +189,14 @@ public class ImapClientService(
                 var folder = string.IsNullOrEmpty(folderName) ? client.Inbox : await client.GetFolderAsync(folderName, cancellationToken);
                 if (!folder.IsOpen)
                 {
-                    folder.Open(FolderAccess.ReadOnly, cancellationToken);
+                    await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
                 }
 
                 var message = folder.GetMessage(uid, cancellationToken);
-                messages.Add((uid, message));
+                if (message != null)
+                {
+                    messages.Add((uid, message));
+                }
             }
             finally
             {
@@ -228,10 +231,14 @@ public class ImapClientService(
             try
             {
                 if (client.IsConnected)
+                {
                     await client.DisconnectAsync(true, cancellationToken);
+                }
             }
-            catch
+            catch (Exception disconnectEx)
             {
+                // Nothing to do when having exceptions while disconnecting, but we should log them
+                logger.LogError(disconnectEx, "Fehler beim Trennen der IMAP-Verbindung nach Verbindungsfehler");
             }
             finally
             {
@@ -241,7 +248,6 @@ public class ImapClientService(
             throw new ImapConnectionException("Connecting IMAP server failed", ex);
         }
     }
-
 
     public async Task<IList<IMailFolder>> GetAllPersonalFoldersAsync(CancellationToken cancellationToken = default)
     {

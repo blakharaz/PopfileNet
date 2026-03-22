@@ -10,6 +10,7 @@ using Xunit;
 
 namespace PopfileNet.IntegrationTests;
 
+[Collection("DatabaseTests")]
 public abstract class DatabaseTestBase : IAsyncLifetime
 {
     protected readonly DatabaseFixture Fixture;
@@ -21,7 +22,7 @@ public abstract class DatabaseTestBase : IAsyncLifetime
         Fixture = fixture;
     }
 
-    public async Task InitializeAsync()
+    public virtual async Task InitializeAsync()
     {
         await Fixture.ResetDatabaseAsync();
         await SetupClientAsync();
@@ -31,12 +32,17 @@ public abstract class DatabaseTestBase : IAsyncLifetime
 
     public virtual async Task DisposeAsync()
     {
-        Client.Dispose();
-        await Factory.DisposeAsync();
+        Client?.Dispose();
+        if (Factory is not null)
+        {
+            await Factory.DisposeAsync();
+        }
     }
 
-    protected static WebApplicationFactory<Program> CreateWebApplicationFactory(string connectionString)
+    protected WebApplicationFactory<Program> CreateWebApplicationFactory(string? connectionString = null)
     {
+        var connString = connectionString ?? Fixture.ConnectionString;
+        
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
@@ -46,7 +52,7 @@ public abstract class DatabaseTestBase : IAsyncLifetime
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:popfilenet"] = connectionString
+                        ["ConnectionStrings:popfilenet"] = connString
                     });
                 });
 
@@ -54,7 +60,7 @@ public abstract class DatabaseTestBase : IAsyncLifetime
                 {
                     services.AddDbContext<PopfileNetDbContext>(options =>
                     {
-                        options.UseNpgsql(connectionString);
+                        options.UseNpgsql(connString);
                     });
                 });
             });
