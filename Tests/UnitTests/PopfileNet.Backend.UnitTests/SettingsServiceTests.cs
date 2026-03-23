@@ -337,52 +337,355 @@ namespace PopfileNet.Backend.UnitTests
             existingSettings.ImapPassword.ShouldBe("existing.secret.password"); // Should be preserved
         }
 
-        [Fact]
-        public async Task SaveSettingsAsync_ValidatesMaxParallelConnections_Range()
-        {
-            // Arrange
-            await using var context = CreateInMemoryContext();
-            var defaults = new ImapSettings
-            {
-                Server = "default.server.com",
-                Port = 993,
-                Username = "default.user",
-                Password = "default.password",
-                UseSsl = true,
-                MaxParallelConnections = 4
-            };
-            
-            var testCases = new[]
-            {
-                new { Input = 0, Expected = 4 },    // Below minimum -> default
-                new { Input = 1, Expected = 1 },    // Minimum valid
-                new { Input = 10, Expected = 10 },  // Middle valid
-                new { Input = 20, Expected = 20 },  // Maximum valid
-                new { Input = 21, Expected = 4 },   // Above maximum -> default
-                new { Input = 100, Expected = 4 }   // Way above -> default
-            };
-            
-            foreach (var testCase in testCases)
-            {
-                // Arrange for this test case
-                await using var testContext = CreateInMemoryContext();
-                var settingsToSave = new AppSettings
-                {
-                    ImapSettings = new ImapSettingsDto("test.com", 993, "test", "pass", true, testCase.Input),
-                    Buckets = new List<BucketDto>(),
-                    FolderMappings = new List<FolderMappingDto>()
-                };
-                
-                var service = CreateService(testContext, defaults);
+         [Fact]
+         public async Task SaveSettingsAsync_ValidatesMaxParallelConnections_Range()
+         {
+             // Arrange
+             await using var context = CreateInMemoryContext();
+             var defaults = new ImapSettings
+             {
+                 Server = "default.server.com",
+                 Port = 993,
+                 Username = "default.user",
+                 Password = "default.password",
+                 UseSsl = true,
+                 MaxParallelConnections = 4
+             };
+             
+             var testCases = new[]
+             {
+                 new { Input = 0, Expected = 4 },    // Below minimum -> default
+                 new { Input = 1, Expected = 1 },    // Minimum valid
+                 new { Input = 10, Expected = 10 },  // Middle valid
+                 new { Input = 20, Expected = 20 },  // Maximum valid
+                 new { Input = 21, Expected = 4 },   // Above maximum -> default
+                 new { Input = 100, Expected = 4 }   // Way above -> default
+             };
+             
+             foreach (var testCase in testCases)
+             {
+                 // Arrange for this test case
+                 await using var testContext = CreateInMemoryContext();
+                 var settingsToSave = new AppSettings
+                 {
+                     ImapSettings = new ImapSettingsDto("test.com", 993, "test", "pass", true, testCase.Input),
+                     Buckets = new List<BucketDto>(),
+                     FolderMappings = new List<FolderMappingDto>()
+                 };
+                 
+                 var service = CreateService(testContext, defaults);
+ 
+                 // Act
+                 await service.SaveSettingsAsync(settingsToSave);
+ 
+                 // Assert
+                 var savedSettings = await testContext.Settings.FindAsync(1);
+                 savedSettings.ShouldNotBeNull();
+                 savedSettings.MaxParallelConnections.ShouldBe(testCase.Expected);
+             }
+         }
 
-                // Act
-                await service.SaveSettingsAsync(settingsToSave);
+         [Fact]
+         public async Task GetFolderMappingsAsync_ReturnsEmptyList_WhenNoFoldersExist()
+         {
+             // Arrange
+             await using var context = CreateInMemoryContext();
+             var defaults = new ImapSettings
+             {
+                 Server = "default.server.com",
+                 Port = 993,
+                 Username = "default.user",
+                 Password = "default.password",
+                 UseSsl = true,
+                 MaxParallelConnections = 4
+             };
+             
+             var service = CreateService(context, defaults);
+ 
+             // Act
+             var result = await service.GetFolderMappingsAsync();
+ 
+             // Assert
+             result.ShouldNotBeNull();
+             result.ShouldBeEmpty();
+         }
+ 
+          [Fact]
+          public async Task GetFolderMappingsAsync_ReturnsCorrectMappings_WhenFoldersExist()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              // Add folders with different bucket assignments
+              var dbFolders = new List<MailFolder>
+              {
+                  new MailFolder { Id = "folder1", Name = "Inbox", BucketId = "bucket1" },
+                  new MailFolder { Id = "folder2", Name = "Work", BucketId = "bucket2" },
+                  new MailFolder { Id = "folder3", Name = "Archive", BucketId = null } // No bucket assignment
+              };
+              
+              context.MailFolders.AddRange(dbFolders);
+              await context.SaveChangesAsync();
+              
+              var service = CreateService(context, defaults);
+              
+              // Act
+              var result = await service.GetFolderMappingsAsync();
+              
+              // Assert
+              result.ShouldNotBeNull();
+              result.Count.ShouldBe(3);
+              
+              // Find each folder mapping by name and verify
+              var inboxMapping = result.FirstOrDefault(f => f.Name == "Inbox");
+              inboxMapping.ShouldNotBeNull();
+              inboxMapping.BucketId.ShouldBe("bucket1");
+              
+              var workMapping = result.FirstOrDefault(f => f.Name == "Work");
+              workMapping.ShouldNotBeNull();
+              workMapping.BucketId.ShouldBe("bucket2");
+              
+              var archiveMapping = result.FirstOrDefault(f => f.Name == "Archive");
+              archiveMapping.ShouldNotBeNull();
+              archiveMapping.BucketId.ShouldBeNull();
+          }
 
-                // Assert
-                var savedSettings = await testContext.Settings.FindAsync(1);
-                savedSettings.ShouldNotBeNull();
-                savedSettings.MaxParallelConnections.ShouldBe(testCase.Expected);
-            }
-        }
-    }
+          [Fact]
+          public async Task SetFolderMappingAsync_SetsFolderToBucket_WhenFolderAndBucketExist()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              var folder = new MailFolder { Id = Guid.NewGuid().ToString(), Name = "TestFolder" };
+              var bucket = new Bucket { Id = Guid.NewGuid().ToString(), Name = "TestBucket" };
+              
+              context.MailFolders.Add(folder);
+              context.Buckets.Add(bucket);
+              await context.SaveChangesAsync();
+              
+              var service = CreateService(context, defaults);
+              
+              // Act
+              await service.SetFolderMappingAsync(folder.Name, bucket.Id);
+              
+              // Assert
+              var updatedFolder = await context.MailFolders.FirstOrDefaultAsync(f => f.Name == folder.Name);
+              updatedFolder.ShouldNotBeNull();
+              updatedFolder.BucketId.ShouldBe(bucket.Id);
+          }
+
+          [Fact]
+          public async Task SetFolderMappingAsync_SetsFolderToNull_WhenBucketIdIsNull()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              var folder = new MailFolder { Id = Guid.NewGuid().ToString(), Name = "TestFolder" };
+              var bucket = new Bucket { Id = Guid.NewGuid().ToString(), Name = "TestBucket" };
+              
+              // Start with the folder assigned to a bucket
+              folder.BucketId = bucket.Id;
+              context.MailFolders.Add(folder);
+              context.Buckets.Add(bucket);
+              await context.SaveChangesAsync();
+              
+              var service = CreateService(context, defaults);
+              
+              // Act
+              await service.SetFolderMappingAsync(folder.Name, null);
+              
+              // Assert
+              var updatedFolder = await context.MailFolders.FirstOrDefaultAsync(f => f.Name == folder.Name);
+              updatedFolder.ShouldNotBeNull();
+              updatedFolder.BucketId.ShouldBeNull();
+          }
+
+          [Fact]
+          public async Task SetFolderMappingAsync_ThrowsKeyNotFoundException_WhenFolderDoesNotExist()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              var bucket = new Bucket { Id = Guid.NewGuid().ToString(), Name = "TestBucket" };
+              context.Buckets.Add(bucket);
+              await context.SaveChangesAsync();
+              
+              var service = CreateService(context, defaults);
+              
+              // Act
+              Func<Task> act = async () => await service.SetFolderMappingAsync("NonExistentFolder", bucket.Id);
+              
+              // Assert
+              await act.ShouldThrowAsync<KeyNotFoundException>();
+          }
+
+          [Fact]
+          public async Task SetFolderMappingAsync_ThrowsKeyNotFoundException_WhenBucketDoesNotExist()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              var folder = new MailFolder { Id = Guid.NewGuid().ToString(), Name = "TestFolder" };
+              context.MailFolders.Add(folder);
+              await context.SaveChangesAsync();
+              
+              var service = CreateService(context, defaults);
+              
+              // Act
+              Func<Task> act = async () => await service.SetFolderMappingAsync(folder.Name, Guid.NewGuid().ToString());
+              
+              // Assert
+              await act.ShouldThrowAsync<KeyNotFoundException>();
+          }
+
+          [Fact]
+          public async Task SetFolderMappingAsync_ThrowsArgumentException_WhenFolderNameIsNullOrEmpty()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              var service = CreateService(context, defaults);
+              
+              // Act & Assert
+              await Assert.ThrowsAsync<ArgumentException>(() => service.SetFolderMappingAsync(null!, "bucketId"));
+              await Assert.ThrowsAsync<ArgumentException>(() => service.SetFolderMappingAsync(string.Empty, "bucketId"));
+              await Assert.ThrowsAsync<ArgumentException>(() => service.SetFolderMappingAsync("   ", "bucketId"));
+          }
+
+          [Fact]
+          public async Task RemoveFolderMappingAsync_RemovesFolderMapping_WhenFolderExists()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              var folder = new MailFolder { Id = Guid.NewGuid().ToString(), Name = "TestFolder" };
+              var bucket = new Bucket { Id = Guid.NewGuid().ToString(), Name = "TestBucket" };
+              
+              // Start with the folder assigned to a bucket
+              folder.BucketId = bucket.Id;
+              context.MailFolders.Add(folder);
+              context.Buckets.Add(bucket);
+              await context.SaveChangesAsync();
+              
+              var service = CreateService(context, defaults);
+              
+              // Act
+              await service.RemoveFolderMappingAsync(folder.Name);
+              
+              // Assert
+              var updatedFolder = await context.MailFolders.FirstOrDefaultAsync(f => f.Name == folder.Name);
+              updatedFolder.ShouldNotBeNull();
+              updatedFolder.BucketId.ShouldBeNull();
+          }
+
+          [Fact]
+          public async Task RemoveFolderMappingAsync_ThrowsKeyNotFoundException_WhenFolderDoesNotExist()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              var service = CreateService(context, defaults);
+              
+              // Act
+              Func<Task> act = async () => await service.RemoveFolderMappingAsync("NonExistentFolder");
+              
+              // Assert
+              await act.ShouldThrowAsync<KeyNotFoundException>();
+          }
+
+          [Fact]
+          public async Task RemoveFolderMappingAsync_ThrowsArgumentException_WhenFolderNameIsNullOrEmpty()
+          {
+              // Arrange
+              await using var context = CreateInMemoryContext();
+              var defaults = new ImapSettings
+              {
+                  Server = "default.server.com",
+                  Port = 993,
+                  Username = "default.user",
+                  Password = "default.password",
+                  UseSsl = true,
+                  MaxParallelConnections = 4
+              };
+              
+              var service = CreateService(context, defaults);
+              
+              // Act & Assert
+              await Assert.ThrowsAsync<ArgumentException>(() => service.RemoveFolderMappingAsync(null!));
+              await Assert.ThrowsAsync<ArgumentException>(() => service.RemoveFolderMappingAsync(string.Empty));
+              await Assert.ThrowsAsync<ArgumentException>(() => service.RemoveFolderMappingAsync("   "));
+          }
+      }
 }

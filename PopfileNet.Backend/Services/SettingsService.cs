@@ -48,32 +48,82 @@ public class SettingsService(PopfileNetDbContext db, ImapSettings defaults) : IS
         };
     }
 
-    public async Task SaveSettingsAsync(AppSettings settings, CancellationToken ct = default)
-    {
-        var dbSettings = await db.Settings.FindAsync([SettingsId], ct);
+     public async Task SaveSettingsAsync(AppSettings settings, CancellationToken ct = default)
+     {
+         var dbSettings = await db.Settings.FindAsync([SettingsId], ct);
+ 
+         if (dbSettings == null)
+         {
+             dbSettings = new Settings { Id = SettingsId };
+             db.Settings.Add(dbSettings);
+         }
+ 
+         if (settings.ImapSettings != null)
+         {
+             dbSettings.ImapServer = settings.ImapSettings.Server ?? "";
+             dbSettings.ImapPort = settings.ImapSettings.Port;
+             dbSettings.ImapUsername = settings.ImapSettings.Username ?? "";
+             if (!string.IsNullOrEmpty(settings.ImapSettings.Password))
+             {
+                 dbSettings.ImapPassword = settings.ImapSettings.Password;
+             }
+             dbSettings.ImapUseSsl = settings.ImapSettings.UseSsl;
+             var maxConn = settings.ImapSettings.MaxParallelConnections;
+             dbSettings.MaxParallelConnections = maxConn > 0 && maxConn <= 20 ? maxConn : defaults.MaxParallelConnections;
+         }
+ 
+         dbSettings.UpdatedAt = DateTime.UtcNow;
+ 
+         await db.SaveChangesAsync(ct);
+     }
 
-        if (dbSettings == null)
-        {
-            dbSettings = new Settings { Id = SettingsId };
-            db.Settings.Add(dbSettings);
-        }
+     public async Task<IReadOnlyList<FolderMappingDto>> GetFolderMappingsAsync(CancellationToken ct = default)
+     {
+         var folders = await db.MailFolders.ToListAsync(ct);
+         return folders.Select(f => new FolderMappingDto(f.Name, f.BucketId)).ToList();
+     }
 
-        if (settings.ImapSettings != null)
-        {
-            dbSettings.ImapServer = settings.ImapSettings.Server ?? "";
-            dbSettings.ImapPort = settings.ImapSettings.Port;
-            dbSettings.ImapUsername = settings.ImapSettings.Username ?? "";
-            if (!string.IsNullOrEmpty(settings.ImapSettings.Password))
-            {
-                dbSettings.ImapPassword = settings.ImapSettings.Password;
-            }
-            dbSettings.ImapUseSsl = settings.ImapSettings.UseSsl;
-            var maxConn = settings.ImapSettings.MaxParallelConnections;
-            dbSettings.MaxParallelConnections = maxConn > 0 && maxConn <= 20 ? maxConn : defaults.MaxParallelConnections;
-        }
+     public async Task SetFolderMappingAsync(string folderName, string? bucketId, CancellationToken ct = default)
+     {
+         if (string.IsNullOrWhiteSpace(folderName))
+         {
+             throw new ArgumentException("Folder name cannot be null or empty", nameof(folderName));
+         }
 
-        dbSettings.UpdatedAt = DateTime.UtcNow;
+         var folder = await db.MailFolders.FirstOrDefaultAsync(f => f.Name == folderName, ct);
+         if (folder == null)
+         {
+             throw new KeyNotFoundException($"Folder '{folderName}' not found");
+         }
 
-        await db.SaveChangesAsync(ct);
-    }
-}
+         // Validate bucket exists if bucketId is provided
+         if (!string.IsNullOrEmpty(bucketId))
+         {
+             var bucketExists = await db.Buckets.AnyAsync(b => b.Id == bucketId, ct);
+             if (!bucketExists)
+             {
+                 throw new KeyNotFoundException($"Bucket with ID '{bucketId}' not found");
+             }
+         }
+
+         folder.BucketId = string.IsNullOrEmpty(bucketId) ? null : bucketId;
+         await db.SaveChangesAsync(ct);
+     }
+
+     public async Task RemoveFolderMappingAsync(string folderName, CancellationToken ct = default)
+     {
+         if (string.IsNullOrWhiteSpace(folderName))
+         {
+             throw new ArgumentException("Folder name cannot be null or empty", nameof(folderName));
+         }
+
+         var folder = await db.MailFolders.FirstOrDefaultAsync(f => f.Name == folderName, ct);
+         if (folder == null)
+         {
+             throw new KeyNotFoundException($"Folder '{folderName}' not found");
+         }
+
+         folder.BucketId = null;
+         await db.SaveChangesAsync(ct);
+     }
+ }

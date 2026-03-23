@@ -71,14 +71,55 @@
     }
     else
     {
-        <ul>
-            @foreach (var mapping in FolderMappings)
-            {
-                <li>
-                    <strong>@mapping.Name</strong> → @(GetBucketName(mapping.BucketId))
-                </li>
-            }
-        </ul>
+        <table>
+            <thead>
+                <tr>
+                    <th>Folder</th>
+                    <th>Assigned Bucket</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var mapping in FolderMappings)
+                {
+                    <tr>
+                        <td>@mapping.Name</td>
+                        <td>@(GetBucketName(mapping.BucketId))</td>
+                        <td>
+                            <FluentButton Appearance="Appearance.Accent" Size="Size.Compact" 
+                                          @onclick="() => StartEditMapping(mapping.Name)">Edit</FluentButton>
+                            <FluentButton Size="Size.Compact" 
+                                          @onclick="() => RemoveMapping(mapping.Name)">Remove</FluentButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    
+    @if (_editMappingName != null)
+    {
+        <FluentCard>
+            <h3>Edit Folder Mapping</h3>
+            <FluentStack Orientation="Orientation.Vertical" Gap="10">
+                <FluentLabel>Folder</FluentLabel>
+                <FluentTextField @bind="_editFolderName" Disabled="true" />
+                
+                <FluentLabel>Assign to Bucket</FluentLabel>
+                <select @bind="_editSelectedBucketId">
+                    <option value="">(None)</option>
+                    @foreach (var bucket in Buckets)
+                    {
+                        <option value="@bucket.Id">@bucket.Name</option>
+                    }
+                </select>
+                
+                <FluentStack Orientation="Orientation.Horizontal" Gap="10" Justify="Justify.End">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveMapping">Save</FluentButton>
+                    <FluentButton @onclick="CancelEditMapping">Cancel</FluentButton>
+                </FluentStack>
+            </FluentStack>
+        </FluentCard>
     }
 </FluentCard>
 
@@ -97,6 +138,11 @@
     
     public List<EditableBucket> Buckets { get; set; } = [];
     public List<FolderMappingDto> FolderMappings { get; set; } = [];
+    
+    // Folder mapping editing state
+    private string? _editMappingName;
+    private string _editFolderName = "";
+    private string? _editSelectedBucketId;
     
     protected override async Task OnInitializedAsync()
     {
@@ -208,5 +254,68 @@
         }
         var bucket = Buckets.FirstOrDefault(b => b.Id == bucketId);
         return bucket?.Name ?? "(Unknown)";
+    }
+    
+    // Folder mapping editing methods
+    private void StartEditMapping(string folderName)
+    {
+        _editMappingName = folderName;
+        _editFolderName = folderName;
+        
+        // Find current bucket assignment for this folder
+        var currentMapping = FolderMappings.FirstOrDefault(m => m.Name == folderName);
+        _editSelectedBucketId = currentMapping?.BucketId;
+    }
+    
+    private async Task SaveMapping()
+    {
+        try
+        {
+            if (_editMappingName == null) return;
+            
+            await Api.SetFolderMappingAsync(_editMappingName, _editSelectedBucketId);
+            
+            // Refresh the folder mappings from the server
+            var settings = await Api.GetSettingsAsync();
+            if (settings != null)
+            {
+                FolderMappings = settings.FolderMappings;
+            }
+            
+            CancelEditMapping();
+            StatusMessage = "Folder mapping saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    private void CancelEditMapping()
+    {
+        _editMappingName = null;
+        _editFolderName = "";
+        _editSelectedBucketId = null;
+    }
+    
+    private async Task RemoveMapping(string folderName)
+    {
+        try
+        {
+            await Api.RemoveFolderMappingAsync(folderName);
+            
+            // Refresh the folder mappings from the server
+            var settings = await Api.GetSettingsAsync();
+            if (settings != null)
+            {
+                FolderMappings = settings.FolderMappings;
+            }
+            
+            StatusMessage = "Folder mapping removed successfully!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
     }
 }
