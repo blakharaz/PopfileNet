@@ -18,7 +18,7 @@
 ## Current State Analysis
 - FolderMappingDto exists in both backend (`/PopfileNet.Backend/Models/FolderMappingDto.cs`) and UI
 - Folder mappings are already included in settings retrieval (`SettingsService.cs` line 30)
-- Database relationship exists: Bucket has optional AssociatedFolder (FK to MailFolder)
+- Database relationship exists: Bucket has many MailFolders (FK BucketId in MailFolder)
 - `/folders` endpoint exists to list folders
 - No specific API endpoints for creating/editing/deleting folder mappings
 

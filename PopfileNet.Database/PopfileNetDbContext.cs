@@ -87,10 +87,10 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
             
             entity.Property(b => b.Description)
                 .HasMaxLength(500);
-
-            entity.HasOne(b => b.AssociatedFolder)
+            
+            entity.HasMany(b => b.Folders)
                 .WithOne(f => f.Bucket)
-                .HasForeignKey<MailFolder>(f => f.BucketId)
+                .HasForeignKey(f => f.BucketId)
                 .IsRequired(false);
         });
 

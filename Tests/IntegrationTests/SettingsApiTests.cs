@@ -211,35 +211,35 @@ public class SettingsApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixtur
          dbFolder.BucketId.ShouldBe(bucket2.Id);
      }
      
-     [Fact]
-     public async Task SetFolderMapping_ReturnsBadRequest_WhenFolderDoesNotExist()
-     {
-         // Add a bucket to the database for testing
-         await using var dbContext = Fixture.CreateDbContext();
-         var bucket = new Bucket { Id = Guid.NewGuid().ToString(), Name = "TestBucket" };
-         dbContext.Buckets.Add(bucket);
-         await dbContext.SaveChangesAsync();
-         
-         var mapping = new FolderMappingDto("NonExistentFolder", bucket.Id);
-         var response = await Client.PostAsJsonAsync("/settings/folder-mappings", mapping);
- 
-         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-     }
+      [Fact]
+      public async Task SetFolderMapping_ReturnsNotFound_WhenFolderDoesNotExist()
+      {
+          // Add a bucket to the database for testing
+          await using var dbContext = Fixture.CreateDbContext();
+          var bucket = new Bucket { Id = Guid.NewGuid().ToString(), Name = "TestBucket" };
+          dbContext.Buckets.Add(bucket);
+          await dbContext.SaveChangesAsync();
+          
+          var mapping = new FolderMappingDto("NonExistentFolder", bucket.Id);
+          var response = await Client.PostAsJsonAsync("/settings/folder-mappings", mapping);
+  
+          response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+      }
      
-     [Fact]
-     public async Task SetFolderMapping_ReturnsBadRequest_WhenBucketDoesNotExist()
-     {
-         // Add a folder to the database for testing
-         await using var dbContext = Fixture.CreateDbContext();
-         var folder = new MailFolder { Id = Guid.NewGuid().ToString(), Name = "TestFolder" };
-         dbContext.MailFolders.Add(folder);
-         await dbContext.SaveChangesAsync();
-         
-         var mapping = new FolderMappingDto(folder.Name, Guid.NewGuid().ToString()); // Non-existent bucket ID
-         var response = await Client.PostAsJsonAsync("/settings/folder-mappings", mapping);
- 
-         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-     }
+      [Fact]
+      public async Task SetFolderMapping_ReturnsNotFound_WhenBucketDoesNotExist()
+      {
+          // Add a folder to the database for testing
+          await using var dbContext = Fixture.CreateDbContext();
+          var folder = new MailFolder { Id = Guid.NewGuid().ToString(), Name = "TestFolder" };
+          dbContext.MailFolders.Add(folder);
+          await dbContext.SaveChangesAsync();
+          
+          var mapping = new FolderMappingDto(folder.Name, Guid.NewGuid().ToString()); // Non-existent bucket ID
+          var response = await Client.PostAsJsonAsync("/settings/folder-mappings", mapping);
+  
+          response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+      }
      
      [Fact]
      public async Task RemoveFolderMapping_RemovesMapping_WhenFolderExists()

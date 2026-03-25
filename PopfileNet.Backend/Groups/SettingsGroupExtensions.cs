@@ -140,7 +140,19 @@ public static class SettingsGroupExtensions
         }
         catch (KeyNotFoundException ex)
         {
-            return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+            // Determine if it's a folder or bucket not found based on the message
+            if (ex.Message.Contains("Folder", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+            }
+            else if (ex.Message.Contains("Bucket", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+            }
+            else
+            {
+                return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+            }
         }
         catch (Exception ex)
         {

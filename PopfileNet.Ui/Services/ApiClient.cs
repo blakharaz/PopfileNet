@@ -121,6 +121,10 @@ public class ApiClient(HttpClient http) : IApiClient
     public async Task SetFolderMappingAsync(string folderName, string? bucketId) =>
         await PostAsync<object>($"/settings/folder-mappings", new FolderMappingDto(folderName, bucketId));
 
-    public async Task RemoveFolderMappingAsync(string folderName) =>
-        await _http.DeleteAsync($"/settings/folder-mappings/{folderName}");
+    public async Task RemoveFolderMappingAsync(string folderName)
+    {
+        var encodedFolderName = Uri.EscapeDataString(folderName);
+        var response = await _http.DeleteAsync($"/settings/folder-mappings/{encodedFolderName}");
+        response.EnsureSuccessStatusCode();
+    }
 }

@@ -23,24 +23,28 @@ namespace PopfileNet.Database.Migrations
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("PopfileNet.Common.Bucket", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+            {
+                b.Property<string>("Id")
+                    .HasColumnType("text");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                b.Property<string>("Description")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("character varying(500)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("character varying(100)");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.ToTable("Buckets");
-                });
+                b.HasMany("PopfileNet.Common.MailFolder", "Folders")
+                    .WithOne("Bucket")
+                    .HasForeignKey("BucketId");
+
+                b.ToTable("Buckets");
+            });
 
             modelBuilder.Entity("PopfileNet.Common.Email", b =>
                 {
@@ -90,28 +94,25 @@ namespace PopfileNet.Database.Migrations
                 });
 
             modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+            {
+                b.Property<string>("Id")
+                    .HasColumnType("text");
 
-                    b.Property<string>("BucketId")
-                        .HasColumnType("text");
+                b.Property<string>("BucketId")
+                    .HasColumnType("text");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("character varying(200)");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("BucketId")
-                        .IsUnique();
+                b.HasIndex("Name")
+                    .IsUnique();
 
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("MailFolders");
-                });
+                b.ToTable("MailFolders");
+            });
 
             modelBuilder.Entity("PopfileNet.Common.MailHeader", b =>
                 {
@@ -207,14 +208,14 @@ namespace PopfileNet.Database.Migrations
                     b.Navigation("UniqueId");
                 });
 
-            modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
-                {
-                    b.HasOne("PopfileNet.Common.Bucket", "Bucket")
-                        .WithOne("AssociatedFolder")
-                        .HasForeignKey("PopfileNet.Common.MailFolder", "BucketId");
+             modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
+                 {
+                     b.HasOne("PopfileNet.Common.Bucket", "Bucket")
+                         .WithMany("Folders")
+                         .HasForeignKey("PopfileNet.Common.MailFolder", "BucketId");
 
-                    b.Navigation("Bucket");
-                });
+                     b.Navigation("Bucket");
+                 });
 
             modelBuilder.Entity("PopfileNet.Common.MailHeader", b =>
                 {
@@ -226,10 +227,10 @@ namespace PopfileNet.Database.Migrations
                     b.Navigation("Email");
                 });
 
-            modelBuilder.Entity("PopfileNet.Common.Bucket", b =>
-                {
-                    b.Navigation("AssociatedFolder");
-                });
+             modelBuilder.Entity("PopfileNet.Common.Bucket", b =>
+                 {
+                     // Navigation property for Folders collection is handled by the WithMany above
+                 });
 
             modelBuilder.Entity("PopfileNet.Common.Email", b =>
                 {

@@ -106,8 +106,8 @@ public class MockApiClient : IApiClient
 
     public virtual Task<PredictionResult?> PredictAsync(string emailId) => Task.FromResult<PredictionResult?>(null);
 
-    public virtual Task<IReadOnlyList<FolderMappingDto>?> GetFolderMappingsAsync() =>
-        Task.FromResult<IReadOnlyList<FolderMappingDto>?>(new List<FolderMappingDto>());
+     public virtual Task<IReadOnlyList<FolderMappingDto>?> GetFolderMappingsAsync() =>
+         Task.FromResult<IReadOnlyList<FolderMappingDto>?>([]);
 
     public virtual Task SetFolderMappingAsync(string folderName, string? bucketId) => Task.CompletedTask;
 

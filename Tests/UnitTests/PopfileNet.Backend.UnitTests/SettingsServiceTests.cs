@@ -224,12 +224,12 @@ namespace PopfileNet.Backend.UnitTests
                 MaxParallelConnections = 4
             };
             
-            var settingsToSave = new AppSettings
-            {
-                ImapSettings = new ImapSettingsDto("new.server.com", 587, "new.user", "new.password", false, 5),
-                Buckets = new List<BucketDto>(),
-                FolderMappings = new List<FolderMappingDto>()
-            };
+             var settingsToSave = new AppSettings
+             {
+                 ImapSettings = new ImapSettingsDto("new.server.com", 587, "new.user", "new.password", false, 5),
+                 Buckets = [],
+                 FolderMappings = []
+             };
             
             var service = CreateService(context, defaults);
 
@@ -272,12 +272,12 @@ namespace PopfileNet.Backend.UnitTests
             context.Settings.Add(existingSettings);
             await context.SaveChangesAsync();
             
-            var settingsToSave = new AppSettings
-            {
-                ImapSettings = new ImapSettingsDto("updated.server.com", 25, "updated.user", "", true, 10),
-                Buckets = new List<BucketDto>(),
-                FolderMappings = new List<FolderMappingDto>()
-            };
+             var settingsToSave = new AppSettings
+             {
+                 ImapSettings = new ImapSettingsDto("updated.server.com", 25, "updated.user", "", true, 10),
+                 Buckets = [],
+                 FolderMappings = []
+             };
             
             var service = CreateService(context, defaults);
 
@@ -366,12 +366,12 @@ namespace PopfileNet.Backend.UnitTests
              {
                  // Arrange for this test case
                  await using var testContext = CreateInMemoryContext();
-                 var settingsToSave = new AppSettings
-                 {
-                     ImapSettings = new ImapSettingsDto("test.com", 993, "test", "pass", true, testCase.Input),
-                     Buckets = new List<BucketDto>(),
-                     FolderMappings = new List<FolderMappingDto>()
-                 };
+                  var settingsToSave = new AppSettings
+                  {
+                      ImapSettings = new ImapSettingsDto("test.com", 993, "test", "pass", true, testCase.Input),
+                      Buckets = [],
+                      FolderMappings = []
+                  };
                  
                  var service = CreateService(testContext, defaults);
  
