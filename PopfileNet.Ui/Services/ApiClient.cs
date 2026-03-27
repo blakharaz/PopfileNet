@@ -103,6 +103,10 @@ public class ApiClient(HttpClient http) : IApiClient
     public async Task<EmailDetailDto?> GetMailByIdAsync(string id) =>
         await GetAsync<EmailDetailDto>($"/mails/{id}");
 
+    // Folder Mappings
+    public async Task<IReadOnlyList<FolderMappingDto>?> GetFolderMappingsAsync() =>
+        await GetAsync<IReadOnlyList<FolderMappingDto>>("/settings/folder-mappings");
+
     // Classifier
     public async Task<ClassifierStatus?> GetClassifierStatusAsync() =>
         await GetAsync<ClassifierStatus>("/classifier/status");
@@ -112,4 +116,15 @@ public class ApiClient(HttpClient http) : IApiClient
 
     public async Task<PredictionResult?> PredictAsync(string emailId) =>
         await PostAsync<PredictionResult>("/classifier/predict", new { EmailId = emailId });
+
+    // Folder Mappings
+    public async Task SetFolderMappingAsync(string folderName, string? bucketId) =>
+        await PostAsync<object>($"/settings/folder-mappings", new FolderMappingDto(folderName, bucketId));
+
+    public async Task RemoveFolderMappingAsync(string folderName)
+    {
+        var encodedFolderName = Uri.EscapeDataString(folderName);
+        var response = await _http.DeleteAsync($"/settings/folder-mappings/{encodedFolderName}");
+        response.EnsureSuccessStatusCode();
+    }
 }

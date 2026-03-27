@@ -29,14 +29,26 @@ public static class SettingsGroupExtensions
         group.MapPost("/buckets", CreateBucketAsync);
         group.MapPut("/buckets/{id}", UpdateBucketAsync);
         group.MapDelete("/buckets/{id}", DeleteBucketAsync);
+        
+        group.MapGet("/folder-mappings", GetFolderMappingsAsync);
+        group.MapPost("/folder-mappings", SetFolderMappingAsync);
+        group.MapDelete("/folder-mappings/{folderName}", RemoveFolderMappingAsync);
 
         return app;
     }
 
-    private static async Task<Ok<ApiResponse<AppSettings>>> GetSettingsAsync(ISettingsService settingsService)
+    private static async Task<Ok<ApiResponse<AppSettings>>> GetSettingsAsync(ISettingsService settingsService, ILogger<Program> logger)
     {
-        var settings = await settingsService.GetSettingsAsync();
-        return TypedResults.Ok(ApiResponse<AppSettings>.Success(settings));
+        try
+        {
+            var settings = await settingsService.GetSettingsAsync();
+            return TypedResults.Ok(ApiResponse<AppSettings>.Success(settings));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting settings");
+            throw;
+        }
     }
 
     private static async Task<IResult> SaveSettingsAsync(AppSettings settings, ISettingsService settingsService)
@@ -115,5 +127,65 @@ public static class SettingsGroupExtensions
         await db.SaveChangesAsync();
         
         return Results.NoContent();
+    }
+
+    private static async Task<Ok<ApiResponse<IReadOnlyList<FolderMappingDto>>>> GetFolderMappingsAsync(ISettingsService settingsService)
+    {
+        var folderMappings = await settingsService.GetFolderMappingsAsync();
+        return TypedResults.Ok(ApiResponse<IReadOnlyList<FolderMappingDto>>.Success(folderMappings));
+    }
+
+    private static async Task<IResult> SetFolderMappingAsync(FolderMappingDto mapping, ISettingsService settingsService)
+    {
+        try
+        {
+            await settingsService.SetFolderMappingAsync(mapping.Name, mapping.BucketId);
+            return TypedResults.Ok(ApiResponse<FolderMappingDto>.Success(mapping));
+        }
+        catch (ArgumentException ex)
+        {
+            return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("INVALID_INPUT", ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            // Determine if it's a folder or bucket not found based on the message
+            if (ex.Message.Contains("Folder", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+            }
+            else if (ex.Message.Contains("Bucket", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+            }
+            else
+            {
+                return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+            }
+        }
+        catch (Exception ex)
+        {
+            return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("ERROR", ex.Message));
+        }
+    }
+
+    private static async Task<IResult> RemoveFolderMappingAsync(string folderName, ISettingsService settingsService)
+    {
+        try
+        {
+            await settingsService.RemoveFolderMappingAsync(folderName);
+            return TypedResults.NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return TypedResults.BadRequest(ApiResponse<bool>.Failure("INVALID_INPUT", ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return TypedResults.NotFound(ApiResponse<bool>.Failure("NOT_FOUND", ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return TypedResults.BadRequest(ApiResponse<bool>.Failure("ERROR", ex.Message));
+        }
     }
 }
