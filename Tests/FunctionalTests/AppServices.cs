@@ -169,14 +169,12 @@ public class AppServices : IAsyncLifetime
         }
         catch
         {
+            // Don't dispose the container here - let Testcontainers handle cleanup
+            // The container will be disposed when the test run completes or on error
             if (backendStarted)
             {
                 _backendProcess?.Kill(true);
                 _backendProcess?.Dispose();
-            }
-            if (postgresStarted)
-            {
-                await _postgres.DisposeAsync();
             }
             throw;
         }
@@ -190,6 +188,9 @@ public class AppServices : IAsyncLifetime
         _uiProcess?.Dispose();
         _backendProcess?.Kill(true);
         _backendProcess?.Dispose();
+        
+        // Dispose the PostgreSQL container to release resources
+        await _postgres.DisposeAsync();
     }
 
     public async Task RestartBackendAsync()
@@ -213,8 +214,7 @@ public class AppServices : IAsyncLifetime
             CreateNoWindow = true,
             EnvironmentVariables =
             {
-                ["ASPNETCORE_ENVIRONMENT"] = "Test",
-                ["ConnectionStrings__popfilenet"] = _postgres.GetConnectionString()
+                ["ASPNETCORE_ENVIRONMENT"] = "Test"
             }
         };
 
