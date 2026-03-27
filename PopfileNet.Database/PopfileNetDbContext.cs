@@ -24,6 +24,8 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
             
             entity.HasIndex(e => new { e.ImapUid, e.Folder }).IsUnique();
             
+            entity.HasIndex(e => e.Folder);
+            
             entity.OwnsOne(e => e.UniqueId, uid =>
             {
                 uid.Property(u => u.Validity).HasColumnName("Validity");

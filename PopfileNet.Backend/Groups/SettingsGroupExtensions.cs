@@ -37,10 +37,18 @@ public static class SettingsGroupExtensions
         return app;
     }
 
-    private static async Task<Ok<ApiResponse<AppSettings>>> GetSettingsAsync(ISettingsService settingsService)
+    private static async Task<Ok<ApiResponse<AppSettings>>> GetSettingsAsync(ISettingsService settingsService, ILogger<Program> logger)
     {
-        var settings = await settingsService.GetSettingsAsync();
-        return TypedResults.Ok(ApiResponse<AppSettings>.Success(settings));
+        try
+        {
+            var settings = await settingsService.GetSettingsAsync();
+            return TypedResults.Ok(ApiResponse<AppSettings>.Success(settings));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting settings");
+            throw;
+        }
     }
 
     private static async Task<IResult> SaveSettingsAsync(AppSettings settings, ISettingsService settingsService)
