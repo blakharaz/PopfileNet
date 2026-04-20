@@ -1,0 +1,23 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY ["PopfileNet.sln", "./"]
+COPY ["PopfileNet.Common/PopfileNet.Common.csproj", "PopfileNet.Common/"]
+COPY ["PopfileNet.Classifier/PopfileNet.Classifier.csproj", "PopfileNet.Classifier/"]
+COPY ["PopfileNet.Database/PopfileNet.Database.csproj", "PopfileNet.Database/"]
+COPY ["PopfileNet.Imap/PopfileNet.Imap.csproj", "PopfileNet.Imap/"]
+COPY ["PopfileNet.Backend/PopfileNet.Backend.csproj", "PopfileNet.Backend/"]
+COPY ["PopfileNet.ServiceDefaults/PopfileNet.ServiceDefaults.csproj", "PopfileNet.ServiceDefaults/"]
+
+RUN dotnet restore "PopfileNet.sln"
+
+COPY . .
+RUN dotnet publish "PopfileNet.Backend/PopfileNet.Backend.csproj" -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+
+COPY --from=build /app/publish /app
+
+EXPOSE 5000
+ENTRYPOINT ["dotnet", "PopfileNet.Backend.dll"]

@@ -1,0 +1,20 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY ["PopfileNet.sln", "./"]
+COPY ["PopfileNet.Common/PopfileNet.Common.csproj", "PopfileNet.Common/"]
+COPY ["PopfileNet.ServiceDefaults/PopfileNet.ServiceDefaults.csproj", "PopfileNet.ServiceDefaults/"]
+COPY ["PopfileNet.Ui/PopfileNet.Ui.csproj", "PopfileNet.Ui/"]
+
+RUN dotnet restore "PopfileNet.sln"
+
+COPY . .
+RUN dotnet publish "PopfileNet.Ui/PopfileNet.Ui.csproj" -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+
+COPY --from=build /app/publish /app
+
+EXPOSE 5001
+ENTRYPOINT ["dotnet", "PopfileNet.Ui.dll"]
