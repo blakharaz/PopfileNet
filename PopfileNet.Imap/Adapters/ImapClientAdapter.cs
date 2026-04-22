@@ -7,7 +7,7 @@ namespace PopfileNet.Imap.Adapters;
 public class ImapClientAdapter(ImapClient client) : IImapClient
 {
     public bool IsConnected => client.IsConnected;
-    public IMailFolder Inbox => client.Inbox;
+    public IMailFolder? Inbox => client.Inbox;
     public FolderNamespace[] PersonalNamespaces => client.PersonalNamespaces.ToArray();
 
     public Task ConnectAsync(string host, int port, bool useSsl, CancellationToken cancellationToken = default)

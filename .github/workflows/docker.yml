@@ -18,10 +18,6 @@ jobs:
       contents: read
       packages: write
 
-    outputs:
-      backend_tag: ${{ steps.meta.outputs.tags }}
-      ui_tag: ${{ steps.meta.outputs.tags }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -50,10 +46,24 @@ jobs:
             type=semver,pattern={{major}}
             type=sha
 
-      - name: Build and push backend Docker image
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish backend
+        run: dotnet publish PopfileNet.Backend/PopfileNet.Backend.csproj -c Release -o ./publish/backend
+
+      - name: Publish UI
+        run: dotnet publish PopfileNet.Ui/PopfileNet.Ui.csproj -c Release -o ./publish/ui
+
+      - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./publish/backend
           file: ./Dockerfile.backend
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
@@ -62,10 +72,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push UI Docker image
+      - name: Build and push UI
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./publish/ui
           file: ./Dockerfile.ui
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
@@ -125,9 +135,7 @@ EOF
 
       - name: Remove dashboard from compose
         run: |
-          # Remove dashboard service and related config
           sed -i '/popfilenet-dashboard:/,/restart: "always"/d' PopfileNet.AppHost/aspire-output/docker-compose.yaml
-          # Also remove any OTEL references from services
           sed -i '/OTEL_EXPORTER_OTLP_ENDPOINT/d' PopfileNet.AppHost/aspire-output/docker-compose.yaml
           sed -i '/OTEL_EXPORTER_OTLP_PROTOCOL/d' PopfileNet.AppHost/aspire-output/docker-compose.yaml
           sed -i '/OTEL_SERVICE_NAME/d' PopfileNet.AppHost/aspire-output/docker-compose.yaml
@@ -135,14 +143,8 @@ EOF
 
       - name: Update .env with image tags
         run: |
-          TAG="${{ needs.build-and-push.outputs.backend_tag }}"
-          
-          # Extract just the tag (take first line which is the semver tag)
-          IMAGE_TAG=$(echo "$TAG" | head -1)
-          
-          # Update .env with image tags
-          sed -i "s|POPFILENET_BACKEND_IMAGE=.*|POPFILENET_BACKEND_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}-backend:${IMAGE_TAG}|" PopfileNet.AppHost/aspire-output/.env
-          sed -i "s|POPFILENET_UI_IMAGE=.*|POPFILENET_UI_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}-ui:${IMAGE_TAG}|" PopfileNet.AppHost/aspire-output/.env
+          sed -i "s|POPFILENET_BACKEND_IMAGE=.*|POPFILENET_BACKEND_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}-backend:v${{ github.ref_name }}|" PopfileNet.AppHost/aspire-output/.env
+          sed -i "s|POPFILENET_UI_IMAGE=.*|POPFILENET_UI_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}-ui:v${{ github.ref_name }}|" PopfileNet.AppHost/aspire-output/.env
           sed -i "s|POPFILENET_BACKEND_PORT=.*|POPFILENET_BACKEND_PORT=5000|" PopfileNet.AppHost/aspire-output/.env
           sed -i "s|POPFILENET_UI_PORT=.*|POPFILENET_UI_PORT=5001|" PopfileNet.AppHost/aspire-output/.env
           sed -i "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=|" PopfileNet.AppHost/aspire-output/.env
