@@ -21,11 +21,24 @@ public static class FluentUiSetupExtensions
         jsInterop.SetupModule(textFieldModulePath).SetupVoid("ensureCurrentValueMatch", _ => true);
     }
 
-    private static IJSObjectReference CreateStub() => new StubJsRuntime();
+    /// <summary>
+    /// Creates a stub JS interop reference for module setup.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    public static IJSObjectReference CreateStub() => new StubJsRuntime();
 
-    private class StubJsRuntime : IJSObjectReference
+    /// <summary>
+    /// Stub implementation of IJSObjectReference used by the test helpers.
+    /// Excluded from code coverage: this is a simple stub for bunit's JS interop mocking.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    public class StubJsRuntime : IJSObjectReference
     {
-        public ValueTask DisposeAsync() => default;
+        public ValueTask DisposeAsync()
+        {
+            GC.SuppressFinalize(this);
+            return default;
+        }
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
         {
             throw new NotImplementedException();

@@ -4,7 +4,13 @@ using IMailFolder = MailKit.IMailFolder;
 
 namespace PopfileNet.Imap.Adapters;
 
-public class ImapClientAdapter(ImapClient client) : IImapClient
+/// <summary>
+/// Simple wrapper around MailKit's ImapClient.
+/// Excluded from code coverage: straightforward adapter with no logic to test;
+/// it makes the rest of the IMAP layer testable by providing a clean abstraction.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+public sealed class ImapClientAdapter(ImapClient client) : IImapClient
 {
     public bool IsConnected => client.IsConnected;
     public IMailFolder? Inbox => client.Inbox;

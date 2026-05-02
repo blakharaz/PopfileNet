@@ -5,7 +5,7 @@ namespace PopfileNet.Imap;
 public interface IImapClient : IDisposable
 {
     bool IsConnected { get; }
-    IMailFolder Inbox { get; }
+    IMailFolder? Inbox { get; }
     FolderNamespace[] PersonalNamespaces { get; }
 
     Task ConnectAsync(string host, int port, bool useSsl, CancellationToken cancellationToken = default);
