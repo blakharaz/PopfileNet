@@ -18,6 +18,8 @@ PopfileNet is a .NET 10 solution for IMAP-based email classification using ML.NE
 | PopfileNet.Ui | Blazor UI application |
 | PopfileNet.Ui.Tests | UI component tests |
 | PopfileNet.Database | Database access layer |
+| PopfileNet.AppHost | Aspire app host for orchestration |
+| PopfileNet.ServiceDefaults | Shared service defaults and extensions |
 
 ## Key Files
 
@@ -27,6 +29,7 @@ PopfileNet is a .NET 10 solution for IMAP-based email classification using ML.NE
 - `PopfileNet.Classifier/NaiveBayesianClassifier.cs` - ML model training/prediction
 - `PopfileNet.Common/Email.cs` - Core email domain model
 - `PopfileNet.Cli/Program.cs` - CLI entry point (development/testing only)
+- `PopfileNet.AppHost/AppHost.cs` - Aspire application host
 
 ## Agents
 
@@ -73,6 +76,9 @@ dotnet test Tests/IntegrationTests
 
 ### Unit Tests
 Unit tests are in `Tests/UnitTests/` and don't require external dependencies.
+
+### Functional Tests
+Functional tests are in `Tests/FunctionalTests/`.
 
 ## Git Guidelines
 
