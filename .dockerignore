@@ -1,0 +1,16 @@
+**/.git
+**/.gitignore
+**/.env
+**/.env.*
+**/appsettings.Development.json
+**/appsettings.Test.json
+**/obj
+**/bin
+**/Tests
+**/.github
+**/docs
+**/*.md
+**/Dockerfile*
+**/docker-compose*
+**/.vscode
+**/.*
