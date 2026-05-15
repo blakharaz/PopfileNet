@@ -39,7 +39,7 @@ public static class SettingsGroupExtensions
         return app;
     }
 
-    private static async Task<Ok<ApiResponse<AppSettings>>> GetSettingsAsync(ISettingsService settingsService, ILogger<Program> logger)
+    internal static async Task<Ok<ApiResponse<AppSettings>>> GetSettingsAsync(ISettingsService settingsService, ILogger<Program> logger)
     {
         try
         {
@@ -53,7 +53,7 @@ public static class SettingsGroupExtensions
         }
     }
 
-    private static async Task<IResult> SaveSettingsAsync(AppSettings settings, ISettingsService settingsService)
+    internal static async Task<IResult> SaveSettingsAsync(AppSettings settings, ISettingsService settingsService)
     {
         await settingsService.SaveSettingsAsync(settings);
         return TypedResults.Ok(ApiResponse<bool>.Success(true));
@@ -71,7 +71,7 @@ public static class SettingsGroupExtensions
         return TypedResults.Ok(ApiResponse<bool>.Success(result));
     }
 
-    private static async Task<Ok<PagedApiResponse<BucketDto>>> GetBucketsAsync(PopfileNetDbContext db, int page = 1, int pageSize = 20)
+    internal static async Task<Ok<PagedApiResponse<BucketDto>>> GetBucketsAsync(PopfileNetDbContext db, int page = 1, int pageSize = 20)
     {
         pageSize = Math.Min(pageSize, 100);
         
@@ -85,7 +85,7 @@ public static class SettingsGroupExtensions
         return TypedResults.Ok(PagedApiResponse<BucketDto>.Success(buckets, page, pageSize, totalCount));
     }
 
-    private static async Task<IResult> CreateBucketAsync(BucketDto bucket, PopfileNetDbContext db)
+    internal static async Task<IResult> CreateBucketAsync(BucketDto bucket, PopfileNetDbContext db)
     {
         var newBucket = new Bucket
         {
@@ -101,7 +101,7 @@ public static class SettingsGroupExtensions
         return TypedResults.Created($"/settings/buckets/{newBucket.Id}", ApiResponse<BucketDto>.Success(result));
     }
 
-    private static async Task<IResult> UpdateBucketAsync(string id, BucketDto bucket, PopfileNetDbContext db)
+    internal static async Task<IResult> UpdateBucketAsync(string id, BucketDto bucket, PopfileNetDbContext db)
     {
         var existing = await db.Buckets.FindAsync(id);
         if (existing == null)
@@ -117,7 +117,7 @@ public static class SettingsGroupExtensions
         return TypedResults.Ok(ApiResponse<BucketDto>.Success(new BucketDto(existing.Id, existing.Name, existing.Description)));
     }
 
-    private static async Task<IResult> DeleteBucketAsync(string id, PopfileNetDbContext db)
+    internal static async Task<IResult> DeleteBucketAsync(string id, PopfileNetDbContext db)
     {
         var bucket = await db.Buckets.FindAsync(id);
         if (bucket == null)
@@ -131,13 +131,13 @@ public static class SettingsGroupExtensions
         return Results.NoContent();
     }
 
-    private static async Task<Ok<ApiResponse<IReadOnlyList<FolderMappingDto>>>> GetFolderMappingsAsync(ISettingsService settingsService)
+    internal static async Task<Ok<ApiResponse<IReadOnlyList<FolderMappingDto>>>> GetFolderMappingsAsync(ISettingsService settingsService)
     {
         var folderMappings = await settingsService.GetFolderMappingsAsync();
         return TypedResults.Ok(ApiResponse<IReadOnlyList<FolderMappingDto>>.Success(folderMappings));
     }
 
-    private static async Task<IResult> SetFolderMappingAsync(FolderMappingDto mapping, ISettingsService settingsService, ILogger<Program> logger)
+    internal static async Task<IResult> SetFolderMappingAsync(FolderMappingDto mapping, ISettingsService settingsService, ILogger<Program> logger)
     {
         try
         {
@@ -173,7 +173,7 @@ public static class SettingsGroupExtensions
             }
         }
 
-    private static async Task<IResult> RemoveFolderMappingAsync(string folderName, ISettingsService settingsService, ILogger<Program> logger)
+    internal static async Task<IResult> RemoveFolderMappingAsync(string folderName, ISettingsService settingsService, ILogger<Program> logger)
     {
         try
         {

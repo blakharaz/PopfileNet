@@ -111,6 +111,49 @@ public class MigrationCheckerTests
     }
 
     [Fact]
+    public async Task HasPendingMigrationsAsync_Exception_ReturnsFalse()
+    {
+        _mockDatabaseFacade.Setup(d => d.GetPendingMigrationsAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Database error"));
+
+        var checker = CreateChecker();
+
+        var result = await checker.HasPendingMigrationsAsync();
+
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyMigrationsAsync_DoesNotMigrate_WhenTablesExist()
+    {
+        _mockDatabaseFacade.Setup(d => d.ExecuteSqlRawAsync(
+                It.Is<string>(s => s.Contains("table_schema")), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(5);
+
+        var checker = CreateChecker();
+
+        await checker.ApplyMigrationsAsync();
+
+        _mockDatabaseFacade.Verify(d => d.MigrateAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ApplyMigrationsAsync_CallsMigrate_WhenNoTablesExist()
+    {
+        _mockDatabaseFacade.Setup(d => d.ExecuteSqlRawAsync(
+                It.Is<string>(s => s.Contains("table_schema")), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+        _mockDatabaseFacade.Setup(d => d.MigrateAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var checker = CreateChecker();
+
+        await checker.ApplyMigrationsAsync();
+
+        _mockDatabaseFacade.Verify(d => d.MigrateAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ApplyMigrationsAsync_CallsMigrate()
     {
         _mockDatabaseFacade.Setup(d => d.MigrateAsync(It.IsAny<CancellationToken>()))
