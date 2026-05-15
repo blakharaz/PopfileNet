@@ -2,10 +2,10 @@
   "version": 1,
   "isRoot": true,
   "tools": {
-    "coverlet.console": {
-      "version": "8.0.0",
+    "ilspycmd": {
+      "version": "10.0.1.8346",
       "commands": [
-        "coverlet"
+        "ilspycmd"
       ],
       "rollForward": false
     }
