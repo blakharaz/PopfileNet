@@ -103,7 +103,7 @@
             <h3>Edit Folder Mapping</h3>
             <FluentStack Orientation="Orientation.Vertical" Gap="10">
                 <FluentLabel>Folder</FluentLabel>
-                <FluentTextField @bind="_editFolderName" Disabled="true" />
+                <FluentTextField @bind="_editMappingName" Disabled="true" />
                 
                 <FluentLabel>Assign to Bucket</FluentLabel>
                 <select @bind="_editSelectedBucketId">
@@ -141,7 +141,6 @@
     
     // Folder mapping editing state
     private string? _editMappingName;
-    private string _editFolderName = "";
     private string? _editSelectedBucketId;
     
     protected override async Task OnInitializedAsync()
@@ -260,8 +259,7 @@
     private void StartEditMapping(string folderName)
     {
         _editMappingName = folderName;
-        _editFolderName = folderName;
-        
+
         // Find current bucket assignment for this folder
         var currentMapping = FolderMappings.FirstOrDefault(m => m.Name == folderName);
         _editSelectedBucketId = currentMapping?.BucketId;
@@ -294,7 +292,6 @@
     private void CancelEditMapping()
     {
         _editMappingName = null;
-        _editFolderName = "";
         _editSelectedBucketId = null;
     }
     

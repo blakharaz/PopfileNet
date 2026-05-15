@@ -56,13 +56,11 @@ public class AppServices : IAsyncLifetime
     {
         // Testcontainers handles cleanup automatically - just start fresh each time
         
-        var postgresStarted = false;
         var backendStarted = false;
 
         try
         {
             await _postgres.StartAsync();
-            postgresStarted = true;
 
             var connectionString = _postgres.GetConnectionString();
 

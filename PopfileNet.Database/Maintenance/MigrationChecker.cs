@@ -32,7 +32,7 @@ public class MigrationChecker(IDatabaseFacade database) : IMigrationChecker
         catch (Exception ex)
         {
             // If we can't check for pending migrations, assume there are none
-            Console.Error.WriteLine($"Could not check for pending migrations: {ex.Message}");
+            await Console.Error.WriteLineAsync($"Could not check for pending migrations: {ex.Message}");
             return false;
         }
     }

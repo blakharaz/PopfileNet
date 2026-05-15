@@ -12,6 +12,8 @@ namespace PopfileNet.Backend.Groups;
 /// </summary>
 public static class SettingsGroupExtensions
 {
+    private const string NotFoundSetting = "NOT_FOUND";
+
     /// <summary>
     /// Maps the settings endpoints to the application.
     /// </summary>
@@ -135,7 +137,7 @@ public static class SettingsGroupExtensions
         return TypedResults.Ok(ApiResponse<IReadOnlyList<FolderMappingDto>>.Success(folderMappings));
     }
 
-    private static async Task<IResult> SetFolderMappingAsync(FolderMappingDto mapping, ISettingsService settingsService)
+    private static async Task<IResult> SetFolderMappingAsync(FolderMappingDto mapping, ISettingsService settingsService, ILogger<Program> logger)
     {
         try
         {
@@ -144,31 +146,34 @@ public static class SettingsGroupExtensions
         }
         catch (ArgumentException ex)
         {
+            logger.LogWarning(ex, "Invalid input in SetFolderMapping");
             return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("INVALID_INPUT", ex.Message));
         }
         catch (KeyNotFoundException ex)
+            {
+                logger.LogWarning(ex, "Setting not found in SetFolderMapping");
+                // Determine if it's a folder or bucket not found based on the message
+                if (ex.Message.Contains("Folder", StringComparison.OrdinalIgnoreCase))
+            {
+            return TypedResults.NotFound(ApiResponse<FolderMappingDto>.Failure(NotFoundSetting, ex.Message));
+        }
+        else if (ex.Message.Contains("Bucket", StringComparison.OrdinalIgnoreCase))
         {
-            // Determine if it's a folder or bucket not found based on the message
-            if (ex.Message.Contains("Folder", StringComparison.OrdinalIgnoreCase))
-            {
-                return TypedResults.NotFound(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
-            }
-            else if (ex.Message.Contains("Bucket", StringComparison.OrdinalIgnoreCase))
-            {
-                return TypedResults.NotFound(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+            return TypedResults.NotFound(ApiResponse<FolderMappingDto>.Failure(NotFoundSetting, ex.Message));
             }
             else
             {
-                return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("NOT_FOUND", ex.Message));
+                return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure(NotFoundSetting, ex.Message));
             }
         }
         catch (Exception ex)
-        {
-            return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("ERROR", ex.Message));
+            {
+                logger.LogWarning(ex, "Error in SetFolderMapping");
+                return TypedResults.BadRequest(ApiResponse<FolderMappingDto>.Failure("ERROR", ex.Message));
+            }
         }
-    }
 
-    private static async Task<IResult> RemoveFolderMappingAsync(string folderName, ISettingsService settingsService)
+    private static async Task<IResult> RemoveFolderMappingAsync(string folderName, ISettingsService settingsService, ILogger<Program> logger)
     {
         try
         {
@@ -176,13 +181,15 @@ public static class SettingsGroupExtensions
             return TypedResults.NoContent();
         }
         catch (ArgumentException ex)
-        {
-            return TypedResults.BadRequest(ApiResponse<bool>.Failure("INVALID_INPUT", ex.Message));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return TypedResults.NotFound(ApiResponse<bool>.Failure("NOT_FOUND", ex.Message));
-        }
+            {
+                logger.LogWarning(ex, "Invalid input in RemoveFolderMapping");
+                return TypedResults.BadRequest(ApiResponse<bool>.Failure("INVALID_INPUT", ex.Message));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                logger.LogWarning(ex, "Setting not found in RemoveFolderMapping");
+                return TypedResults.NotFound(ApiResponse<bool>.Failure(NotFoundSetting, ex.Message));
+            }
         catch (Exception ex)
         {
             return TypedResults.BadRequest(ApiResponse<bool>.Failure("ERROR", ex.Message));

@@ -5,6 +5,7 @@ using Xunit;
 using PopfileNet.Backend.Models;
 using PopfileNet.Database;
 using System.Linq;
+using System.Globalization;
 
 namespace PopfileNet.FunctionalTests;
 
@@ -209,7 +210,7 @@ public class UiNavigationSteps
             var options = await bucketDropdown.QuerySelectorAllAsync("option");
             foreach (var option in options)
             {
-                var value = await option.GetAttributeAsync("value");
+                var value = await option.GetAttributeAsync("value") ?? string.Empty;
                 if (!string.IsNullOrEmpty(value)) // Not the "(None)" option
                 {
                     await option.SelectOptionAsync(value);
@@ -223,7 +224,7 @@ public class UiNavigationSteps
                 var firstOption = options.FirstOrDefault();
                 if (firstOption != null)
                 {
-                    var value = await firstOption.GetAttributeAsync("value");
+                    var value = await firstOption.GetAttributeAsync("value") ?? string.Empty;
                     await firstOption.SelectOptionAsync(value);
                     return;
                 }
@@ -436,7 +437,7 @@ public class UiNavigationSteps
             // Now select a different option
             foreach (var option in options)
             {
-                var value = await option.GetAttributeAsync("value");
+                var value = await option.GetAttributeAsync("value") ?? string.Empty;
                 if (value != currentValue) // Different from current selection
                 {
                     await option.SelectOptionAsync(value);
@@ -450,7 +451,7 @@ public class UiNavigationSteps
                 var firstOption = options.FirstOrDefault();
                 if (firstOption != null)
                 {
-                    var value = await firstOption.GetAttributeAsync("value");
+                    var value = await firstOption.GetAttributeAsync("value") ?? string.Empty;
                     await firstOption.SelectOptionAsync(value);
                     return;
                 }
@@ -529,7 +530,7 @@ public class UiNavigationSteps
             var options = await bucketDropdown.QuerySelectorAllAsync("option");
             foreach (var option in options)
             {
-                var value = await option.GetAttributeAsync("value");
+                var value = await option.GetAttributeAsync("value") ?? string.Empty;
                 if (string.IsNullOrEmpty(value)) // This is the "(None)" option
                 {
                     await option.SelectOptionAsync(value);
@@ -633,8 +634,8 @@ public class UiNavigationSteps
         if (errorBadge != null)
         {
             var errorText = await errorBadge.InnerTextAsync();
-            if (errorText.Contains("bucket", System.StringComparison.OrdinalIgnoreCase) && 
-                errorText.Contains("exist", System.StringComparison.OrdinalIgnoreCase))
+            if (errorText.Contains("bucket", StringComparison.OrdinalIgnoreCase) && 
+                errorText.Contains("exist", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -645,8 +646,8 @@ public class UiNavigationSteps
         if (statusMessage != null)
         {
             var statusText = await statusMessage.InnerTextAsync();
-            if (statusText.Contains("bucket", System.StringComparison.OrdinalIgnoreCase) && 
-                statusText.Contains("exist", System.StringComparison.OrdinalIgnoreCase))
+            if (statusText.Contains("bucket", StringComparison.OrdinalIgnoreCase) && 
+                statusText.Contains("exist", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -696,8 +697,8 @@ public class UiNavigationSteps
         if (errorBadge != null)
         {
             var errorText = await errorBadge.InnerTextAsync();
-            if (errorText.Contains("folder", System.StringComparison.OrdinalIgnoreCase) && 
-                errorText.Contains("exist", System.StringComparison.OrdinalIgnoreCase))
+            if (errorText.Contains("folder", StringComparison.OrdinalIgnoreCase) && 
+                errorText.Contains("exist", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -708,8 +709,8 @@ public class UiNavigationSteps
         if (statusMessage != null)
         {
             var statusText = await statusMessage.InnerTextAsync();
-            if (statusText.Contains("folder", System.StringComparison.OrdinalIgnoreCase) && 
-                statusText.Contains("exist", System.StringComparison.OrdinalIgnoreCase))
+            if (statusText.Contains("folder", StringComparison.OrdinalIgnoreCase) && 
+                statusText.Contains("exist", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -924,7 +925,7 @@ public class UiNavigationSteps
             if (options != null && options.Count > bucketNumber)
             {
                 var optionToSelect = options[bucketNumber]; // 0-based index
-                var value = await optionToSelect.GetAttributeAsync("value");
+                var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
                 await optionToSelect.SelectOptionAsync(value);
                 return;
             }
@@ -1103,8 +1104,8 @@ public class UiNavigationSteps
         if (errorBadge != null)
         {
             var errorText = await errorBadge.InnerTextAsync();
-            if (errorText.Contains("folder", System.StringComparison.OrdinalIgnoreCase) && 
-                errorText.Contains("required", System.StringComparison.OrdinalIgnoreCase))
+            if (errorText.Contains("folder", StringComparison.OrdinalIgnoreCase) && 
+                errorText.Contains("required", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -1115,8 +1116,8 @@ public class UiNavigationSteps
         if (statusMessage != null)
         {
             var statusText = await statusMessage.InnerTextAsync();
-            if (statusText.Contains("folder", System.StringComparison.OrdinalIgnoreCase) && 
-                statusText.Contains("required", System.StringComparison.OrdinalIgnoreCase))
+            if (statusText.Contains("folder", StringComparison.OrdinalIgnoreCase) && 
+                statusText.Contains("required", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -1169,7 +1170,7 @@ public class UiNavigationSteps
                     var options = await bucketDropdown.QuerySelectorAllAsync("option");
                     foreach (var option in options)
                     {
-                        var value = await option.GetAttributeAsync("value");
+                        var value = await option.GetAttributeAsync("value") ?? string.Empty;
                         if (!string.IsNullOrEmpty(value)) // Not the "(None)" option
                         {
                             await option.SelectOptionAsync(value);
@@ -1287,8 +1288,8 @@ public class UiNavigationSteps
         if (successBadge != null)
         {
             var successText = await successBadge.InnerTextAsync();
-            if (successText.Contains("mapping", System.StringComparison.OrdinalIgnoreCase) && 
-                successText.Contains("save", System.StringComparison.OrdinalIgnoreCase))
+            if (successText.Contains("mapping", StringComparison.OrdinalIgnoreCase) && 
+                successText.Contains("save", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -1299,8 +1300,8 @@ public class UiNavigationSteps
         if (statusMessage != null)
         {
             var statusText = await statusMessage.InnerTextAsync();
-            if (statusText.Contains("mapping", System.StringComparison.OrdinalIgnoreCase) && 
-                statusText.Contains("save", System.StringComparison.OrdinalIgnoreCase))
+            if (statusText.Contains("mapping", StringComparison.OrdinalIgnoreCase) && 
+                statusText.Contains("save", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -1486,7 +1487,7 @@ public class UiNavigationSteps
             var options = await bucketDropdown.QuerySelectorAllAsync("option");
             foreach (var option in options)
             {
-                var value = await option.GetAttributeAsync("value");
+                var value = await option.GetAttributeAsync("value") ?? string.Empty;
                 if (string.IsNullOrEmpty(value)) // This is the "(None)" option
                 {
                     await option.SelectOptionAsync(value);
@@ -1550,7 +1551,7 @@ public class UiNavigationSteps
                     if (options != null && options.Count > bucketNumber)
                     {
                         var optionToSelect = options[bucketNumber];
-                        var value = await optionToSelect.GetAttributeAsync("value");
+                        var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
                         await optionToSelect.SelectOptionAsync(value);
                     }
                     
@@ -1603,7 +1604,7 @@ public class UiNavigationSteps
                     if (options != null && options.Count > bucketNumber)
                     {
                         var optionToSelect = options[bucketNumber];
-                        var value = await optionToSelect.GetAttributeAsync("value");
+                        var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
                         await optionToSelect.SelectOptionAsync(value);
                     }
                     
@@ -1656,7 +1657,7 @@ public class UiNavigationSteps
                     if (options != null && options.Count > bucketNumber)
                     {
                         var optionToSelect = options[bucketNumber];
-                        var value = await optionToSelect.GetAttributeAsync("value");
+                        var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
                         await optionToSelect.SelectOptionAsync(value);
                     }
                     
@@ -1709,7 +1710,7 @@ public class UiNavigationSteps
                     if (options != null && options.Count > 0)
                     {
                         var noneOption = options[0];
-                        var value = await noneOption.GetAttributeAsync("value");
+                        var value = await noneOption.GetAttributeAsync("value") ?? string.Empty;
                         await noneOption.SelectOptionAsync(value);
                     }
                     
