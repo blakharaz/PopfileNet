@@ -18,7 +18,7 @@ public class UiNavigationSteps
     private bool _browserInstalled = true;
 
     [Given("the UI is running")]
-    public async Task GivenTheUiIsRunning()
+    public static async Task GivenTheUiIsRunning()
     {
         await TestServices.Instance.InitializeAsync();
     }
@@ -102,19 +102,19 @@ public class UiNavigationSteps
                 throw new InvalidOperationException("UI URL not set - services may have failed to start");
             }
 
-            _page = await _browser.NewPageAsync();
+            _page = await _browser!.NewPageAsync();
             await _page.GotoAsync(uiUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         }
 
         var settingsUrl = TestServices.Instance.UiUrl + "/settings";
-        await _page.GotoAsync(settingsUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-        
+        await _page!.GotoAsync(settingsUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+
         // Wait a bit for Blazor to fully render
         await _page.WaitForTimeoutAsync(1000);
     }
 
     [Given("there is at least one folder without a bucket assignment")]
-    public async Task GivenThereIsAtLeastOneFolderWithoutABucketAssignment()
+    public static async Task GivenThereIsAtLeastOneFolderWithoutABucketAssignment()
     {
         // For functional tests, we'll assume the test setup has prepared appropriate data
         // In a real implementation, we would make API calls to verify this condition
@@ -123,7 +123,7 @@ public class UiNavigationSteps
     }
 
     [Given("there is at least one bucket configured")]
-    public async Task GivenThereIsAtLeastOneBucketConfigured()
+    public static async Task GivenThereIsAtLeastOneBucketConfigured()
     {
         // For functional tests, we'll assume the test setup has prepared appropriate data
         // In a real implementation, we would make API calls to verify this condition
@@ -165,7 +165,7 @@ public class UiNavigationSteps
 
         // If no rows in tbody, try to find any table rows
         var anyRows = await _page.QuerySelectorAllAsync("table tr");
-        if (anyRows != null && anyRows.Count > 1) // More than just header
+        if (anyRows.Count > 1) // More than just header
         {
             // Skip header row and check data rows
             for (int i = 1; i < anyRows.Count; i++)
@@ -219,15 +219,12 @@ public class UiNavigationSteps
             }
             
             // If we couldn't find a non-empty option, select the first option anyway
-            if (options.Any())
+            if (options.Count > 0)
             {
-                var firstOption = options.FirstOrDefault();
-                if (firstOption != null)
-                {
-                    var value = await firstOption.GetAttributeAsync("value") ?? string.Empty;
-                    await firstOption.SelectOptionAsync(value);
-                    return;
-                }
+                var firstOption = options[0];
+                var value = await firstOption.GetAttributeAsync("value") ?? string.Empty;
+                await firstOption.SelectOptionAsync(value);
+                return;
             }
         }
         
@@ -332,7 +329,7 @@ public class UiNavigationSteps
     // Edit mapping steps (reuse some of the above)
 
     [Given("there is a folder assigned to a bucket")]
-    public async Task GivenThereIsAFolderAssignedToABucket()
+    public static async Task GivenThereIsAFolderAssignedToABucket()
     {
         // For functional tests, we'll assume the test setup has prepared appropriate data
         await Task.CompletedTask;
@@ -375,7 +372,7 @@ public class UiNavigationSteps
 
         // If no rows in tbody, try to find any table rows
         var anyRows = await _page.QuerySelectorAllAsync("table tr");
-        if (anyRows != null && anyRows.Count > 1) // More than just header
+        if (anyRows.Count > 1) // More than just header
         {
             // Skip header row and check data rows
             for (int i = 1; i < anyRows.Count; i++)
@@ -446,15 +443,12 @@ public class UiNavigationSteps
             }
             
             // If all options are the same as current (shouldn't happen in valid test), select first
-            if (options.Any())
+            if (options.Count > 0)
             {
-                var firstOption = options.FirstOrDefault();
-                if (firstOption != null)
-                {
-                    var value = await firstOption.GetAttributeAsync("value") ?? string.Empty;
-                    await firstOption.SelectOptionAsync(value);
-                    return;
-                }
+                var firstOption = options[0];
+                var value = await firstOption.GetAttributeAsync("value") ?? string.Empty;
+                await firstOption.SelectOptionAsync(value);
+                return;
             }
         }
         
@@ -594,7 +588,7 @@ public class UiNavigationSteps
     // Validation steps
 
     [When("I attempt to assign it to a non-existent bucket ID")]
-    public async Task WhenIAttemptToAssignItToANonExistentBucketID()
+    public async Task WhenIAttemptToAssignItToANonExistentBucketId()
     {
         if (_page == null)
         {
@@ -895,7 +889,7 @@ public class UiNavigationSteps
 
         // If no rows in tbody, try to find any table rows (skip header)
         var allRows = await _page.QuerySelectorAllAsync("table tr");
-        if (allRows != null && allRows.Count > 1)
+        if (allRows.Count > 1)
         {
             // Click the first data row (skip header at index 0)
             await allRows[1].ClickAsync();
@@ -922,7 +916,7 @@ public class UiNavigationSteps
             
             // Get all options and select the one at the specified index (1-based)
             var options = await bucketDropdown.QuerySelectorAllAsync("option");
-            if (options != null && options.Count > bucketNumber)
+            if (options.Count > bucketNumber)
             {
                 var optionToSelect = options[bucketNumber]; // 0-based index
                 var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
@@ -997,7 +991,7 @@ public class UiNavigationSteps
     }
 
     [When("I restart the application")]
-    public async Task WhenIRestartTheApplication()
+    public static async Task WhenIRestartTheApplication()
     {
         // Restart the backend service
         await TestServices.Instance.RestartBackendAsync();
@@ -1127,7 +1121,7 @@ public class UiNavigationSteps
     }
 
     [Given("there are at least two folders without bucket assignments")]
-    public async Task GivenThereAreAtLeastTwoFoldersWithoutBucketAssignments()
+    public static async Task GivenThereAreAtLeastTwoFoldersWithoutBucketAssignments()
     {
         // For functional tests, we'll assume the test setup has prepared appropriate data
         // In a real implementation, we would make API calls to verify this condition
@@ -1171,21 +1165,23 @@ public class UiNavigationSteps
                     foreach (var option in options)
                     {
                         var value = await option.GetAttributeAsync("value") ?? string.Empty;
-                        if (!string.IsNullOrEmpty(value)) // Not the "(None)" option
+                        if (string.IsNullOrEmpty(value))
                         {
-                            await option.SelectOptionAsync(value);
-                            break;
+                            continue; // Not the "(None)" option
                         }
+
+                        await option.SelectOptionAsync(value);
+                        break;
                     }
                     
                     // Click Save
                     var saveButton = await _page.QuerySelectorAsync("button:has-text('Save')");
-                    if (saveButton != null)
+                    if (saveButton == null)
                     {
-                        await saveButton.ClickAsync();
-                        await _page.WaitForTimeoutAsync(1000);
                         return;
                     }
+                    await saveButton.ClickAsync();
+                    await _page.WaitForTimeoutAsync(1000);
                 }
                 
                 return;
@@ -1259,14 +1255,14 @@ public class UiNavigationSteps
     }
 
     [Given("there is a folder without a bucket assignment")]
-    public async Task GivenThereIsAFolderWithoutABucketAssignment()
+    public static async Task GivenThereIsAFolderWithoutABucketAssignment()
     {
         // For functional tests, we'll assume the test setup has prepared appropriate data
         await Task.CompletedTask;
     }
 
     [Given("there is a bucket configured")]
-    public async Task GivenThereIsABucketConfigured()
+    public static async Task GivenThereIsABucketConfigured()
     {
         // For functional tests, we'll assume the test setup has prepared appropriate data
         await Task.CompletedTask;
@@ -1311,7 +1307,7 @@ public class UiNavigationSteps
     }
 
     [Given("there is a folder configured")]
-    public async Task GivenThereIsAFolderConfigured()
+    public static async Task GivenThereIsAFolderConfigured()
     {
         // For functional tests, we'll assume the test setup has prepared appropriate data
         await Task.CompletedTask;
@@ -1390,7 +1386,7 @@ public class UiNavigationSteps
 
         // If no rows in tbody, try to find any table rows
         var anyRows = await _page.QuerySelectorAllAsync("table tr");
-        if (anyRows != null && anyRows.Count > 1) // More than just header
+        if (anyRows.Count > 1) // More than just header
         {
             // Skip header row and check data rows
             for (int i = 1; i < anyRows.Count; i++)
@@ -1451,7 +1447,7 @@ public class UiNavigationSteps
 
         // Check that the table exists and has the expected structure
         var rows = await _page.QuerySelectorAllAsync("tbody tr");
-        if (rows == null || rows.Count == 0)
+        if (rows.Count == 0)
         {
             // If no rows, that's okay - there might not be any folders
             await Task.CompletedTask;
@@ -1500,7 +1496,7 @@ public class UiNavigationSteps
     }
 
     [Given("there are no existing folder mappings")]
-    public async Task GivenThereAreNoExistingFolderMappings()
+    public static async Task GivenThereAreNoExistingFolderMappings()
     {
         // For functional tests, we assume the test starts with a clean state
         // The database should have no folder mappings at the start of the test
@@ -1508,7 +1504,7 @@ public class UiNavigationSteps
     }
 
     [Given("there are at least two buckets configured {string}")]
-    public async Task GivenThereAreAtLeastTwoBucketsConfiguredBucketAndBucket(string bucketSpec)
+    public static async Task GivenThereAreAtLeastTwoBucketsConfiguredBucketAndBucket(string bucketSpec)
     {
         // For functional tests, we'll assume the test setup has prepared appropriate data
         await Task.CompletedTask;
@@ -1580,7 +1576,7 @@ public class UiNavigationSteps
 
         // Find the second folder row (assuming "Folder B" is the second one)
         var rows = await _page.QuerySelectorAllAsync("table tbody tr");
-        if (rows != null && rows.Count > 1)
+        if (rows.Count > 1)
         {
             var secondRow = rows[1];
             
@@ -1601,7 +1597,7 @@ public class UiNavigationSteps
                     
                     // Get all options and select the one at the specified index
                     var options = await bucketDropdown.QuerySelectorAllAsync("option");
-                    if (options != null && options.Count > bucketNumber)
+                    if (options.Count > bucketNumber)
                     {
                         var optionToSelect = options[bucketNumber];
                         var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
@@ -1654,7 +1650,7 @@ public class UiNavigationSteps
                     
                     // Get all options and select the one at the specified index
                     var options = await bucketDropdown.QuerySelectorAllAsync("option");
-                    if (options != null && options.Count > bucketNumber)
+                    if (options.Count > bucketNumber)
                     {
                         var optionToSelect = options[bucketNumber];
                         var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
@@ -1686,7 +1682,7 @@ public class UiNavigationSteps
 
         // Find the second folder row (Folder B)
         var rows = await _page.QuerySelectorAllAsync("table tbody tr");
-        if (rows != null && rows.Count > 1)
+        if (rows.Count > 1)
         {
             var secondRow = rows[1];
             
@@ -1707,7 +1703,7 @@ public class UiNavigationSteps
                     
                     // Get all options and select the first one (the "None" option)
                     var options = await bucketDropdown.QuerySelectorAllAsync("option");
-                    if (options != null && options.Count > 0)
+                    if (options.Count > 0)
                     {
                         var noneOption = options[0];
                         var value = await noneOption.GetAttributeAsync("value") ?? string.Empty;
@@ -1739,7 +1735,7 @@ public class UiNavigationSteps
         
         // Check that the first folder shows a bucket assignment
         var rows = await _page.QuerySelectorAllAsync("table tbody tr");
-        if (rows != null && rows.Count > 0)
+        if (rows.Count > 0)
         {
             var firstRow = rows[0];
             var bucketCell = await firstRow.QuerySelectorAsync("td:nth-child(2)");
@@ -1773,7 +1769,7 @@ public class UiNavigationSteps
         
         // Check that the second folder shows a bucket assignment
         var rows = await _page.QuerySelectorAllAsync("table tbody tr");
-        if (rows != null && rows.Count > 1)
+        if (rows.Count > 1)
         {
             var secondRow = rows[1];
             var bucketCell = await secondRow.QuerySelectorAsync("td:nth-child(2)");
@@ -1814,7 +1810,7 @@ public class UiNavigationSteps
         
         // Check that the second folder shows the expected status
         var rows = await _page.QuerySelectorAllAsync("table tbody tr");
-        if (rows != null && rows.Count > 1)
+        if (rows.Count > 1)
         {
             var secondRow = rows[1];
             var bucketCell = await secondRow.QuerySelectorAsync("td:nth-child(2)");
