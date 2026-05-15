@@ -433,3 +433,7 @@ merged.cobertura.xml
 merged.vscoverage.xml
 coverage_files.txt
 PopfileNet.Database/bin\\Debug
+
+# Nuke
+.nuke/temp/
+.nuke/parameters.json
