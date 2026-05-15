@@ -106,6 +106,21 @@ jobs:
   test-functional:
     needs: build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        # Credentials are intentionally weak — only used for the testing pipeline, not production.
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: popfilenet_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
     - uses: actions/checkout@v5
     - name: Setup .NET
@@ -126,6 +141,9 @@ jobs:
         npm install -g playwright
         npx playwright install chromium
     - name: Run functional tests
+      env:
+        # Same test credentials as the service container above — only for the testing pipeline.
+        ConnectionStrings__popfilenet: "Host=localhost;Port=5432;Database=popfilenet_test;Username=test;Password=test"
       run: dotnet test Tests/FunctionalTests/PopfileNet.FunctionalTests.csproj -c Release --no-build --logger "console;verbosity=minimal" --results-directory ./TestResults/FunctionalTests
 
   coverage-report:
