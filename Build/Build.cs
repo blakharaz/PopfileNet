@@ -31,14 +31,14 @@ partial class Build : NukeBuild
     [Parameter("Configuration to build - Default is Release")]
     readonly Configuration Configuration = Configuration.Release;
 
-    [Solution("PopfileNet.sln")] readonly Solution Solution;
-    [GitRepository] readonly GitRepository GitRepository;
-    GitHubActions Ci => GitHubActions.Instance;
+    [Solution("PopfileNet.sln")] readonly Solution? Solution;
+    [GitRepository] readonly GitRepository? GitRepository;
+    GitHubActions? Ci => GitHubActions.Instance;
 
-    [Secret] [Parameter] readonly string SonarToken;
+    [Secret] [Parameter] readonly string? SonarToken;
 
     [Parameter] readonly string Registry = "ghcr.io";
-    [Parameter] readonly string ImageName;
+    [Parameter] readonly string? ImageName;
 
     AbsolutePath SourceDirectory => RootDirectory;
     AbsolutePath TestResultsDirectory => RootDirectory / "TestResults";
@@ -50,10 +50,10 @@ partial class Build : NukeBuild
 
     bool IsPush => Ci == null || !Ci.IsPullRequest;
     bool IsPullRequest => Ci is { IsPullRequest: true };
-    bool IsMainBranch => GitRepository.Branch == "main";
-    bool IsTag => GitRepository.Commit.StartsWith("refs/tags/");
-    string TagName => IsTag ? GitRepository.Commit.Replace("refs/tags/", "") : null;
-    string ImageNameValue => ImageName ?? Ci?.Repository ?? "popfilenet";
+    bool IsMainBranch => GitRepository?.Branch == "main";
+    bool IsTag => GitRepository?.Commit.StartsWith("refs/tags/") == true;
+    string? TagName => IsTag ? GitRepository!.Commit.Replace("refs/tags/", "") : null;
+    string ImageNameValue => (ImageName ?? Ci?.Repository ?? "popfilenet").ToLowerInvariant();
     bool ShouldPushDocker => Ci != null && !Ci.IsPullRequest;
 
     Target Clean => _ => _
@@ -105,6 +105,8 @@ partial class Build : NukeBuild
         .DependsOn(TestUnit)
         .Executes(() =>
         {
+            StartShell("dotnet tool install --global dotnet-coverage").AssertZeroExitCode();
+
             var unitTestResultsDir = TestResultsDirectory / "UnitTests";
             unitTestResultsDir.CreateOrCleanDirectory();
 
@@ -117,8 +119,8 @@ partial class Build : NukeBuild
 
             var coverageFilePatterns = string.Join(" ", coverageFiles.Select(x => $"\"{x}\""));
 
-            StartShell($"dotnet-coverage merge {coverageFilePatterns} --output \"{unitTestResultsDir / "merged.vscoverage.xml"}\" --output-format xml").AssertZeroExitCode();
-            StartShell($"dotnet-coverage merge {coverageFilePatterns} --output \"{unitTestResultsDir / "merged.cobertura.xml"}\" --output-format cobertura").AssertZeroExitCode();
+            StartShell($"dotnet-coverage merge {coverageFilePatterns} --output \"{unitTestResultsDir / "merged.vscoverage.xml"}\" --output-format xml", outputFilter: FilterDockerOutput).AssertZeroExitCode();
+            StartShell($"dotnet-coverage merge {coverageFilePatterns} --output \"{unitTestResultsDir / "merged.cobertura.xml"}\" --output-format cobertura", outputFilter: FilterDockerOutput).AssertZeroExitCode();
         });
 
     Target TestIntegration => _ => _
@@ -217,7 +219,7 @@ partial class Build : NukeBuild
                 return;
             }
 
-            var owner = Ci.RepositoryOwner;
+            var owner = Ci!.RepositoryOwner;
             var repo = Ci.Repository?.Split("/").Last();
 
             if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(repo))
@@ -314,10 +316,16 @@ partial class Build : NukeBuild
 
             var tags = GetDockerTags();
 
-            StartShell($"docker buildx build --push={(ShouldPushDocker ? "true" : "false")} --cache-from type=gha --cache-to type=gha,mode=max -f Dockerfile.backend {string.Join(" ", tags.Select(t => $"-t {t}"))} ./publish/backend").AssertZeroExitCode();
+            var backendArgs = ShouldPushDocker
+                ? $"--push --cache-from type=gha --cache-to type=gha,mode=max"
+                : $"--load --cache-from type=gha";
+            StartShell($"docker buildx build {backendArgs} -f Dockerfile.backend {string.Join(" ", tags.Select(t => $"-t {t}"))} ./publish/backend", outputFilter: FilterDockerOutput).AssertZeroExitCode();
 
             var uiTags = tags.Select(t => t.Replace("-backend", "-ui")).ToArray();
-            StartShell($"docker buildx build --push={(ShouldPushDocker ? "true" : "false")} --cache-from type=gha --cache-to type=gha,mode=max -f Dockerfile.ui {string.Join(" ", uiTags.Select(t => $"-t {t}"))} ./publish/ui").AssertZeroExitCode();
+            var uiArgs = ShouldPushDocker
+                ? $"--push --cache-from type=gha --cache-to type=gha,mode=max"
+                : $"--load --cache-from type=gha";
+            StartShell($"docker buildx build {uiArgs} -f Dockerfile.ui {string.Join(" ", uiTags.Select(t => $"-t {t}"))} ./publish/ui", outputFilter: FilterDockerOutput).AssertZeroExitCode();
         });
 
     Target GenerateRelease => _ => _
@@ -404,6 +412,17 @@ builder.Build().Run();
         (RootDirectory / "Tests" / "FunctionalTests" / "obj").DeleteDirectory();
     }
 
+    static string? FilterDockerOutput(string text)
+    {
+        if (text.StartsWith("#") || text.StartsWith(" ") || string.IsNullOrWhiteSpace(text))
+            return null;
+        if (text.StartsWith("Error:"))
+            return null;
+        if (text.StartsWith("WARNING:"))
+            return null;
+        return text;
+    }
+
     void InstallPlaywright()
     {
         StartShell("npm install -g playwright").AssertZeroExitCode();
@@ -436,7 +455,7 @@ builder.Build().Run();
 
         var sha = Ci?.Sha;
         if (string.IsNullOrEmpty(sha))
-            sha = GitRepository.Commit.Substring(0, Math.Min(7, GitRepository.Commit.Length));
+            sha = GitRepository!.Commit.Substring(0, Math.Min(7, GitRepository.Commit.Length));
         else if (sha.Length > 7)
             sha = sha.Substring(0, 7);
 
@@ -480,17 +499,17 @@ builder.Build().Run();
 
     class GitHubComment
     {
-        public string Id { get; set; }
-        public string Body { get; set; }
-        public string UserType { get; set; }
-        public string CreatedAt { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
+        public string UserType { get; set; } = string.Empty;
+        public string CreatedAt { get; set; } = string.Empty;
     }
 
     class GitHubCommentJson
     {
-        public string Id { get; set; }
-        public string Body { get; set; }
-        public string UserType { get; set; }
-        public string CreatedAt { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
+        public string UserType { get; set; } = string.Empty;
+        public string CreatedAt { get; set; } = string.Empty;
     }
 }
