@@ -1,7 +1,10 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 
-COPY . .
+COPY *.dll .
+COPY *.json .
+COPY *.pdb .
+COPY *.xml .
 
 RUN useradd --create-home appuser && chown -R appuser /app
 USER appuser
