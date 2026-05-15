@@ -64,7 +64,7 @@ public class UiNavigationSteps
                 Headless = true
             });
         }
-        catch (PlaywrightException ex)
+        catch (PlaywrightException)
         {
             _browserInstalled = false;
         }

@@ -49,7 +49,7 @@ public static class SettingsGroupExtensions
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting settings");
-            throw;
+            throw new InvalidOperationException($"Failed to retrieve application settings: {ex.Message}", ex);
         }
     }
 

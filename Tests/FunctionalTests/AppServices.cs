@@ -105,11 +105,15 @@ public class AppServices : IAsyncLifetime
                     var response = await client.GetAsync(backendUrl);
                     if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
-                        _logger.LogInformation("Backend is ready at {Url}", backendUrl);
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            _logger.LogInformation("Backend is ready at {Url}", backendUrl);
+                        }
+
                         break;
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
                     // Connection refused or other error — expected before startup
                 }
@@ -159,7 +163,7 @@ public class AppServices : IAsyncLifetime
                         return;
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
                     // Expected before UI startup
                 }
@@ -198,7 +202,11 @@ public class AppServices : IAsyncLifetime
         }
 
         // Fall back to Testcontainers for local dev / CI without a dedicated Postgres service
-        _logger.LogInformation("Starting PostgreSQL container...");
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Starting PostgreSQL container...");
+        }
+
         _postgres = new PostgreSqlBuilder(image: "postgres:16-alpine")
             .WithDatabase($"popfilenet_{Guid.NewGuid():D}")  // Unique DB name per test run
             .WithUsername("test")
@@ -212,8 +220,7 @@ public class AppServices : IAsyncLifetime
     private static async Task DrainOutputAsync(Process process)
     {
         var t1 = process.StandardOutput.ReadToEndAsync();
-        var t2 = process.StandardError.ReadToEndAsync();
-        await Task.WhenAll(t1, t2);
+        await Task.WhenAll(t1, process.StandardError.ReadToEndAsync());
     }
 
     public async Task DisposeAsync()
@@ -277,11 +284,10 @@ public class AppServices : IAsyncLifetime
                     return;
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 // Expected before backend starts
             }
-            await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
         throw new InvalidOperationException($"Backend failed to start after restart after {maxAttempts} seconds");
