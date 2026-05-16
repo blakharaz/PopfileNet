@@ -205,14 +205,14 @@ namespace PopfileNet.Database.Migrations
                     b.Navigation("UniqueId");
                 });
 
-            modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
-                {
-                    b.HasOne("PopfileNet.Common.Bucket", "Bucket")
-                        .WithOne("AssociatedFolder")
-                        .HasForeignKey("PopfileNet.Common.MailFolder", "BucketId");
+             modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
+                 {
+                     b.HasOne("PopfileNet.Common.Bucket", "Bucket")
+                         .WithMany("Folders")
+                         .HasForeignKey("PopfileNet.Common.MailFolder", "BucketId");
 
-                    b.Navigation("Bucket");
-                });
+                     b.Navigation("Bucket");
+                 });
 
             modelBuilder.Entity("PopfileNet.Common.MailHeader", b =>
                 {
@@ -224,10 +224,10 @@ namespace PopfileNet.Database.Migrations
                     b.Navigation("Email");
                 });
 
-            modelBuilder.Entity("PopfileNet.Common.Bucket", b =>
-                {
-                    b.Navigation("AssociatedFolder");
-                });
+             modelBuilder.Entity("PopfileNet.Common.Bucket", b =>
+                 {
+                     // Navigation property for Folders collection is handled by the WithMany above
+                 });
 
             modelBuilder.Entity("PopfileNet.Common.Email", b =>
                 {

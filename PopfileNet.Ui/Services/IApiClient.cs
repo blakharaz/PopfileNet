@@ -14,6 +14,9 @@ public interface IApiClient
     Task<SyncJobResult?> SyncEmailsAsync();
     Task<bool> UpdateFolderListAsync();
     Task<PagedResponse<FolderDto>?> GetFoldersAsync(int page = 1, int pageSize = 20);
+    Task<IReadOnlyList<FolderMappingDto>?> GetFolderMappingsAsync();
+    Task SetFolderMappingAsync(string folderName, string? bucketId);
+    Task RemoveFolderMappingAsync(string folderName);
     Task<PagedResponse<EmailDto>?> GetMailsAsync(int page = 1, int pageSize = 20);
     Task<EmailDetailDto?> GetMailByIdAsync(string id);
     Task<ClassifierStatus?> GetClassifierStatusAsync();

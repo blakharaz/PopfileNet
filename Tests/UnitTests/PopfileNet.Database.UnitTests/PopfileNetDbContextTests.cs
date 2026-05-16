@@ -148,10 +148,10 @@ public class PopfileNetDbContextTests
     }
 
     [Fact]
-    public async Task Bucket_WithAssociatedFolder_LinksCorrectly()
+    public async Task Bucket_WithFolders_LinksCorrectly()
     {
         await using var context = CreateInMemoryContext();
-
+        
         var bucket = new Bucket
         {
             Id = Guid.NewGuid().ToString(),
@@ -160,7 +160,7 @@ public class PopfileNetDbContextTests
         };
         context.Buckets.Add(bucket);
         await context.SaveChangesAsync();
-
+        
         var folder = new MailFolder
         {
             Id = Guid.NewGuid().ToString(),
@@ -169,14 +169,15 @@ public class PopfileNetDbContextTests
         };
         context.MailFolders.Add(folder);
         await context.SaveChangesAsync();
-
-        var result = await context.MailFolders
-            .Include(f => f.Bucket)
-            .FirstOrDefaultAsync(f => f.Id == folder.Id);
-
+        
+        var result = await context.Buckets
+            .Include(b => b.Folders)
+            .FirstOrDefaultAsync(b => b.Id == bucket.Id);
+        
         result.ShouldNotBeNull();
-        result!.Bucket.ShouldNotBeNull();
-        result.Bucket!.Name.ShouldBe("Spam");
+        result!.Folders.ShouldNotBeNull();
+        result!.Folders.Count.ShouldBe(1);
+        result!.Folders.First().Name.ShouldBe("Spam");
     }
 
     [Fact]

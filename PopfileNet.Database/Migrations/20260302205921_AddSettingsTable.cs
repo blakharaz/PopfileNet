@@ -143,8 +143,7 @@ namespace PopfileNet.Database.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_MailFolders_BucketId",
                 table: "MailFolders",
-                column: "BucketId",
-                unique: true);
+                column: "BucketId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MailHeader_EmailId",
