@@ -39,11 +39,11 @@ An IMAP-based email classification system inspired by [POPFile](https://getpopfi
 # Build the solution
 dotnet build
 
-# Run the Web UI
-dotnet run --project PopfileNet.Ui
+# Run via Aspire (manages Backend, UI, and PostgreSQL)
+dotnet run --project PopfileNet.AppHost
 ```
 
-Open http://localhost:5000 in your browser.
+The backend API is available at http://localhost:8000 and the UI at http://localhost:8001. An Aspire dashboard will open in your browser for monitoring.
 
 ## Development Testing
 

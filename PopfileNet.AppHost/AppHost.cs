@@ -4,7 +4,8 @@ var postgres = builder.AddPostgres("postgres")
     .WithDataVolume();
 
 var backend = builder.AddProject<Projects.PopfileNet_Backend>("popfilenet-backend")
-    .WithReference(postgres);
+    .WithReference(postgres)
+    .WithEnvironment("DevMode", "true");
 
 builder.AddProject<Projects.PopfileNet_Ui>("popfilenet-ui")
     .WithReference(backend);

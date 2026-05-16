@@ -9,5 +9,5 @@ COPY *.xml .
 RUN useradd --create-home appuser && chown -R appuser /app
 USER appuser
 
-EXPOSE 5000
+EXPOSE 8000
 ENTRYPOINT ["dotnet", "PopfileNet.Backend.dll"]

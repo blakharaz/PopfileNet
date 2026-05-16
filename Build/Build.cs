@@ -381,8 +381,8 @@ builder.Build().Run();
                 var envContent = System.IO.File.ReadAllText(envPath);
                 envContent = Regex.Replace(envContent, @"POPFILENET_BACKEND_IMAGE=.*", $"POPFILENET_BACKEND_IMAGE={Registry}/{ImageNameValue}-backend:v{TagName}");
                 envContent = Regex.Replace(envContent, @"POPFILENET_UI_IMAGE=.*", $"POPFILENET_UI_IMAGE={Registry}/{ImageNameValue}-ui:v{TagName}");
-                envContent = Regex.Replace(envContent, @"POPFILENET_BACKEND_PORT=.*", "POPFILENET_BACKEND_PORT=5000");
-                envContent = Regex.Replace(envContent, @"POPFILENET_UI_PORT=.*", "POPFILENET_UI_PORT=5001");
+                envContent = Regex.Replace(envContent, @"POPFILENET_BACKEND_PORT=.*", "POPFILENET_BACKEND_PORT=8000");
+                envContent = Regex.Replace(envContent, @"POPFILENET_UI_PORT=.*", "POPFILENET_UI_PORT=8001");
                 envContent = Regex.Replace(envContent, @"POSTGRES_PASSWORD=.*", "POSTGRES_PASSWORD=");
                 System.IO.File.WriteAllText(envPath, envContent);
 
