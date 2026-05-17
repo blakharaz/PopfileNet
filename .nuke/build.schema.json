@@ -26,6 +26,7 @@
       "enum": [
         "All",
         "Clean",
+        "CommitEnv",
         "Compile",
         "CoverageReport",
         "DockerBuild",
@@ -120,6 +121,13 @@
         },
         "Registry": {
           "type": "string"
+        },
+        "ReleaseBranches": {
+          "type": "array",
+          "description": "Release branches pattern",
+          "items": {
+            "type": "string"
+          }
         },
         "Solution": {
           "type": "string",
