@@ -12,25 +12,67 @@ namespace PopfileNet.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_MailFolders_Buckets_PopfileNet.Common.MailFolder_BucketId",
-                table: "MailFolders");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.table_constraints
+                        WHERE constraint_name = 'FK_MailFolders_Buckets_PopfileNet.Common.MailFolder_BucketId'
+                        AND table_name = 'MailFolders'
+                    ) THEN
+                        ALTER TABLE ""MailFolders"" DROP CONSTRAINT ""FK_MailFolders_Buckets_PopfileNet.Common.MailFolder_BucketId"";
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.DropUniqueConstraint(
-                name: "AK_Buckets_TempId_TempId1",
-                table: "Buckets");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.table_constraints
+                        WHERE constraint_name = 'AK_Buckets_TempId_TempId1'
+                        AND table_name = 'Buckets'
+                    ) THEN
+                        ALTER TABLE ""Buckets"" DROP CONSTRAINT ""AK_Buckets_TempId_TempId1"";
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.DropColumn(
-                name: "PopfileNet.Common.MailFolder",
-                table: "MailFolders");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'MailFolders' AND column_name = 'PopfileNet.Common.MailFolder'
+                    ) THEN
+                        ALTER TABLE ""MailFolders"" DROP COLUMN ""PopfileNet.Common.MailFolder"";
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.DropColumn(
-                name: "TempId",
-                table: "Buckets");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'Buckets' AND column_name = 'TempId'
+                    ) THEN
+                        ALTER TABLE ""Buckets"" DROP COLUMN ""TempId"";
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.DropColumn(
-                name: "TempId1",
-                table: "Buckets");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'Buckets' AND column_name = 'TempId1'
+                    ) THEN
+                        ALTER TABLE ""Buckets"" DROP COLUMN ""TempId1"";
+                    END IF;
+                END $$;
+            ");
 
             migrationBuilder.AlterColumn<string>(
                 name: "ImapUid",
@@ -190,10 +232,17 @@ namespace PopfileNet.Database.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_MailFolders_BucketId",
-                table: "MailFolders",
-                column: "BucketId");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_indexes
+                        WHERE tablename = 'MailFolders' AND indexname = 'IX_MailFolders_BucketId'
+                    ) THEN
+                        CREATE INDEX ""IX_MailFolders_BucketId"" ON ""MailFolders"" (""BucketId"");
+                    END IF;
+                END $$;
+            ");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -238,20 +287,37 @@ namespace PopfileNet.Database.Migrations
                 column: "NormalizedUserName",
                 unique: true);
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_MailFolders_Buckets_BucketId",
-                table: "MailFolders",
-                column: "BucketId",
-                principalTable: "Buckets",
-                principalColumn: "Id");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.table_constraints
+                        WHERE constraint_name = 'FK_MailFolders_Buckets_BucketId'
+                        AND table_name = 'MailFolders'
+                    ) THEN
+                        ALTER TABLE ""MailFolders""
+                        ADD CONSTRAINT ""FK_MailFolders_Buckets_BucketId""
+                        FOREIGN KEY (""BucketId"") REFERENCES ""Buckets"" (""Id"");
+                    END IF;
+                END $$;
+            ");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_MailFolders_Buckets_BucketId",
-                table: "MailFolders");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.table_constraints
+                        WHERE constraint_name = 'FK_MailFolders_Buckets_BucketId'
+                        AND table_name = 'MailFolders'
+                    ) THEN
+                        ALTER TABLE ""MailFolders"" DROP CONSTRAINT ""FK_MailFolders_Buckets_BucketId"";
+                    END IF;
+                END $$;
+            ");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
@@ -274,9 +340,17 @@ namespace PopfileNet.Database.Migrations
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
 
-            migrationBuilder.DropIndex(
-                name: "IX_MailFolders_BucketId",
-                table: "MailFolders");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM pg_indexes
+                        WHERE tablename = 'MailFolders' AND indexname = 'IX_MailFolders_BucketId'
+                    ) THEN
+                        DROP INDEX ""IX_MailFolders_BucketId"";
+                    END IF;
+                END $$;
+            ");
 
             migrationBuilder.AddColumn<int>(
                 name: "PopfileNet.Common.MailFolder",

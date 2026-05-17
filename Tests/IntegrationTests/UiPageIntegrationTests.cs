@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 using PopfileNet.Backend.Models;
+using PopfileNet.Common;
 using Shouldly;
 using Xunit;
 
@@ -9,6 +11,9 @@ namespace PopfileNet.IntegrationTests;
 [Collection("DatabaseTests")]
 public class UiPageIntegrationTests : DatabaseTestBase
 {
+    private const string AdminEmail = "test@popfile.local";
+    private const string AdminPassword = "testpassword123";
+
     public UiPageIntegrationTests(DatabaseFixture fixture) : base(fixture)
     {
     }
@@ -16,13 +21,25 @@ public class UiPageIntegrationTests : DatabaseTestBase
     protected override Task SetupClientAsync()
     {
         Factory = CreateWebApplicationFactory(Fixture.ConnectionString);
-        Client = Factory.CreateClient();
+        Client = Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
         return Task.CompletedTask;
+    }
+
+    private async Task LoginAsync()
+    {
+        var loginRequest = new LoginRequest(AdminEmail, AdminPassword);
+        var response = await Client.PostAsJsonAsync("/auth/login", loginRequest);
+        response.EnsureSuccessStatusCode();
     }
 
     [Fact]
     public async Task SettingsPage_CanSaveSettings()
     {
+        await LoginAsync();
+
         var settings = new AppSettings
         {
             ImapSettings = new ImapSettingsDto
@@ -43,6 +60,8 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task SettingsPage_CanTestConnection()
     {
+        await LoginAsync();
+
         var response = await Client.PostAsync("/settings/test-connection", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
@@ -51,6 +70,8 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task ClassifyPage_CanGetStatus()
     {
+        await LoginAsync();
+
         var response = await Client.GetAsync("/classifier/status");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -59,6 +80,8 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task ClassifyPage_CanTrain()
     {
+        await LoginAsync();
+
         var response = await Client.PostAsync("/classifier/train", null);
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
@@ -67,6 +90,8 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task MailsPage_CanViewMails()
     {
+        await LoginAsync();
+
         var response = await Client.GetAsync("/mails");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -75,6 +100,8 @@ public class UiPageIntegrationTests : DatabaseTestBase
     [Fact]
     public async Task MailsPage_CanPaginate()
     {
+        await LoginAsync();
+
         var response = await Client.GetAsync("/mails?page=1&pageSize=10");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -89,6 +116,6 @@ public class UiPageIntegrationTests : DatabaseTestBase
     {
         var response = await Client.GetAsync("/");
 
-        response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.Redirect);
+        response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.Redirect, HttpStatusCode.Found);
     }
 }
