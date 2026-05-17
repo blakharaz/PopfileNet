@@ -45,6 +45,9 @@ jobs:
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Run Nuke Validation
         run: ./build.sh TestUnit TestIntegration TestFunctional SonarCloud CoverageReport PrComment
 

@@ -127,8 +127,6 @@ partial class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
-            CleanObjDirectories();
-
             DotNetTest(s => s
                 .SetProjectFile(RootDirectory / "Tests" / "IntegrationTests" / "PopfileNet.IntegrationTests.csproj")
                 .SetConfiguration(Configuration)
@@ -141,7 +139,6 @@ partial class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
-            CleanObjDirectories();
             InstallPlaywright();
 
             DotNetTest(s => s
@@ -457,12 +454,6 @@ partial class Build : NukeBuild
         .DependsOn(DockerBuild)
         .DependsOn(CommitEnv);
     [Parameter("Release branches pattern")] readonly string[] ReleaseBranches = ["release/*", "releases/*"];
-
-    void CleanObjDirectories()
-    {
-        (RootDirectory / "Tests" / "IntegrationTests" / "obj").DeleteDirectory();
-        (RootDirectory / "Tests" / "FunctionalTests" / "obj").DeleteDirectory();
-    }
 
     static string? FilterDockerOutput(string text)
     {
