@@ -25,6 +25,7 @@ public static class ClassifierGroupExtensions
         var group = app.MapGroup("/classifier");
         
         group.MapGet("/status", GetStatusAsync);
+        group.MapGet("/dev-mode", () => TypedResults.Ok(ApiResponse<bool>.Success(app.Configuration.GetValue<bool>("DevMode"))));
         group.MapPost("/train", TrainAsync);
         group.MapPost("/predict", PredictAsync);
         

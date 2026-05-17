@@ -22,4 +22,7 @@ public interface IApiClient
     Task<ClassifierStatus?> GetClassifierStatusAsync();
     Task<bool> TrainClassifierAsync();
     Task<PredictionResult?> PredictAsync(string emailId);
+    Task<bool?> GetDevModeStatusAsync();
+    Task<EvaluationResult?> RunEvaluationAsync(EvaluationRequest request);
+    Task<object?> GetEvaluationConfigAsync();
 }

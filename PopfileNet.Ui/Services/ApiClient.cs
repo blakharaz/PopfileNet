@@ -117,6 +117,17 @@ public class ApiClient(HttpClient http) : IApiClient
     public async Task<PredictionResult?> PredictAsync(string emailId) =>
         await PostAsync<PredictionResult>("/classifier/predict", new { EmailId = emailId });
 
+    // DevMode status
+    public async Task<bool?> GetDevModeStatusAsync() =>
+        await GetAsync<string>("/classifier/dev-mode") is { } s && bool.TryParse(s, out var b) ? (bool?)b : false;
+
+    // Evaluation
+    public async Task<EvaluationResult?> RunEvaluationAsync(EvaluationRequest request) =>
+        await PostAsync<EvaluationResult>("/evaluation/run", request);
+
+    public async Task<object?> GetEvaluationConfigAsync() =>
+        await GetAsync<object>("/evaluation/config");
+
     // Folder Mappings
     public async Task SetFolderMappingAsync(string folderName, string? bucketId) =>
         await PostAsync<object>($"/settings/folder-mappings", new FolderMappingDto(folderName, bucketId));

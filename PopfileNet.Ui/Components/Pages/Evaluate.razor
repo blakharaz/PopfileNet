@@ -1,0 +1,269 @@
+@page "/evaluate"
+@using PopfileNet.Ui.Services
+@inject IApiClient Api
+
+@if (devMode is false)
+{
+    <FluentCard>
+        <h2>Evaluation</h2>
+        <p>This page is only accessible in dev mode.</p>
+        <a href="/mails" class="btn-link">Go to Mails</a>
+    </FluentCard>
+}
+else if (config is null)
+{
+    <div>Loading...</div>
+}
+else
+{
+    <FluentCard>
+        <h2>Evaluation</h2>
+
+        <FluentStack Orientation="Orientation.Vertical" Gap="16">
+            <!-- Configuration -->
+            <FluentCard>
+                <h3>Configuration</h3>
+
+                <table class="config-table">
+                    <tr>
+                        <td style="width: 200px;">Folder Filter</td>
+                        <td>
+                            <select @bind="request.FolderFilter" @bind:event="oninput">
+                                <option value="all">All folders</option>
+                                @foreach (var folder in config.Folders)
+                                {
+                                    <option value="@folder">@folder</option>
+                                }
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Bucket Filter</td>
+                        <td>
+                            <select @bind="request.BucketFilter" @bind:event="oninput">
+                                <option value="all">All buckets</option>
+                                @foreach (var bucket in config.Buckets)
+                                {
+                                    <option value="@bucket.Id">@bucket.Name</option>
+                                }
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Cutoff Type</td>
+                        <td>
+                            <label><input type="radio" name="cutoffType" @onclick="SetCutoffDate"> By Date</label>
+                            <label style="margin-left: 16px;"><input type="radio" name="cutoffType" @onclick="SetCutoffAmount"> By Amount</label>
+                        </td>
+                    </tr>
+                    <tr id="cutoff-value-row">
+                        <td>Cutoff Value</td>
+                        <td>
+                            @if (request.CutoffType == "date")
+                            {
+                                <input type="date" />
+                            }
+                            else
+                            {
+                                <input type="number" min="10" max="@totalMails" value="@(cutoffAmount.ToString())" onchange="document.querySelector('#amount-value').textContent = this.value" />
+                                <span id="amount-value" style="margin-left: 8px;">@cutoffAmount</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Train/Test Split</td>
+                        <td>
+                            <input type="range" min="0.5" max="0.95" step="0.05" @bind="request.TrainTestSplit" @bind:event="oninput" />
+                            <span>@(request.TrainTestSplit.ToString("P0"))</span>
+                        </td>
+                    </tr>
+                    <tr id="num-runs-row">
+                        <td>Number of Runs</td>
+                        <td><input type="number" min="1" max="20" @bind="request.NumberOfRuns" @bind:event="oninput" /></td>
+                    </tr>
+                </table>
+
+                <FluentButton Appearance="Appearance.Accent" @onclick="RunEvalAsync" Disabled="@isRunning">
+                    @(isRunning ? "Evaluating..." : "Run Evaluation")
+                </FluentButton>
+            </FluentCard>
+
+            <!-- Results -->
+            @if (result is not null)
+            {
+                <FluentStack Orientation="Orientation.Vertical" Gap="16">
+                    @if (result.Aggregated != null && result.NumberOfRuns > 1)
+                    {
+                        <FluentCard>
+                            <h3>Aggregated Results</h3>
+                            <table class="results-table">
+                                <tr><td>Mean Accuracy</td><td>@(result.Aggregated.MeanAccuracy.ToString("P1"))</td></tr>
+                                <tr><td>Min Accuracy</td><td>@(result.Aggregated.MinAccuracy.ToString("P1"))</td></tr>
+                                <tr><td>Max Accuracy</td><td>@(result.Aggregated.MaxAccuracy.ToString("P1"))</td></tr>
+                            </table>
+                            @if (result.Aggregated.PerBucket != null && result.Aggregated.PerBucket.Any())
+                            {
+                                <h4>Per-Bucket Averages</h4>
+                                <table class="metrics-table">
+                                    <thead><tr><th>Bucket</th><th>Precision</th><th>Recall</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var kv in result.Aggregated.PerBucket.OrderByDescending(x => x.Value.MeanPrecision))
+                                        {<tr><td>@kv.Key</td><td>@(kv.Value.MeanPrecision.ToString("P1"))</td><td>@(kv.Value.MeanRecall.ToString("P1"))</td></tr>}
+                                    </tbody>
+                                </table>
+                            }
+                        </FluentCard>
+                        <FluentCard><h3>Per-Run Accuracy</h3>
+                            <ul class="runs-list">
+                                @foreach (var run in result.Runs)
+                                {<li><strong>Run @(run.RunNumber)</strong>: @(run.Accuracy.ToString("P1")) (@(run.Correct)/@(run.Total))</li>}
+                            </ul>
+                        </FluentCard>
+                        <FluentCard>
+                            <h3>Per-Bucket Metrics (Last Run)</h3>
+                            @if (result.Runs.Any())
+                            {
+                                var lastRun = result.Runs.Last();
+                                <table class="metrics-table">
+                                    <thead><tr><th>Bucket</th><th>TP</th><th>FP</th><th>FN</th><th>Precision</th><th>Recall</th></tr></thead>
+                                    <tbody>@foreach (var m in lastRun.BucketMetrics) {<tr><td>@m.BucketName</td><td>@m.TruePositives</td><td>@m.FalsePositives</td><td>@m.FalseNegatives</td><td>@(m.Precision.ToString("P1"))</td><td>@(m.Recall.ToString("P1"))</td></tr>}</tbody>
+                                </table>
+                                @if (lastRun.Mismatches.Any())
+                                {<h4>Mismatches (@(lastRun.Mismatches.Count))</h4>}
+                                @foreach (var ms in lastRun.Mismatches.Take(20).OrderByDescending(x => x.Subject))
+                                {<details style="margin-bottom: 8px;"><summary style="cursor:pointer; font-weight:bold;">@ms.ActualBucket -> @ms.PredictedBucket</summary><table class="metrics-table"><tbody><tr><td>@ms.EmailId</td><td style="max-width:400px;overflow-wrap:break-word;">@ms.Subject</td></tr></tbody></table></details>}
+                                @if (lastRun.Mismatches.Count > 20) {<p>(Showing first 20 of @(lastRun.Mismatches.Count))</p>}
+                            }
+                        </FluentCard>
+                    }
+                    else if (result.Runs.Any())
+                    {
+                        var run = result.Runs[0];
+                        <FluentCard><h3>Overall Accuracy</h3><table class="results-table">
+                            <tr><td>Correct</td><td>@run.Correct / @run.Total</td></tr>
+                            <tr><td>Accuracy</td><td>@(run.Accuracy.ToString("P1"))</td></tr>
+                        </table></FluentCard>
+                        @if (run.BucketMetrics.Any())
+                        {<FluentCard><h3>Per-Bucket Metrics</h3>
+                            <table class="metrics-table">
+                                <thead><tr><th>Bucket</th><th>TP</th><th>FP</th><th>FN</th><th>Precision</th><th>Recall</th></tr></thead>
+                                <tbody>@foreach (var m in run.BucketMetrics) {<tr><td>@m.BucketName</td><td>@m.TruePositives</td><td>@m.FalsePositives</td><td>@m.FalseNegatives</td><td>@(m.Precision.ToString("P1"))</td><td>@(m.Recall.ToString("P1"))</td></tr>}</tbody>
+                            </table>
+                        </FluentCard>}
+                        @if (run.Mismatches.Any())
+                        {<FluentCard>
+                            <h3>Mismatches (@(run.Mismatches.Count))</h3>
+                            <p style="margin-bottom:8px;">Predicted bucket differs from actual:</p>
+                            @foreach (var ms in run.Mismatches.Take(20).OrderByDescending(x => x.Subject))
+                            {<details style="margin-bottom:8px;"><summary style="cursor:pointer; font-weight:bold;">@ms.ActualBucket -> @ms.PredictedBucket</summary><table class="metrics-table"><tbody><tr><td>@ms.EmailId</td><td style="max-width:400px;overflow-wrap:break-word;">@ms.Subject</td></tr></tbody></table></details>}
+                            @if (run.Mismatches.Count > 20) {<p>(Showing first 20 of @(run.Mismatches.Count))</p>}
+                        </FluentCard>}
+                    }
+                </FluentStack>
+            }
+        </FluentStack>
+
+        @if (!string.IsNullOrEmpty(errorMsg))
+        {<div style="margin-top:16px; color:red;">@errorMsg</div>}
+    </FluentCard>
+}
+
+@code {
+    private bool devMode = true;
+    private MyConfigDto? config;
+    private EvaluationRequest request = new();
+    private EvaluationResult? result;
+    private int cutoffAmount = 100;
+    private string _cutoffDateStr = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
+    private int totalMails;
+    private bool isRunning;
+    private string errorMsg = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && devMode)
+            await LoadConfig();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var dm = await Api.GetDevModeStatusAsync();
+        devMode = dm == true;
+        config = new MyConfigDto(new List<string>(), new List<MyBucketInfo>());
+    }
+
+    private async Task LoadConfig()
+    {
+        var raw = await Api.GetEvaluationConfigAsync();
+        totalMails = 500;
+
+        if (raw is System.Text.Json.JsonElement je)
+        {
+            var folders = new List<string>();
+            foreach (var f in je.GetProperty("Folders").EnumerateArray())
+                folders.Add(f.GetString() ?? "");
+
+            var bucketsList = new List<MyBucketInfo>();
+            foreach (var b in je.GetProperty("Buckets").EnumerateArray())
+            {
+                var id = b.TryGetProperty("Id", out var p) ? p.GetString() : "";
+                var name = b.TryGetProperty("Name", out var p2) ? p2.GetString() : "";
+                bucketsList.Add(new MyBucketInfo(id ?? "", name ?? ""));
+            }
+
+            config = new MyConfigDto(folders, bucketsList);
+
+            if (config.Folders.Count > 100)
+                cutoffAmount = (int)(config.Folders.Count * 0.2);
+        }
+
+        request.CutoffType = "amount";
+        request.CutoffValue = cutoffAmount.ToString();
+    }
+
+    public async Task RunEvalAsync()
+    {
+        if (request.CutoffType == "amount")
+            request.CutoffValue = cutoffAmount.ToString();
+        try
+        {
+            isRunning = true;
+            errorMsg = "";
+            result = await Api.RunEvaluationAsync(request);
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isRunning = false;
+        }
+    }
+
+    private void SetCutoffDate()
+    {
+        request.CutoffType = "date";
+        result = null;
+        errorMsg = "";
+    }
+
+    private void SetCutoffAmount()
+    {
+        request.CutoffType = "amount";
+        result = null;
+        errorMsg = "";
+    }
+
+    public class MyConfigDto(List<string> folders, List<MyBucketInfo> buckets)
+    {
+        public List<string> Folders { get; } = folders;
+        public List<MyBucketInfo> Buckets { get; } = buckets;
+    }
+
+    public class MyBucketInfo(string id, string name)
+    {
+        public string Id { get; } = id;
+        public string Name { get; } = name;
+    }
+}

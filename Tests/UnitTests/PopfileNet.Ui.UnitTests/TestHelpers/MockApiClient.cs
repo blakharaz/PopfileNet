@@ -112,4 +112,12 @@ public class MockApiClient : IApiClient
     public virtual Task SetFolderMappingAsync(string folderName, string? bucketId) => Task.CompletedTask;
 
     public virtual Task RemoveFolderMappingAsync(string folderName) => Task.CompletedTask;
+
+    public virtual Task<bool?> GetDevModeStatusAsync() => Task.FromResult<bool?>(true);
+
+    public virtual Task<object?> GetEvaluationConfigAsync() =>
+        Task.FromResult<object?>(new { Folders = new List<string>(), Buckets = Array.Empty<BucketInfoDto>() });
+
+    public virtual Task<EvaluationResult?> RunEvaluationAsync(EvaluationRequest request) =>
+        Task.FromResult<EvaluationResult?>(null);
 }

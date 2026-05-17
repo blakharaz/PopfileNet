@@ -12,7 +12,6 @@ using PopfileNet.Imap;
 using PopfileNet.Imap.Services;
 using PopfileNet.Imap.Settings;
 using PopfileNet.ServiceDefaults;
-using InvalidDataException = System.IO.InvalidDataException;
 
 namespace PopfileNet.Backend;
 
@@ -31,8 +30,9 @@ public class Program
                 Models.AppJsonSerializerContext.Default);
         });
 
-    var devMode = builder.Configuration.GetSection("DevMode").Get<DevModeSettings>() ?? new DevModeSettings(Enabled: false);
-    builder.Services.AddSingleton(devMode);
+        var devMode = builder.Configuration.GetSection("DevMode").Get<DevModeSettings>() ??
+                      new DevModeSettings(Enabled: false);
+        builder.Services.AddSingleton(devMode);
 
         builder.Services.AddEndpointsApiExplorer();
         builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet", configureDbContextOptions: options =>
@@ -44,9 +44,9 @@ public class Program
             }
         });
 
-    var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
-                               ?? throw new InvalidDataException("Missing IMAP settings in app configuration");
-    builder.Services.AddSingleton(imapSettingsDefaults);
+        var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
+                                   ?? throw new InvalidDataException("Missing IMAP settings in app configuration");
+        builder.Services.AddSingleton(imapSettingsDefaults);
 
         builder.Services.AddScoped<IImapClientFactory, ImapClientFactory>();
         builder.Services.AddScoped<IImapService, ImapService>();
@@ -54,6 +54,7 @@ public class Program
         builder.Services.AddScoped<IDatabaseFacade, EfCoreDatabaseFacadeWrapper>();
         builder.Services.AddScoped<IEmailRepository, EmailRepository>();
         builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
+        builder.Services.AddSingleton<ClassifierEvaluationService>();
         builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
         var app = builder.Build();
@@ -88,7 +89,8 @@ public class Program
             }
         }
 
-        app.AddSettingsGroup()
+        app.AddEvaluationGroup()
+            .AddSettingsGroup()
             .AddJobsGroup()
             .AddMailsGroup()
             .AddClassifierGroup()
