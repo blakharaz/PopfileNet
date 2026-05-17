@@ -516,6 +516,175 @@ public class ApiClientTests
         result.PredictedBucket.ShouldBe("bucket-1");
         result.Confidence.ShouldBe(0.95f);
     }
+
+    [Fact]
+    public async Task LoginAsync_ReturnsSuccess_OnValidCredentials()
+    {
+        var loginResponse = new LoginResponse(true, new UserDto("1", "user@test.com", "Admin"), null);
+        var apiResponse = new ApiResponse<LoginResponse> { Value = loginResponse };
+        var content = JsonSerializer.Serialize(apiResponse, JsonOptions);
+
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            request.Method.ShouldBe(System.Net.Http.HttpMethod.Post);
+            request.RequestUri?.ToString().ShouldContain("/auth/login");
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(content) };
+        });
+
+        var apiClient = new ApiClient(client);
+        var result = await apiClient.LoginAsync("user@test.com", "password");
+
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeTrue();
+        result.User.ShouldNotBeNull();
+        result.User.Email.ShouldBe("user@test.com");
+    }
+
+    [Fact]
+    public async Task LoginAsync_ReturnsFailure_OnUnauthorized()
+    {
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+        });
+
+        var apiClient = new ApiClient(client);
+        var result = await apiClient.LoginAsync("user@test.com", "wrong");
+
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldBe("Invalid email or password");
+    }
+
+    [Fact]
+    public async Task LogoutAsync_SendsPostRequest()
+    {
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            request.Method.ShouldBe(System.Net.Http.HttpMethod.Post);
+            request.RequestUri?.ToString().ShouldContain("/auth/logout");
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var apiClient = new ApiClient(client);
+        await apiClient.LogoutAsync();
+    }
+
+    [Fact]
+    public async Task GetCurrentUserAsync_ReturnsUser_OnSuccess()
+    {
+        var userDto = new UserDto("1", "user@test.com", "Admin");
+        var apiResponse = new ApiResponse<UserDto> { Value = userDto };
+        var content = JsonSerializer.Serialize(apiResponse, JsonOptions);
+
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            request.RequestUri?.ToString().ShouldContain("/auth/me");
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(content) };
+        });
+
+        var apiClient = new ApiClient(client);
+        var result = await apiClient.GetCurrentUserAsync();
+
+        result.ShouldNotBeNull();
+        result.Email.ShouldBe("user@test.com");
+        result.Role.ShouldBe("Admin");
+    }
+
+    [Fact]
+    public async Task GetCurrentUserAsync_ReturnsNull_OnFailure()
+    {
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+        });
+
+        var apiClient = new ApiClient(client);
+        var result = await apiClient.GetCurrentUserAsync();
+
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetUsersAsync_ReturnsPagedUsers_OnSuccess()
+    {
+        var users = new PagedResponse<UserDto>
+        {
+            Items = [new UserDto("1", "admin@test.com", "Admin")],
+            Page = 1, PageSize = 20, TotalCount = 1, TotalPages = 1, HasPrevious = false, HasNext = false, IsSuccess = true
+        };
+        var content = JsonSerializer.Serialize(users, JsonOptions);
+
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            request.RequestUri?.ToString().ShouldContain("/auth/users?page=1&pageSize=20");
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(content) };
+        });
+
+        var apiClient = new ApiClient(client);
+        var result = await apiClient.GetUsersAsync();
+
+        result.ShouldNotBeNull();
+        result.Items.Count.ShouldBe(1);
+        result.Items[0].Email.ShouldBe("admin@test.com");
+    }
+
+    [Fact]
+    public async Task CreateUserAsync_ReturnsCreatedUser_OnSuccess()
+    {
+        var userDto = new UserDto("new-id", "new@test.com", "User");
+        var apiResponse = new ApiResponse<UserDto> { Value = userDto };
+        var content = JsonSerializer.Serialize(apiResponse, JsonOptions);
+
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            request.Method.ShouldBe(System.Net.Http.HttpMethod.Post);
+            request.RequestUri?.ToString().ShouldContain("/auth/users");
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(content) };
+        });
+
+        var apiClient = new ApiClient(client);
+        var result = await apiClient.CreateUserAsync("new@test.com", "password", "User");
+
+        result.ShouldNotBeNull();
+        result.Email.ShouldBe("new@test.com");
+        result.Role.ShouldBe("User");
+    }
+
+    [Fact]
+    public async Task UpdateUserAsync_ReturnsUpdatedUser_OnSuccess()
+    {
+        var userDto = new UserDto("1", "updated@test.com", "Admin");
+        var apiResponse = new ApiResponse<UserDto> { Value = userDto };
+        var content = JsonSerializer.Serialize(apiResponse, JsonOptions);
+
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            request.Method.ShouldBe(System.Net.Http.HttpMethod.Put);
+            request.RequestUri?.ToString().ShouldContain("/auth/users/1");
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(content) };
+        });
+
+        var apiClient = new ApiClient(client);
+        var result = await apiClient.UpdateUserAsync("1", "updated@test.com", "Admin");
+
+        result.ShouldNotBeNull();
+        result.Role.ShouldBe("Admin");
+    }
+
+    [Fact]
+    public async Task DeleteUserAsync_SendsDeleteRequest()
+    {
+        var client = CreateMockClient(async (request, ct) =>
+        {
+            request.Method.ShouldBe(System.Net.Http.HttpMethod.Delete);
+            request.RequestUri?.ToString().ShouldContain("/auth/users/user-id");
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        });
+
+        var apiClient = new ApiClient(client);
+        await apiClient.DeleteUserAsync("user-id");
+    }
 }
 
 public class MockHttpMessageHandler : HttpMessageHandler
