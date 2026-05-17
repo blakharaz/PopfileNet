@@ -69,6 +69,62 @@ public class ApiClient(HttpClient http) : IApiClient
         return JsonSerializer.Deserialize<PagedResponse<T>>(content, JsonOptions);
     }
 
+    // Auth
+    public async Task<LoginResponse?> LoginAsync(string email, string password)
+    {
+        var response = await _http.PostAsJsonAsync("/auth/login", new LoginRequest(email, password));
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            return new LoginResponse(false, null, "Invalid email or password");
+        }
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync();
+        var apiResponse = JsonSerializer.Deserialize<ApiResponse<LoginResponse>>(content, JsonOptions);
+        return apiResponse?.Value;
+    }
+
+    public async Task LogoutAsync()
+    {
+        await _http.PostAsync("/auth/logout", null);
+    }
+
+    public async Task<UserDto?> GetCurrentUserAsync()
+    {
+        try
+        {
+            return await GetAsync<UserDto>("/auth/me");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<PagedResponse<UserDto>?> GetUsersAsync(int page = 1, int pageSize = 20) =>
+        await GetPagedAsync<UserDto>($"/auth/users?page={page}&pageSize={pageSize}");
+
+    public async Task<UserDto?> CreateUserAsync(string email, string password, string role)
+    {
+        var response = await _http.PostAsJsonAsync("/auth/users", new { Email = email, Password = password, Role = role });
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse<UserDto>>(content, JsonOptions)?.Value;
+    }
+
+    public async Task<UserDto?> UpdateUserAsync(string id, string? email, string? role)
+    {
+        var response = await _http.PutAsJsonAsync($"/auth/users/{id}", new { Email = email, Role = role });
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse<UserDto>>(content, JsonOptions)?.Value;
+    }
+
+    public async Task DeleteUserAsync(string id)
+    {
+        var response = await _http.DeleteAsync($"/auth/users/{id}");
+        response.EnsureSuccessStatusCode();
+    }
+
     // Accounts
     public async Task<PagedResponse<AccountDto>?> GetAccountsAsync(int page = 1, int pageSize = 20) =>
         await GetPagedAsync<AccountDto>($"/accounts?page={page}&pageSize={pageSize}");

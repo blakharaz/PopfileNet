@@ -16,7 +16,7 @@ public static class AccountsGroupExtensions
     /// <returns>The configured web application.</returns>
     public static WebApplication AddAccountsGroup(this WebApplication app)
     {
-        var group = app.MapGroup("/accounts");
+        var group = app.MapGroup("/accounts").RequireAuthorization();
         group.MapGet("/", GetAccountsAsync);
         return app;
     }

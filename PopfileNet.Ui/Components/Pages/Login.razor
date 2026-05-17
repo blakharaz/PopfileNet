@@ -1,0 +1,68 @@
+@page "/login"
+@using Microsoft.AspNetCore.Components.Authorization
+@using PopfileNet.Ui.Services
+@inject IApiClient Api
+@inject AuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<FluentCard>
+    <h2>Login</h2>
+
+    <FluentStack Orientation="Orientation.Vertical" Gap="20">
+        <FluentTextField @bind-Value="Email" Label="Email" Placeholder="user@example.com" />
+        <FluentTextField @bind-Value="Password" Label="Password" Type="Password" />
+
+        <FluentButton Appearance="Appearance.Accent" @onclick="HandleLogin" Disabled="isLoading">
+            @(isLoading ? "Logging in..." : "Login")
+        </FluentButton>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <FluentBadge Appearance="Appearance.Hypertext">@ErrorMessage</FluentBadge>
+        }
+    </FluentStack>
+</FluentCard>
+
+@code {
+    private string Email { get; set; } = "";
+    private string Password { get; set; } = "";
+    private string ErrorMessage { get; set; } = "";
+    private bool isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        ErrorMessage = "";
+
+        try
+        {
+            var result = await Api.LoginAsync(Email, Password);
+            if (result != null && result.Success)
+            {
+                await AuthStateProvider.OnLoginSuccessAsync();
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                ErrorMessage = result?.Error ?? "Login failed";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

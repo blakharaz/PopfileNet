@@ -1,26 +1,43 @@
 @inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using PopfileNet.Ui.Services
+@inject IApiClient Api
+@inject AuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 
-<FluentLayout>
-    <FluentHeader>
-        <a href="/" class="logo">PopfileNet</a>
-        <FluentSpacer />
-    </FluentHeader>
-    
-    <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%">
-        <FluentNavMenu Width="250">
-            <FluentNavLink Href="/" Match="NavLinkMatch.All">Dashboard</FluentNavLink>
-            <FluentNavLink Href="/accounts">Accounts</FluentNavLink>
-            <FluentNavLink Href="/mails">Mails</FluentNavLink>
-            <FluentNavLink Href="/sync">Mail Sync</FluentNavLink>
-            <FluentNavLink Href="/classify">Classifier</FluentNavLink>
-            <FluentNavLink Href="/settings">Settings</FluentNavLink>
-        </FluentNavMenu>
-        
-        <FluentMainContent>
-            @Body
-        </FluentMainContent>
-    </FluentStack>
-</FluentLayout>
+<AuthorizeView Context="outerContext">
+    <Authorized Context="authContext">
+        <FluentLayout>
+            <FluentHeader>
+                <a href="/" class="logo">PopfileNet</a>
+                <FluentSpacer />
+                <span class="user-info">@authContext.User.Identity?.Name</span>
+                <FluentButton Size="Size.Small" @onclick="HandleLogout">Logout</FluentButton>
+            </FluentHeader>
+
+            <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%">
+                <FluentNavMenu Width="250">
+                    <FluentNavLink Href="/" Match="NavLinkMatch.All">Dashboard</FluentNavLink>
+                    <FluentNavLink Href="/accounts">Accounts</FluentNavLink>
+                    <FluentNavLink Href="/mails">Mails</FluentNavLink>
+                    <FluentNavLink Href="/sync">Mail Sync</FluentNavLink>
+                    <FluentNavLink Href="/classify">Classifier</FluentNavLink>
+                    <FluentNavLink Href="/settings">Settings</FluentNavLink>
+                    <AuthorizeView Roles="Admin" Context="adminContext">
+                        <FluentNavLink Href="/users">Users</FluentNavLink>
+                    </AuthorizeView>
+                </FluentNavMenu>
+
+                <FluentMainContent>
+                    @Body
+                </FluentMainContent>
+            </FluentStack>
+        </FluentLayout>
+    </Authorized>
+    <NotAuthorized>
+        @Body
+    </NotAuthorized>
+</AuthorizeView>
 
 <style>
     .logo {
@@ -29,4 +46,17 @@
         color: var(--neutralforegroundhighbrush);
         text-decoration: none;
     }
+    .user-info {
+        margin-right: 10px;
+        font-size: 0.9rem;
+    }
 </style>
+
+@code {
+    private async Task HandleLogout()
+    {
+        await Api.LogoutAsync();
+        await AuthStateProvider.OnLogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}

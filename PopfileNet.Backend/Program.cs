@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using PopfileNet.Backend.BackgroundServices;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.DevMode;
@@ -58,6 +60,33 @@ public class Program
         builder.Services.AddScoped<IClassifierDataProvider, ClassifierDataProvider>();
         builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
+        builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                options.Password.RequiredLength = 8;
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+            })
+            .AddEntityFrameworkStores<PopfileNetDbContext>()
+            .AddDefaultTokenProviders();
+
+        builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddCookie(options =>
+            {
+                options.LoginPath = "/auth/login";
+                options.LogoutPath = "/auth/logout";
+                options.SlidingExpiration = true;
+                options.ExpireTimeSpan = TimeSpan.FromDays(7);
+            });
+
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+        });
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddHttpContextAccessor();
+
         var app = builder.Build();
 
         app.Use(async (context, next) =>
@@ -72,6 +101,9 @@ public class Program
         });
 
         app.UseServiceDefaults();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         using (var scope = app.Services.CreateScope())
         {
@@ -91,6 +123,7 @@ public class Program
         }
 
         app.AddEvaluationGroup()
+            .AddAuthGroup()
             .AddSettingsGroup()
             .AddJobsGroup()
             .AddMailsGroup()
@@ -98,6 +131,34 @@ public class Program
             .AddCategoriesGroup()
             .AddAccountsGroup();
 
+        await SeedAdminUserAsync(app.Services);
+
         await app.RunAsync();
+    }
+
+    private static async Task SeedAdminUserAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
+
+        if (await authService.AnyUserExistsAsync())
+        {
+            return;
+        }
+
+        var adminEmail = "admin@popfile.local";
+        var adminPassword = "admin12345";
+
+        try
+        {
+            await authService.CreateUserAsync(adminEmail, adminPassword, "Admin");
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Default admin user created: {Email} / {Password}", adminEmail, adminPassword);
+        }
+        catch (Exception ex)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "Failed to seed admin user");
+        }
     }
 }

@@ -17,12 +17,12 @@ public static class MailsGroupExtensions
     /// <returns>The configured web application.</returns>
     public static WebApplication AddMailsGroup(this WebApplication app)
     {
-        var group = app.MapGroup("/mails");
+        var group = app.MapGroup("/mails").RequireAuthorization();
         
         group.MapGet("/", GetMailsAsync);
         group.MapGet("/{id}", GetMailByIdAsync);
         
-        var foldersGroup = app.MapGroup("/folders");
+        var foldersGroup = app.MapGroup("/folders").RequireAuthorization();
         foldersGroup.MapGet("/", GetFoldersAsync);
         
         return app;

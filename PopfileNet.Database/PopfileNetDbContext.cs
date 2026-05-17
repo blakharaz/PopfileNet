@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PopfileNet.Common;
 
 namespace PopfileNet.Database;
 
-public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) : DbContext(options)
+public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Email> Emails { get; set; } = null!;
     public DbSet<Bucket> Buckets { get; set; } = null!;
@@ -99,6 +100,15 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
         modelBuilder.Entity<Settings>(entity =>
         {
             entity.HasKey(s => s.Id);
+        });
+
+        modelBuilder.Entity<ApplicationUser>(entity =>
+        {
+            entity.Property(u => u.TenantId)
+                .HasMaxLength(100)
+                .IsRequired(false);
+
+            entity.HasIndex(u => u.Email).IsUnique();
         });
     }
 }

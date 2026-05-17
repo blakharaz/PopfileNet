@@ -21,7 +21,7 @@ public static class SettingsGroupExtensions
     /// <returns>The configured web application.</returns>
     public static WebApplication AddSettingsGroup(this WebApplication app)
     {
-        var group = app.MapGroup("/settings");
+        var group = app.MapGroup("/settings").RequireAuthorization();
         
         group.MapGet("/", GetSettingsAsync);
         group.MapPost("/", SaveSettingsAsync);

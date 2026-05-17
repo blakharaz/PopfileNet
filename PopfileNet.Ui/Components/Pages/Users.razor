@@ -1,0 +1,166 @@
+@page "/users"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Components.Authorization
+@using PopfileNet.Ui.Services
+@inject IApiClient Api
+@inject NavigationManager Navigation
+
+<FluentCard>
+    <h2>User Management</h2>
+
+    @if (_users.Count == 0)
+    {
+        <p>No users found.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in _users)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>@user.Role</td>
+                        <td>
+                            <FluentButton Size="Size.Compact" @onclick="() => StartEditUser(user)">Edit</FluentButton>
+                            <FluentButton Size="Size.Compact" Appearance="Appearance.Accent" @onclick="() => DeleteUser(user.Id)">Delete</FluentButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <FluentButton @onclick="ShowAddUser">Add User</FluentButton>
+</FluentCard>
+
+@if (_isEditing)
+{
+    <FluentCard>
+        <h3>@(_editingUser?.Id == null ? "Add User" : "Edit User")</h3>
+        <FluentStack Orientation="Orientation.Vertical" Gap="10">
+            <FluentTextField @bind-Value="_editEmail" Label="Email" />
+            @if (_editingUser?.Id == null)
+            {
+                <FluentTextField @bind-Value="_editPassword" Label="Password" Type="Password" />
+            }
+            <FluentLabel>Role</FluentLabel>
+            <select @bind="_editRole">
+                <option value="Admin">Admin</option>
+                <option value="User">User</option>
+            </select>
+            <FluentStack Orientation="Orientation.Horizontal" Gap="10" Justify="Justify.End">
+                <FluentButton Appearance="Appearance.Accent" @onclick="SaveUser" Disabled="_isSaving">
+                    @(_isSaving ? "Saving..." : "Save")
+                </FluentButton>
+                <FluentButton @onclick="CancelEdit">Cancel</FluentButton>
+            </FluentStack>
+        </FluentStack>
+    </FluentCard>
+}
+
+@if (!string.IsNullOrEmpty(StatusMessage))
+{
+    <FluentBadge Appearance="Appearance.Neutral">@StatusMessage</FluentBadge>
+}
+
+@code {
+    private List<UserDto> _users = [];
+    private UserDto? _editingUser;
+    private string _editEmail = "";
+    private string _editPassword = "";
+    private string _editRole = "User";
+    private bool _isEditing;
+    private bool _isSaving;
+    private string StatusMessage { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        var response = await Api.GetUsersAsync();
+        if (response != null)
+        {
+            _users = response.Items.ToList();
+        }
+    }
+
+    private void ShowAddUser()
+    {
+        _editingUser = null;
+        _editEmail = "";
+        _editPassword = "";
+        _editRole = "User";
+        _isEditing = true;
+    }
+
+    private void StartEditUser(UserDto user)
+    {
+        _editingUser = user;
+        _editEmail = user.Email;
+        _editPassword = "";
+        _editRole = user.Role;
+        _isEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+        _editingUser = null;
+    }
+
+    private async Task SaveUser()
+    {
+        _isSaving = true;
+        StatusMessage = "";
+
+        try
+        {
+            if (_editingUser?.Id == null)
+            {
+                await Api.CreateUserAsync(_editEmail, _editPassword, _editRole);
+                StatusMessage = "User created successfully!";
+            }
+            else
+            {
+                await Api.UpdateUserAsync(_editingUser.Id, _editEmail, _editRole);
+                StatusMessage = "User updated successfully!";
+            }
+
+            CancelEdit();
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task DeleteUser(string id)
+    {
+        try
+        {
+            await Api.DeleteUserAsync(id);
+            StatusMessage = "User deleted successfully!";
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+}
