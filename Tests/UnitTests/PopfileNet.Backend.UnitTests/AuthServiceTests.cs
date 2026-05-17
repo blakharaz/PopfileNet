@@ -129,6 +129,7 @@ public class AuthServiceTests
         var result = await _authService.LoginAsync("test@example.com", "password");
 
         result.Success.ShouldBeTrue();
+        result.User.ShouldNotBeNull();
         result.User.Role.ShouldBe("User");
     }
 

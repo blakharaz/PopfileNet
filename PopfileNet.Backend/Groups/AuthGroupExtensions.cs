@@ -7,6 +7,8 @@ namespace PopfileNet.Backend.Groups;
 
 public static class AuthGroupExtensions
 {
+    private const string Error = "ERROR";
+
     public static WebApplication AddAuthGroup(this WebApplication app)
     {
         var group = app.MapGroup("/auth");
@@ -47,7 +49,7 @@ public static class AuthGroupExtensions
         catch (Exception ex)
         {
             logger.LogError(ex, "Error during login");
-            return TypedResults.InternalServerError(ApiResponse<LoginResponse>.Failure("ERROR", "An unexpected error occurred"));
+            return TypedResults.InternalServerError(ApiResponse<LoginResponse>.Failure(Error, "An unexpected error occurred"));
         }
     }
 
@@ -107,7 +109,7 @@ public static class AuthGroupExtensions
         catch (InvalidOperationException ex)
         {
             logger.LogWarning(ex, "Failed to create user");
-            return TypedResults.BadRequest(ApiResponse<UserDto>.Failure("ERROR", ex.Message));
+            return TypedResults.BadRequest(ApiResponse<UserDto>.Failure(Error, ex.Message));
         }
     }
 
@@ -126,7 +128,7 @@ public static class AuthGroupExtensions
         catch (InvalidOperationException ex)
         {
             logger.LogWarning(ex, "Failed to update user {Id}", id);
-            return TypedResults.BadRequest(ApiResponse<UserDto>.Failure("ERROR", ex.Message));
+            return TypedResults.BadRequest(ApiResponse<UserDto>.Failure(Error, ex.Message));
         }
     }
 
@@ -144,7 +146,7 @@ public static class AuthGroupExtensions
         catch (InvalidOperationException ex)
         {
             logger.LogWarning(ex, "Failed to delete user {Id}", id);
-            return TypedResults.BadRequest(ApiResponse<bool>.Failure("ERROR", ex.Message));
+            return TypedResults.BadRequest(ApiResponse<bool>.Failure(Error, ex.Message));
         }
     }
 }

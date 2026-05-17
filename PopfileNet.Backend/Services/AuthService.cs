@@ -14,7 +14,6 @@ public class AuthService(
     SignInManager<ApplicationUser> signInManager,
     IHttpContextAccessor httpContextAccessor) : IAuthService
 {
-    private const string AdminRole = "Admin";
     private const string UserRole = "User";
 
     public async Task<LoginResult> LoginAsync(string email, string password, CancellationToken ct = default)
@@ -44,7 +43,7 @@ public class AuthService(
     public async Task<UserInfo?> GetCurrentUserAsync(CancellationToken ct = default)
     {
         var httpContext = httpContextAccessor.HttpContext;
-        if (httpContext?.User?.Identity is not { IsAuthenticated: true } identity)
+        if (httpContext?.User?.Identity?.IsAuthenticated != true)
         {
             return null;
         }

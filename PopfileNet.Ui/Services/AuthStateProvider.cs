@@ -5,14 +5,14 @@ namespace PopfileNet.Ui.Services;
 
 public class AuthStateProvider(IApiClient apiClient) : AuthenticationStateProvider
 {
-    private ClaimsPrincipal _anonymous = new(new ClaimsIdentity());
+    private readonly ClaimsPrincipal _anonymous = new(new ClaimsIdentity());
     private bool _isInitialized;
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
         if (!_isInitialized)
         {
-            await InitializeAsync();
+            _isInitialized = true;
         }
 
         var user = await apiClient.GetCurrentUserAsync();
@@ -33,10 +33,9 @@ public class AuthStateProvider(IApiClient apiClient) : AuthenticationStateProvid
         return new AuthenticationState(principal);
     }
 
-    public async Task InitializeAsync()
+    public void MarkInitialized()
     {
         _isInitialized = true;
-        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 
     public async Task OnLoginSuccessAsync()
@@ -45,7 +44,7 @@ public class AuthStateProvider(IApiClient apiClient) : AuthenticationStateProvid
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 
-    public async Task OnLogoutAsync()
+    public void OnLogout()
     {
         _isInitialized = true;
         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_anonymous)));

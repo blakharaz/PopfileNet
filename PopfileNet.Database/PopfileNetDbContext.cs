@@ -11,11 +11,11 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
     public DbSet<MailFolder> MailFolders { get; set; } = null!;
     public DbSet<Settings> Settings { get; set; } = null!;
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreating(builder);
 
-        modelBuilder.Entity<Email>(entity =>
+        builder.Entity<Email>(entity =>
         {
             entity.HasKey(e => e.Id);
             
@@ -63,13 +63,13 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
                 .OnDelete(DeleteBehavior.Cascade);
         });
         
-        modelBuilder.Entity<MailHeader>()
+        builder.Entity<MailHeader>()
             .HasOne(a => a.Email)
             .WithMany(e => e.Headers)
             .HasForeignKey(a => a.EmailId)
             .IsRequired(false);
 
-        modelBuilder.Entity<MailFolder>(entity =>
+        builder.Entity<MailFolder>(entity =>
         {
             entity.HasKey(f => f.Id);
             
@@ -80,7 +80,7 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
             entity.HasIndex(f => f.Name).IsUnique();
         });
 
-        modelBuilder.Entity<Bucket>(entity =>
+        builder.Entity<Bucket>(entity =>
         {
             entity.HasKey(b => b.Id);
             
@@ -97,12 +97,12 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
                 .IsRequired(false);
         });
 
-        modelBuilder.Entity<Settings>(entity =>
+        builder.Entity<Settings>(entity =>
         {
             entity.HasKey(s => s.Id);
         });
 
-        modelBuilder.Entity<ApplicationUser>(entity =>
+        builder.Entity<ApplicationUser>(entity =>
         {
             entity.Property(u => u.TenantId)
                 .HasMaxLength(100)

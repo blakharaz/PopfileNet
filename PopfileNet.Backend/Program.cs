@@ -80,10 +80,8 @@ public class Program
                 options.ExpireTimeSpan = TimeSpan.FromDays(7);
             });
 
-        builder.Services.AddAuthorization(options =>
-        {
-            options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
-        });
+        builder.Services.AddAuthorizationBuilder()
+            .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddHttpContextAccessor();
 

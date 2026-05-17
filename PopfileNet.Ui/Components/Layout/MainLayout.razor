@@ -56,7 +56,7 @@
     private async Task HandleLogout()
     {
         await Api.LogoutAsync();
-        await AuthStateProvider.OnLogoutAsync();
+        AuthStateProvider.OnLogout();
         Navigation.NavigateTo("/login");
     }
 }
