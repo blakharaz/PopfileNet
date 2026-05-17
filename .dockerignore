@@ -10,7 +10,5 @@
 **/.github
 **/docs
 **/*.md
-**/Dockerfile*
-**/docker-compose*
 **/.vscode
 **/.*

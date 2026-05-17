@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using PopfileNet.Backend.BackgroundServices;
 using PopfileNet.Backend.Groups;
+using PopfileNet.Backend.DevMode;
 using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
@@ -28,6 +29,9 @@ public class Program
             options.SerializerOptions.TypeInfoResolverChain.Insert(0,
                 Models.AppJsonSerializerContext.Default);
         });
+
+    var devMode = builder.Configuration.GetSection("DevMode").Get<DevModeSettings>()!;
+        builder.Services.AddSingleton(devMode);
 
         builder.Services.AddEndpointsApiExplorer();
         builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
