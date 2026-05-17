@@ -131,12 +131,21 @@ public class Program
             .AddCategoriesGroup()
             .AddAccountsGroup();
 
-        await SeedAdminUserAsync(app.Services);
+        var adminEmail = builder.Configuration["AdminEmail"] ?? "";
+        var adminPassword = builder.Configuration["AdminPassword"] ?? "";
+
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            throw new InvalidOperationException(
+                "AdminEmail and AdminPassword must be configured. Set ADMIN_EMAIL and ADMIN_PASSWORD environment variables or add them to appsettings.json.");
+        }
+
+        await SeedAdminUserAsync(app.Services, adminEmail, adminPassword);
 
         await app.RunAsync();
     }
 
-    private static async Task SeedAdminUserAsync(IServiceProvider services)
+    private static async Task SeedAdminUserAsync(IServiceProvider services, string adminEmail, string adminPassword)
     {
         using var scope = services.CreateScope();
         var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
@@ -146,14 +155,11 @@ public class Program
             return;
         }
 
-        var adminEmail = "admin@popfile.local";
-        var adminPassword = "admin12345";
-
         try
         {
             await authService.CreateUserAsync(adminEmail, adminPassword, "Admin");
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("Default admin user created: {Email} / {Password}", adminEmail, adminPassword);
+            logger.LogInformation("Default admin user created");
         }
         catch (Exception ex)
         {

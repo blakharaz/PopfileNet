@@ -52,7 +52,9 @@ public abstract class DatabaseTestBase : IAsyncLifetime
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:popfilenet"] = connString
+                        ["ConnectionStrings:popfilenet"] = connString,
+                        ["AdminEmail"] = "test@popfile.local",
+                        ["AdminPassword"] = "testpassword123"
                     });
                 });
 
