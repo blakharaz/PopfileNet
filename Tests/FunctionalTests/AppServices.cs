@@ -50,6 +50,8 @@ public class AppServices : IAsyncLifetime
     private readonly List<string> _backendErrors = [];
     private readonly List<string> _backendOutput = [];
     public string UiUrl { get; private set; } = string.Empty;
+    public string BackendUrl { get; private set; } = string.Empty;
+    public ApiHelper Api { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
@@ -61,8 +63,9 @@ public class AppServices : IAsyncLifetime
 
             var connectionString = _postgres.GetConnectionString();
 
-            const string backendUrl = "http://localhost:5180";
+            BackendUrl = "http://localhost:5180";
             UiUrl = "http://localhost:5181";
+            Api = new ApiHelper(new HttpClient { BaseAddress = new Uri(BackendUrl) }, connectionString);
 
             Console.WriteLine($"Solution root: {SolutionRoot}");
 
@@ -74,7 +77,7 @@ public class AppServices : IAsyncLifetime
             var backendStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls {backendUrl} --environment Test \"--ConnectionStrings:popfilenet={connectionString}\" \"--ImapSettings:Server=localhost\" \"--ImapSettings:Port=993\" \"--ImapSettings:Username={imapUsername}\" \"--ImapSettings:Password={imapPassword}\"",
+                Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls {BackendUrl} --environment Test \"--ConnectionStrings:popfilenet={connectionString}\" \"--ImapSettings:Server=localhost\" \"--ImapSettings:Port=993\" \"--ImapSettings:Username={imapUsername}\" \"--ImapSettings:Password={imapPassword}\"",
                 WorkingDirectory = SolutionRoot,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -117,10 +120,10 @@ public class AppServices : IAsyncLifetime
                 try
                 {
                     using var client = new HttpClient();
-                    var response = await client.GetAsync(backendUrl);
+                    var response = await client.GetAsync(BackendUrl);
                     if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
-                        Console.WriteLine($"Backend is ready at {backendUrl}");
+                        Console.WriteLine($"Backend is ready at {BackendUrl}");
                         break;
                     }
                 }
@@ -137,7 +140,7 @@ public class AppServices : IAsyncLifetime
                 var allErrors = string.Join("\n", _backendErrors);
                 var allOutput = string.Join("\n", _backendOutput);
                 throw new InvalidOperationException(
-                    $"Backend failed to start at {backendUrl} after {maxAttempts} seconds.\n" +
+                    $"Backend failed to start at {BackendUrl} after {maxAttempts} seconds.\n" +
                     $"Errors:\n{allErrors}\n" +
                     $"Output:\n{allOutput}");
             }
@@ -154,7 +157,7 @@ public class AppServices : IAsyncLifetime
                 EnvironmentVariables =
                 {
                     ["ASPNETCORE_ENVIRONMENT"] = "Test",
-                    ["services__popfilenet-backend__http__0"] = backendUrl,
+                    ["services__popfilenet-backend__http__0"] = BackendUrl,
                 }
             };
 

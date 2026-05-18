@@ -9,6 +9,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="reqnroll.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Shouldly" Version="4.3.0" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />

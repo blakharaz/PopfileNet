@@ -1,4 +1,5 @@
 @page "/settings"
+@rendermode InteractiveServer
 @using PopfileNet.Ui.Services
 
 <FluentCard data-testid="settings-imap-card">
@@ -16,13 +17,6 @@
             <FluentButton Appearance="Appearance.Accent" @onclick="SaveSettings">Save</FluentButton>
             <FluentButton @onclick="TestConnection">Test Connection</FluentButton>
         </FluentStack>
-        
-        @if (!string.IsNullOrEmpty(StatusMessage))
-        {
-            <FluentBadge Appearance="Appearance.Neutral">
-                @StatusMessage
-            </FluentBadge>
-        }
     </FluentStack>
 </FluentCard>
 
@@ -67,11 +61,11 @@
     
     @if (FolderMappings.Count == 0)
     {
-        <p>No folder mappings configured.</p>
+        <p data-testid="no-folder-mappings">No folder mappings configured.</p>
     }
     else
     {
-        <table>
+        <table data-testid="folder-mappings-table">
             <thead>
                 <tr>
                     <th>Folder</th>
@@ -83,12 +77,12 @@
                 @foreach (var mapping in FolderMappings)
                 {
                     <tr>
-                        <td>@mapping.Name</td>
-                        <td>@(GetBucketName(mapping.BucketId))</td>
+                        <td data-testid="folder-name">@mapping.Name</td>
+                        <td data-testid="folder-bucket">@(GetBucketName(mapping.BucketId))</td>
                         <td>
-                            <FluentButton Appearance="Appearance.Accent" Size="Size.Compact" 
+                            <FluentButton class="edit-mapping-btn" data-folder="@mapping.Name" Appearance="Appearance.Accent" Size="Size.Compact" 
                                           @onclick="() => StartEditMapping(mapping.Name)">Edit</FluentButton>
-                            <FluentButton Size="Size.Compact" 
+                            <FluentButton class="remove-mapping-btn" data-folder="@mapping.Name" Size="Size.Compact" 
                                           @onclick="() => RemoveMapping(mapping.Name)">Remove</FluentButton>
                         </td>
                     </tr>
@@ -99,14 +93,14 @@
     
     @if (_editMappingName != null)
     {
-        <FluentCard>
+        <FluentCard data-testid="edit-mapping-form">
             <h3>Edit Folder Mapping</h3>
             <FluentStack Orientation="Orientation.Vertical" Gap="10">
                 <FluentLabel>Folder</FluentLabel>
-                <FluentTextField @bind="_editMappingName" Disabled="true" />
+                <FluentTextField data-testid="edit-folder-name" @bind="_editMappingName" Disabled="true" />
                 
                 <FluentLabel>Assign to Bucket</FluentLabel>
-                <select @bind="_editSelectedBucketId">
+                <select data-testid="edit-bucket-dropdown" @bind="_editSelectedBucketId">
                     <option value="">(None)</option>
                     @foreach (var bucket in Buckets)
                     {
@@ -115,13 +109,22 @@
                 </select>
                 
                 <FluentStack Orientation="Orientation.Horizontal" Gap="10" Justify="Justify.End">
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveMapping">Save</FluentButton>
-                    <FluentButton @onclick="CancelEditMapping">Cancel</FluentButton>
+                    <FluentButton data-testid="save-mapping" Appearance="Appearance.Accent" @onclick="SaveMapping">Save</FluentButton>
+                    <FluentButton data-testid="cancel-mapping" @onclick="CancelEditMapping">Cancel</FluentButton>
                 </FluentStack>
             </FluentStack>
         </FluentCard>
     }
 </FluentCard>
+
+@if (!string.IsNullOrEmpty(StatusMessage))
+{
+    <FluentCard data-testid="status-message-card">
+        <FluentBadge data-testid="status-badge" Appearance="Appearance.Neutral">
+            @StatusMessage
+        </FluentBadge>
+    </FluentCard>
+}
 
 @code {
     [Inject]
