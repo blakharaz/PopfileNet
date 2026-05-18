@@ -477,8 +477,8 @@ partial class Build : NukeBuild
 
     void InstallPlaywright()
     {
-        StartShell("npm install -g playwright").AssertZeroExitCode();
-        StartShell("npx playwright install chromium").AssertZeroExitCode();
+        StartShell("dotnet tool install Microsoft.Playwright.CLI --local").AssertZeroExitCode();
+        StartShell("dotnet playwright install --with-deps chromium").AssertZeroExitCode();
     }
 
     string[] GetDockerTags()

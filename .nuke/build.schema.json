@@ -33,6 +33,7 @@
         "GenerateRelease",
         "MergeCoverage",
         "PrComment",
+        "PrValidation",
         "Restore",
         "SonarBegin",
         "SonarEnd",

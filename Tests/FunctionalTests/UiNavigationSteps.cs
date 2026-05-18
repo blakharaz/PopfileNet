@@ -58,14 +58,18 @@ public class UiNavigationSteps
     {
         try
         {
+            Console.WriteLine("[Playwright] Initializing browser...");
             _playwright = await Microsoft.Playwright.Playwright.CreateAsync();
+            Console.WriteLine("[Playwright] Playwright created, launching Chromium...");
             _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
                 Headless = true
             });
+            Console.WriteLine("[Playwright] Browser launched successfully");
         }
-        catch (PlaywrightException)
+        catch (Exception ex)
         {
+            Console.WriteLine($"[Playwright] Failed to initialize browser: {ex.GetType().Name}: {ex.Message}");
             _browserInstalled = false;
         }
     }
@@ -91,25 +95,28 @@ public class UiNavigationSteps
     [Given("I am on the Settings page")]
     public async Task GivenIAmOnTheSettingsPage()
     {
-        // Initialize browser if not already done (similar to WhenINavigateToTheHomePage)
         if (_browser == null || _page == null)
         {
             await GivenTheUiIsRunning();
-            
+
+            if (_browser == null)
+            {
+                throw new InvalidOperationException("Browser not initialized - Playwright may not be installed");
+            }
+
             var uiUrl = TestServices.Instance.UiUrl;
             if (string.IsNullOrEmpty(uiUrl))
             {
                 throw new InvalidOperationException("UI URL not set - services may have failed to start");
             }
 
-            _page = await _browser!.NewPageAsync();
+            _page = await _browser.NewPageAsync();
             await _page.GotoAsync(uiUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         }
 
         var settingsUrl = TestServices.Instance.UiUrl + "/settings";
         await _page!.GotoAsync(settingsUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
-        // Wait a bit for Blazor to fully render
         await _page.WaitForTimeoutAsync(1000);
     }
 
