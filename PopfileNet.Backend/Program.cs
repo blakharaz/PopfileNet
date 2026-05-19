@@ -69,6 +69,7 @@ public class Program
                 options.Password.RequireNonAlphanumeric = false;
             })
             .AddEntityFrameworkStores<PopfileNetDbContext>()
+            .AddRoles<IdentityRole>()
             .AddDefaultTokenProviders();
 
         builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -155,6 +156,12 @@ public class Program
 
         try
         {
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            if (!await roleManager.RoleExistsAsync("Admin"))
+            {
+                await roleManager.CreateAsync(new IdentityRole("Admin"));
+            }
+
             await authService.CreateUserAsync(adminEmail, adminPassword, "Admin");
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Default admin user created");

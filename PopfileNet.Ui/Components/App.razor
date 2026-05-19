@@ -15,7 +15,9 @@
 
 <body>
     <FluentThemeProvider />
-    <Routes/>
+    <CascadingAuthenticationState>
+        <Routes/>
+    </CascadingAuthenticationState>
     <ReconnectModal/>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="/js/app.js"></script>

@@ -24,9 +24,9 @@ builder.Services.AddHttpClient<ApiClient>(client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-builder.Services.AddSingleton<IApiClient>(sp => sp.GetRequiredService<ApiClient>());
-builder.Services.AddSingleton<AuthStateProvider>();
-builder.Services.AddSingleton<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateProvider>());
+builder.Services.AddScoped<IApiClient>(sp => sp.GetRequiredService<ApiClient>());
+builder.Services.AddScoped<AuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateProvider>());
 
 var app = builder.Build();
 
