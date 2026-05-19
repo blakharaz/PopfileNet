@@ -54,7 +54,7 @@ public class Program
         builder.Services.AddScoped<IDatabaseFacade, EfCoreDatabaseFacadeWrapper>();
         builder.Services.AddScoped<IEmailRepository, EmailRepository>();
         builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
-        builder.Services.AddSingleton<ClassifierEvaluationService>();
+        builder.Services.AddScoped<ClassifierEvaluationService>();
         builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
         var app = builder.Build();

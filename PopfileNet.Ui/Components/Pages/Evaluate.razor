@@ -2,7 +2,7 @@
 @using PopfileNet.Ui.Services
 @inject IApiClient Api
 
-@if (devMode is false)
+@if (!devMode)
 {
     <FluentCard>
         <h2>Evaluation</h2>
@@ -113,7 +113,8 @@ else
                                 </table>
                             }
                         </FluentCard>
-                        <FluentCard><h3>Per-Run Accuracy</h3>
+                        <FluentCard>
+                            <h3>Per-Run Accuracy</h3>
                             <ul class="runs-list">
                                 @foreach (var run in result.Runs)
                                 {<li><strong>Run @(run.RunNumber)</strong>: @(run.Accuracy.ToString("P1")) (@(run.Correct)/@(run.Total))</li>}
@@ -123,26 +124,27 @@ else
                             <h3>Per-Bucket Metrics (Last Run)</h3>
                             @if (result.Runs.Any())
                             {
-                                var lastRun = result.Runs.Last();
-                                <table class="metrics-table">
-                                    <thead><tr><th>Bucket</th><th>TP</th><th>FP</th><th>FN</th><th>Precision</th><th>Recall</th></tr></thead>
-                                    <tbody>@foreach (var m in lastRun.BucketMetrics) {<tr><td>@m.BucketName</td><td>@m.TruePositives</td><td>@m.FalsePositives</td><td>@m.FalseNegatives</td><td>@(m.Precision.ToString("P1"))</td><td>@(m.Recall.ToString("P1"))</td></tr>}</tbody>
-                                </table>
-                                @if (lastRun.Mismatches.Any())
+                                var lastRun = result.Runs[result.Runs.Count - 1];
+
+                                if (lastRun.Mismatches.Any())
                                 {<h4>Mismatches (@(lastRun.Mismatches.Count))</h4>}
+
                                 @foreach (var ms in lastRun.Mismatches.Take(20).OrderByDescending(x => x.Subject))
                                 {<details style="margin-bottom: 8px;"><summary style="cursor:pointer; font-weight:bold;">@ms.ActualBucket -> @ms.PredictedBucket</summary><table class="metrics-table"><tbody><tr><td>@ms.EmailId</td><td style="max-width:400px;overflow-wrap:break-word;">@ms.Subject</td></tr></tbody></table></details>}
-                                @if (lastRun.Mismatches.Count > 20) {<p>(Showing first 20 of @(lastRun.Mismatches.Count))</p>}
+
+                                if (lastRun.Mismatches.Count > 20) {<p>(Showing first 20 of @(lastRun.Mismatches.Count))</p>}
                             }
                         </FluentCard>
                     }
                     else if (result.Runs.Any())
                     {
                         var run = result.Runs[0];
+
                         <FluentCard><h3>Overall Accuracy</h3><table class="results-table">
                             <tr><td>Correct</td><td>@run.Correct / @run.Total</td></tr>
                             <tr><td>Accuracy</td><td>@(run.Accuracy.ToString("P1"))</td></tr>
                         </table></FluentCard>
+
                         @if (run.BucketMetrics.Any())
                         {<FluentCard><h3>Per-Bucket Metrics</h3>
                             <table class="metrics-table">
@@ -150,13 +152,15 @@ else
                                 <tbody>@foreach (var m in run.BucketMetrics) {<tr><td>@m.BucketName</td><td>@m.TruePositives</td><td>@m.FalsePositives</td><td>@m.FalseNegatives</td><td>@(m.Precision.ToString("P1"))</td><td>@(m.Recall.ToString("P1"))</td></tr>}</tbody>
                             </table>
                         </FluentCard>}
+
                         @if (run.Mismatches.Any())
                         {<FluentCard>
                             <h3>Mismatches (@(run.Mismatches.Count))</h3>
                             <p style="margin-bottom:8px;">Predicted bucket differs from actual:</p>
                             @foreach (var ms in run.Mismatches.Take(20).OrderByDescending(x => x.Subject))
                             {<details style="margin-bottom:8px;"><summary style="cursor:pointer; font-weight:bold;">@ms.ActualBucket -> @ms.PredictedBucket</summary><table class="metrics-table"><tbody><tr><td>@ms.EmailId</td><td style="max-width:400px;overflow-wrap:break-word;">@ms.Subject</td></tr></tbody></table></details>}
-                            @if (run.Mismatches.Count > 20) {<p>(Showing first 20 of @(run.Mismatches.Count))</p>}
+
+                            if (run.Mismatches.Count > 20) {<p>(Showing first 20 of @(run.Mismatches.Count))</p>}
                         </FluentCard>}
                     }
                 </FluentStack>
@@ -171,10 +175,9 @@ else
 @code {
     private bool devMode = true;
     private MyConfigDto? config;
-    private EvaluationRequest request = new();
+    private readonly EvaluationRequest request = new();
     private EvaluationResult? result;
     private int cutoffAmount = 100;
-    private string _cutoffDateStr = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
     private int totalMails;
     private bool isRunning;
     private string errorMsg = "";

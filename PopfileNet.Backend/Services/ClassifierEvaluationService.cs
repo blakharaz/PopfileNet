@@ -3,6 +3,7 @@ using PopfileNet.Backend.Models;
 using PopfileNet.Classifier;
 using PopfileNet.Common;
 using PopfileNet.Database;
+using System.Globalization;
 
 namespace PopfileNet.Backend.Services;
 
@@ -11,28 +12,27 @@ namespace PopfileNet.Backend.Services;
 /// </summary>
 public class ClassifierEvaluationService(PopfileNetDbContext db)
 {
-    private readonly Random _random = new();
-
     public async Task<EvaluationResult> RunEvaluationAsync(EvaluationRequest request, CancellationToken ct = default)
     {
-        var baseQuery = db.Emails.AsQueryable();
-        
-        if (request.FolderFilter is not "all")
-            baseQuery = baseQuery.Where(e => e.Folder == request.FolderFilter);
+        var allEmails = await FetchEmailsForFilter(request.FolderFilter, ct);
 
-        var allEmails = await baseQuery.ToListAsync(ct);
-
-        if (!allEmails.Any())
+        if (allEmails.Count == 0)
+        {
             throw new InvalidOperationException("No emails available for evaluation");
+        }
 
         // Apply cutoff to separate training and test sets
         var (training, test) = CutoffAndSplit(allEmails, request.CutoffType, request.CutoffValue, request.TrainTestSplit);
 
-        if (!training.Any())
+        if (training.Count == 0)
+        {
             throw new InvalidOperationException("Training set is empty after cutoff. Adjust the cutoff settings.");
+        }
 
-        if (!test.Any())
+        if (test.Count == 0)
+        {
             throw new InvalidOperationException("Test set is empty after cutoff. Adjust the cutoff settings.");
+        }
 
         var runs = new List<RunResultDto>();
         for (int runNum = 0; runNum < request.NumberOfRuns; runNum++)
@@ -49,97 +49,121 @@ public class ClassifierEvaluationService(PopfileNetDbContext db)
                 actualTest = test.Except(actualTraining).ToList();
             }
 
-            if (!actualTest.Any())
+            if (actualTest.Count == 0)
+            {
                 throw new InvalidOperationException("Not enough emails for the requested number of runs");
+            }
 
-            var runResult = await RunSingleAsync(actualTraining, actualTest, runNum + 1, request.BucketFilter, ct);
+            var runResult = await RunSingleAsync(actualTraining, actualTest, runNum + 1, request.BucketFilter);
             runs.Add(runResult);
         }
 
-        EvaluationResult result;
-        
         if (request.NumberOfRuns == 1)
         {
-            result = new EvaluationResult(
-                1,
-                [runs[0]],
-                null);
-        }
-        else
-        {
-            var aggregated = AggregateResults(runs);
-            result = new EvaluationResult(request.NumberOfRuns, runs, aggregated);
+            return new EvaluationResult(1, [runs[0]], null);
         }
 
-        return result;
+        var aggregated = AggregateResults(runs);
+        return new EvaluationResult(request.NumberOfRuns, runs, aggregated);
     }
 
-    private (List<Email> training, List<Email> test) CutoffAndSplit(
+    private async Task<List<Email>> FetchEmailsForFilter(string folderFilter, CancellationToken ct)
+    {
+        var baseQuery = db.Emails.AsQueryable();
+        
+        if (folderFilter != "all")
+        {
+            baseQuery = baseQuery.Where(e => e.Folder == folderFilter);
+        }
+
+        return await baseQuery.ToListAsync(ct);
+    }
+
+    private static (List<Email> training, List<Email> test) CutoffAndSplit(
         List<Email> emails, string cutoffType, string? cutoffValue, float trainTestRatio)
     {
-        if (cutoffValue == null || !emails.Any())
+        if (cutoffValue == null || emails.Count == 0)
+        {
             return SplitByRatio(emails, trainTestRatio);
+        }
 
         if (cutoffType == "amount" && int.TryParse(cutoffValue, out var count))
         {
-            // Sort by received date descending, take `count` most recent as training set
-            var sorted = emails.OrderByDescending(e => e.ReceivedDate).ToList();
-            var trainingSet = sorted.Take(count).ToList();
-
-            if (trainingSet.Count >= count)
-                return SplitByRatio(trainingSet, trainTestRatio);
-
-            // Not enough for the cutoff; use all emails with ratio split
-            return SplitByRatio(emails, trainTestRatio);
+            return HandleAmountCutoff(emails, count, trainTestRatio);
         }
 
-        if (cutoffType == "date" && DateTime.TryParse(cutoffValue, out var cutoffDate))
+        if (cutoffType == "date" && DateTime.TryParse(cutoffValue, CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None, out var cutoffDate))
         {
-            // Use only emails before the cutoff date for training
-            var beforeCutoff = emails.Where(e => e.ReceivedDate < cutoffDate).ToList();
-            
-            return SplitByRatio(beforeCutoff, trainTestRatio);
+            return HandleDateCutoff(emails, cutoffDate, trainTestRatio);
         }
 
         return SplitByRatio(emails, trainTestRatio);
     }
 
-    private (List<Email> training, List<Email> test) SplitByRatio(List<Email> emails, float ratio)
+    private static (List<Email> training, List<Email> test) HandleAmountCutoff(
+        List<Email> emails, int count, float ratio)
+    {
+        var sorted = emails.OrderByDescending(e => e.ReceivedDate).ToList();
+        var trainingSet = sorted.Take(count).ToList();
+
+        if (trainingSet.Count >= count)
+        {
+            return SplitByRatio(trainingSet, ratio);
+        }
+
+        // Not enough for the cutoff; use all emails with ratio split
+        return SplitByRatio(emails, ratio);
+    }
+
+    private static (List<Email> training, List<Email> test) HandleDateCutoff(
+        List<Email> emails, DateTime cutoffDate, float trainTestRatio)
+    {
+        // Use only emails before the cutoff date for training
+        var beforeCutoff = emails.Where(e => e.ReceivedDate < cutoffDate).ToList();
+        
+        return SplitByRatio(beforeCutoff, trainTestRatio);
+    }
+
+    private static (List<Email> training, List<Email> test) SplitByRatio(List<Email> emails, float ratio)
     {
         var shuffled = Shuffle(emails);
         var splitIndex = Math.Max(1, (int)(shuffled.Count * ratio));
         return (shuffled.Take(splitIndex).ToList(), shuffled.Skip(splitIndex).ToList());
     }
 
-    private List<T> Shuffle<T>(List<T> list)
+    private static List<T> Shuffle<T>(List<T> list)
     {
         var result = new T[list.Count];
         list.CopyTo(result);
 
         for (int i = 0; i < result.Length - 1; i++)
         {
-            var j = _random.Next(i, result.Length);
+            var j = Random.Shared.Next(i, result.Length);
             (result[i], result[j]) = (result[j], result[i]);
         }
 
         return [.. result];
     }
 
-    private async Task<RunResultDto> RunSingleAsync(
-        List<Email> training, List<Email> test, int runNumber, string bucketFilter, CancellationToken ct)
+    private static async Task<RunResultDto> RunSingleAsync(
+        List<Email> training, List<Email> test, int runNumber, string bucketFilter)
     {
         var classifier = new NaiveBayesianClassifier();
         var dataSet = new EmailClassificationDataSet();
 
         foreach (var email in training.Where(e => e.FolderNavigation?.Bucket != null))
+        {
             dataSet.AddMail(email, email.FolderNavigation!.Bucket!.Name);
+        }
 
         if (!dataSet.Data.Any())
+        {
             throw new InvalidOperationException("No labeled data available for the selected filters");
+        }
 
         classifier.Train(dataSet);
 
-        var metrics = ComputeMetrics(test, bucketFilter, classifier, ct);
+        var metrics = ComputeMetrics(test, bucketFilter, classifier);
         
         return new RunResultDto(
             runNumber, training.Count, test.Count,
@@ -148,8 +172,27 @@ public class ClassifierEvaluationService(PopfileNetDbContext db)
             [.. metrics.Mismatches]);
     }
 
-    private (float OverallAccuracy, int Correct, int Total, List<BucketMetricDto> BucketMetrics, List<MismatchDetailDto> Mismatches) ComputeMetrics(
-        List<Email> test, string bucketFilter, NaiveBayesianClassifier classifier, CancellationToken ct)
+    private static (float OverallAccuracy, int Correct, int Total, List<BucketMetricDto> BucketMetrics, List<MismatchDetailDto> Mismatches) ComputeMetrics(
+        List<Email> test, string bucketFilter, NaiveBayesianClassifier classifier)
+    {
+        var predictions = CollectPredictions(test, bucketFilter, classifier);
+
+        if (predictions.Count == 0)
+        {
+            return (0f, 0, test.Count, [], []);
+        }
+
+        var correct = predictions.Values.Count(v => v.actual == v.predicted);
+        var total = predictions.Count;
+        var overallAccuracy = correct / (float)total;
+        var mismatches = CollectMismatches(predictions, test);
+        var bucketMetrics = AggregateBucketMetrics(predictions).Values.Select(MetricToDto).ToList();
+
+        return (overallAccuracy, correct, total, bucketMetrics, mismatches);
+    }
+
+    private static Dictionary<string, (string actual, string predicted)> CollectPredictions(
+        List<Email> test, string bucketFilter, NaiveBayesianClassifier classifier)
     {
         var predictions = new Dictionary<string, (string actual, string predicted)>();
 
@@ -169,36 +212,13 @@ public class ClassifierEvaluationService(PopfileNetDbContext db)
             }
         }
 
-        if (!predictions.Any())
-            return (0f, 0, test.Count, [], []);
+        return predictions;
+    }
 
-        var correct = predictions.Values.Count(v => v.actual == v.predicted);
-        var total = predictions.Count;
-        var overallAccuracy = total > 0 ? correct / (float)total : 0f;
-
-        // Per-bucket metrics: count TP/FP/FN for each bucket
-        var bucketMap = new Dictionary<string, BucketMetricAccumulator>();
-        foreach (var pred in predictions.Values)
-        {
-            if (!bucketMap.ContainsKey(pred.actual))
-                bucketMap[pred.actual] = new BucketMetricAccumulator(pred.actual);
-            
-            if (pred.actual == pred.predicted)
-                bucketMap[pred.actual].TruePositives++;
-            else
-                bucketMap[pred.actual].FalseNegatives++;
-        }
-
-        foreach (var pred in predictions.Values)
-        {
-            if (!bucketMap.ContainsKey(pred.predicted))
-                bucketMap[pred.predicted] = new BucketMetricAccumulator(pred.predicted);
-
-            if (pred.actual != pred.predicted)
-                bucketMap[pred.predicted].FalsePositives++;
-        }
-
-        var mismatches = predictions
+    private static List<MismatchDetailDto> CollectMismatches(
+        Dictionary<string, (string actual, string predicted)> predictions, List<Email> test)
+    {
+        return predictions
             .Where(kv => kv.Value.actual != kv.Value.predicted)
             .Select(kv => new MismatchDetailDto(
                 kv.Key,
@@ -206,13 +226,55 @@ public class ClassifierEvaluationService(PopfileNetDbContext db)
                 kv.Value.actual,
                 kv.Value.predicted))
             .ToList();
+    }
 
-        return (overallAccuracy, correct, total, bucketMap.Values.Select(MetricToDto).ToList(), mismatches);
+    private static Dictionary<string, BucketMetricAccumulator> AggregateBucketMetrics(
+        Dictionary<string, (string actual, string predicted)> predictions)
+    {
+        var bucketMap = new Dictionary<string, BucketMetricAccumulator>();
+
+        foreach (var pred in predictions.Values)
+        {
+            if (!bucketMap.TryGetValue(pred.actual, out var accumulator))
+            {
+                accumulator = new BucketMetricAccumulator(pred.actual);
+                bucketMap[pred.actual] = accumulator;
+            }
+
+            if (pred.actual == pred.predicted)
+            {
+                accumulator.TruePositives++;
+            }
+            else
+            {
+                accumulator.FalseNegatives++;
+            }
+        }
+
+        foreach (var pred in predictions.Values)
+        {
+            if (!bucketMap.TryGetValue(pred.predicted, out var accumulator))
+            {
+                accumulator = new BucketMetricAccumulator(pred.predicted);
+                bucketMap[pred.predicted] = accumulator;
+            }
+
+            if (pred.actual != pred.predicted)
+            {
+                accumulator.FalsePositives++;
+            }
+        }
+
+        return bucketMap;
     }
 
     private static bool MatchesFilter(Email email, string bucketFilter)
     {
-        if (bucketFilter == "all") return true;
+        if (bucketFilter == "all")
+        {
+            return true;
+        }
+
         var nav = email.FolderNavigation?.Bucket;
         return nav != null && (nav.Id == bucketFilter || nav.Name == bucketFilter);
     }
@@ -223,7 +285,7 @@ public class ClassifierEvaluationService(PopfileNetDbContext db)
             acc.FalseNegatives, acc.Precision, acc.Recall);
     }
 
-    private AggregatedMetricsDto AggregateResults(List<RunResultDto> runs)
+    private static AggregatedMetricsDto AggregateResults(List<RunResultDto> runs)
     {
         var accuracies = runs.Select(r => r.Accuracy).ToList();
 
@@ -232,14 +294,17 @@ public class ClassifierEvaluationService(PopfileNetDbContext db)
         {
             foreach (var metric in run.BucketMetrics)
             {
-                if (!bucketAccumulators.ContainsKey(metric.BucketName))
-                    bucketAccumulators[metric.BucketName] = new();
+                if (!bucketAccumulators.TryGetValue(metric.BucketName, out var accumulators))
+                {
+                    accumulators = new();
+                    bucketAccumulators[metric.BucketName] = accumulators;
+                }
 
                 var acc = new BucketMetricAccumulator(metric.BucketName);
                 acc.TruePositives = metric.TruePositives;
                 acc.FalsePositives = metric.FalsePositives;
                 acc.FalseNegatives = metric.FalseNegatives;
-                bucketAccumulators[metric.BucketName].Add(acc);
+                accumulators.Add(acc);
             }
         }
 
@@ -258,7 +323,7 @@ public class ClassifierEvaluationService(PopfileNetDbContext db)
             perBucket);
     }
 
-    private class BucketMetricAccumulator(string bucketName)
+    private sealed class BucketMetricAccumulator(string bucketName)
     {
         public string BucketName { get; } = bucketName;
         public int TruePositives { get; set; }
