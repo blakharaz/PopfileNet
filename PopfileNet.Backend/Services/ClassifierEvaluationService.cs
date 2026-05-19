@@ -2,24 +2,18 @@ using Microsoft.EntityFrameworkCore;
 using PopfileNet.Backend.Models;
 using PopfileNet.Classifier;
 using PopfileNet.Common;
-using PopfileNet.Database;
 using System.Globalization;
 
 namespace PopfileNet.Backend.Services;
 
 /// <summary>
-/// Runs classifier evaluation with train/test split and optional multi-run sampling.
+/// Provides email data for classifier evaluation.
 /// </summary>
-public class ClassifierEvaluationService(PopfileNetDbContext db)
+public interface IClassifierDataProvider
 {
-    public async Task<EvaluationResult> RunEvaluationAsync(EvaluationRequest request, CancellationToken ct = default)
-    {
-        var allEmails = await FetchEmailsForFilter(request.FolderFilter, ct);
+    Task<List<Email>> FetchFilteredAsync(EmailFilterRequest request, CancellationToken ct = default);
+}
 
-        if (allEmails.Count == 0)
-        {
-            throw new InvalidOperationException("No emails available for evaluation");
-        }
 
         // Apply cutoff to separate training and test sets
         var (training, test) = CutoffAndSplit(allEmails, request.CutoffType, request.CutoffValue, request.TrainTestSplit);

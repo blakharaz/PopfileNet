@@ -55,6 +55,7 @@ public class Program
         builder.Services.AddScoped<IEmailRepository, EmailRepository>();
         builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
         builder.Services.AddScoped<ClassifierEvaluationService>();
+        builder.Services.AddSingleton<IClassifierDataProvider, ClassifierDataProvider>();
         builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
         var app = builder.Build();
