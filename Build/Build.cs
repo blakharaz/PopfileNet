@@ -74,8 +74,29 @@ partial class Build : NukeBuild
                 .SetProjectFile(Solution));
         });
 
+    Target SonarBegin => _ => _
+        .Before(Compile)
+        .OnlyWhenStatic(() => !string.IsNullOrEmpty(SonarToken))
+        .Executes(() =>
+        {
+            StartShell("dotnet tool install --global dotnet-sonarscanner").AssertZeroExitCode();
+
+            var workspace = RootDirectory.ToString();
+            var vscoveragePath = (TestResultsDirectory / "UnitTests" / "merged.vscoverage.xml").ToString();
+
+            StartShell($"dotnet sonarscanner begin /k:\"{SonarProjectKey}\" /o:\"{SonarOrganization}\" /d:sonar.token=\"{SonarToken}\" /d:sonar.cs.vscoveragexml.reportsPaths=\"{vscoveragePath}\" /d:sonar.projectBaseDir=\"{workspace}\" /d:sonar.exclusions=\"**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md,**/Migrations/**\" /d:sonar.coverage.exclusions=\"**/*.Tests/**,**/Migrations/**\"").AssertZeroExitCode();
+        });
+
+    Target SonarEnd => _ => _
+        .OnlyWhenStatic(() => !string.IsNullOrEmpty(SonarToken))
+        .Executes(() =>
+        {
+            StartShell($"dotnet sonarscanner end /d:sonar.token=\"{SonarToken}\"").AssertZeroExitCode();
+        });
+
     Target Compile => _ => _
         .DependsOn(Restore)
+        .DependsOn(SonarBegin)
         .Executes(() =>
         {
             DotNetBuild(s => s
@@ -127,8 +148,6 @@ partial class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
-            CleanObjDirectories();
-
             DotNetTest(s => s
                 .SetProjectFile(RootDirectory / "Tests" / "IntegrationTests" / "PopfileNet.IntegrationTests.csproj")
                 .SetConfiguration(Configuration)
@@ -141,7 +160,6 @@ partial class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
-            CleanObjDirectories();
             InstallPlaywright();
 
             DotNetTest(s => s
@@ -150,26 +168,6 @@ partial class Build : NukeBuild
                 .SetLoggers(["console;verbosity=minimal"])
                 .SetResultsDirectory((TestResultsDirectory / "FunctionalTests").ToString())
                 .SetNoBuild(true));
-        });
-
-    Target SonarCloud => _ => _
-        .DependsOn(TestUnit)
-        .DependsOn(MergeCoverage)
-        .OnlyWhenStatic(() => !string.IsNullOrEmpty(SonarToken))
-        .Executes(() =>
-        {
-            var workspace = RootDirectory.ToString();
-            var vscoveragePath = (TestResultsDirectory / "UnitTests" / "merged.vscoverage.xml").ToString();
-
-            StartShell("dotnet tool install --global dotnet-sonarscanner").AssertZeroExitCode();
-
-            StartShell($"dotnet sonarscanner begin /k:\"{SonarProjectKey}\" /o:\"{SonarOrganization}\" /d:sonar.token=\"{SonarToken}\" /d:sonar.cs.vscoveragexml.reportsPaths=\"{vscoveragePath}\" /d:sonar.projectBaseDir=\"{workspace}\" /d:sonar.exclusions=\"**/obj/**,**/bin/**,**/*.Tests/**,**/TestResults/**,.github/**,**/*.md,**/Migrations/**\" /d:sonar.coverage.exclusions=\"**/*.Tests/**,**/Migrations/**\"").AssertZeroExitCode();
-
-            DotNetBuild(s => s
-                .SetProjectFile(Solution)
-                .SetConfiguration(Configuration));
-
-            StartShell($"dotnet sonarscanner end /d:sonar.token=\"{SonarToken}\"").AssertZeroExitCode();
         });
 
     Target CoverageReport => _ => _
@@ -445,24 +443,26 @@ partial class Build : NukeBuild
             StartShell($"gh release create \"{TagName}\" \"{composePath}\" \"{envPath}\" --title \"PopfileNet Release {TagName}\"").AssertZeroExitCode();
         });
 
+    Target PrValidation => _ => _
+        .DependsOn(TestUnit)
+        .DependsOn(TestIntegration)
+        .DependsOn(TestFunctional)
+        .DependsOn(SonarEnd)
+        .DependsOn(CoverageReport)
+        .DependsOn(PrComment);
+
     Target All => _ => _
         .DependsOn(TestUnit)
         .DependsOn(MergeCoverage)
         .DependsOn(TestIntegration)
         .DependsOn(TestFunctional)
-        .DependsOn(SonarCloud)
+        .DependsOn(SonarEnd)
         .DependsOn(CoverageReport)
         .DependsOn(PrComment)
         .DependsOn(UpdateReadme)
         .DependsOn(DockerBuild)
         .DependsOn(CommitEnv);
     [Parameter("Release branches pattern")] readonly string[] ReleaseBranches = ["release/*", "releases/*"];
-
-    void CleanObjDirectories()
-    {
-        (RootDirectory / "Tests" / "IntegrationTests" / "obj").DeleteDirectory();
-        (RootDirectory / "Tests" / "FunctionalTests" / "obj").DeleteDirectory();
-    }
 
     static string? FilterDockerOutput(string text)
     {
@@ -477,8 +477,8 @@ partial class Build : NukeBuild
 
     void InstallPlaywright()
     {
-        StartShell("npm install -g playwright").AssertZeroExitCode();
-        StartShell("npx playwright install chromium").AssertZeroExitCode();
+        StartShell("dotnet tool install Microsoft.Playwright.CLI --local").AssertZeroExitCode();
+        StartShell("dotnet playwright install --with-deps chromium").AssertZeroExitCode();
     }
 
     string[] GetDockerTags()

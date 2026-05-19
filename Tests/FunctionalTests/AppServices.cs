@@ -41,18 +41,20 @@ public class AppServices : IAsyncLifetime
     }
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder(image: "postgres:16-alpine")
-        .WithDatabase($"popfilenet_{Guid.NewGuid():D}")  // Unique DB name per test run
-        .WithUsername("test")
-        .WithPassword("test")
+        .WithDatabase($"popfilenet_{Guid.NewGuid():D}")
+        .WithUsername(Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "test")
+        .WithPassword(Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "test")
         .Build();
     private Process? _backendProcess;
     private Process? _uiProcess;
+    private readonly List<string> _backendErrors = [];
+    private readonly List<string> _backendOutput = [];
     public string UiUrl { get; private set; } = string.Empty;
+    public string BackendUrl { get; private set; } = string.Empty;
+    public ApiHelper Api { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
-        // Testcontainers handles cleanup automatically - just start fresh each time
-        
         var backendStarted = false;
 
         try
@@ -61,15 +63,21 @@ public class AppServices : IAsyncLifetime
 
             var connectionString = _postgres.GetConnectionString();
 
-            const string backendUrl = "http://localhost:5180";
+            BackendUrl = "http://localhost:5180";
             UiUrl = "http://localhost:5181";
+            Api = new ApiHelper(new HttpClient { BaseAddress = new Uri(BackendUrl) }, connectionString);
 
             Console.WriteLine($"Solution root: {SolutionRoot}");
+
+            var imapUsername = Environment.GetEnvironmentVariable("IMAP_USERNAME")
+                               ?? throw new InvalidOperationException("IMAP_USERNAME environment variable is required");
+            var imapPassword = Environment.GetEnvironmentVariable("IMAP_PASSWORD")
+                               ?? throw new InvalidOperationException("IMAP_PASSWORD environment variable is required");
 
             var backendStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls {backendUrl} --environment Test \"--ConnectionStrings:popfilenet={connectionString}\"",
+                Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls {BackendUrl} --environment Test \"--ConnectionStrings:popfilenet={connectionString}\" \"--ImapSettings:Server=localhost\" \"--ImapSettings:Port=993\" \"--ImapSettings:Username={imapUsername}\" \"--ImapSettings:Password={imapPassword}\"",
                 WorkingDirectory = SolutionRoot,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -81,7 +89,6 @@ public class AppServices : IAsyncLifetime
                 }
             };
 
-            // Start the backend process first so we can wait for it
             _backendProcess = Process.Start(backendStartInfo);
             if (_backendProcess == null)
             {
@@ -89,20 +96,34 @@ public class AppServices : IAsyncLifetime
             }
             backendStarted = true;
 
+            _backendProcess.OutputDataReceived += (_, e) => { if (e.Data != null) _backendOutput.Add(e.Data); };
+            _backendProcess.ErrorDataReceived += (_, e) => { if (e.Data != null) _backendErrors.Add(e.Data); };
+            _backendProcess.BeginOutputReadLine();
+            _backendProcess.BeginErrorReadLine();
+
             Console.WriteLine($"Backend started, waiting for readiness...");
 
-            // Wait for backend to be ready
-            const int maxAttempts = 60;
+            const int maxAttempts = 120;
             var attempts = 0;
             while (attempts < maxAttempts)
             {
+                if (_backendProcess.HasExited)
+                {
+                    var allErrors = string.Join("\n", _backendErrors);
+                    var allOutput = string.Join("\n", _backendOutput);
+                    throw new InvalidOperationException(
+                        $"Backend process exited prematurely (exit code: {_backendProcess.ExitCode}).\n" +
+                        $"Errors:\n{allErrors}\n" +
+                        $"Output:\n{allOutput}");
+                }
+
                 try
                 {
                     using var client = new HttpClient();
-                    var response = await client.GetAsync(backendUrl);
+                    var response = await client.GetAsync(BackendUrl);
                     if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
-                        Console.WriteLine($"Backend is ready at {backendUrl}");
+                        Console.WriteLine($"Backend is ready at {BackendUrl}");
                         break;
                     }
                 }
@@ -116,7 +137,12 @@ public class AppServices : IAsyncLifetime
 
             if (attempts >= maxAttempts)
             {
-                throw new InvalidOperationException($"Backend failed to start at {backendUrl} after {maxAttempts} seconds");
+                var allErrors = string.Join("\n", _backendErrors);
+                var allOutput = string.Join("\n", _backendOutput);
+                throw new InvalidOperationException(
+                    $"Backend failed to start at {BackendUrl} after {maxAttempts} seconds.\n" +
+                    $"Errors:\n{allErrors}\n" +
+                    $"Output:\n{allOutput}");
             }
 
             var uiStartInfo = new ProcessStartInfo
@@ -131,7 +157,7 @@ public class AppServices : IAsyncLifetime
                 EnvironmentVariables =
                 {
                     ["ASPNETCORE_ENVIRONMENT"] = "Test",
-                    ["services__popfilenet-backend__http__0"] = backendUrl,
+                    ["services__popfilenet-backend__http__0"] = BackendUrl,
                 }
             };
 
@@ -141,7 +167,7 @@ public class AppServices : IAsyncLifetime
                 throw new InvalidOperationException("Failed to start UI process");
             }
 
-            const int uiMaxAttempts = 60;
+            const int uiMaxAttempts = 120;
             for (var i = 0; i < uiMaxAttempts; i++)
             {
                 try
@@ -161,30 +187,43 @@ public class AppServices : IAsyncLifetime
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            throw new InvalidOperationException($"UI failed to start at {UiUrl} after {maxAttempts} seconds");
+            throw new InvalidOperationException($"UI failed to start at {UiUrl} after {uiMaxAttempts} seconds");
         }
         catch
         {
-            // Don't dispose the container here - let Testcontainers handle cleanup
-            if (backendStarted)
-            {
-                _backendProcess?.Kill(true);
-                _backendProcess?.Dispose();
-            }
+            KillProcessSafely(_backendProcess, backendStarted);
             throw;
+        }
+    }
+
+    private static void KillProcessSafely(Process? process, bool wasStarted = true)
+    {
+        if (process == null || !wasStarted) return;
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Process already exited
+        }
+        catch
+        {
+            // Ignore other kill errors
+        }
+        finally
+        {
+            try { process.Dispose(); } catch { }
         }
     }
 
     public async Task DisposeAsync()
     {
-        // Testcontainers handles cleanup internally
-        // Just ensure processes are killed
-        _uiProcess?.Kill(true);
-        _uiProcess?.Dispose();
-        _backendProcess?.Kill(true);
-        _backendProcess?.Dispose();
-        
-        // Dispose the PostgreSQL container to release resources
+        KillProcessSafely(_uiProcess);
+        KillProcessSafely(_backendProcess);
         await _postgres.DisposeAsync();
     }
 
@@ -192,17 +231,22 @@ public class AppServices : IAsyncLifetime
     {
         var connectionString = _postgres.GetConnectionString();
 
-        // Kill the existing backend process if it's running
-        _backendProcess?.Kill(true);
-        _backendProcess?.Dispose();
-        
-        // Small delay to ensure process is fully terminated
+        KillProcessSafely(_backendProcess);
+        _backendProcess = null;
+        _backendErrors.Clear();
+        _backendOutput.Clear();
+
         await Task.Delay(1000);
+
+        var imapUsername = Environment.GetEnvironmentVariable("IMAP_USERNAME")
+                           ?? throw new InvalidOperationException("IMAP_USERNAME environment variable is required");
+        var imapPassword = Environment.GetEnvironmentVariable("IMAP_PASSWORD")
+                           ?? throw new InvalidOperationException("IMAP_PASSWORD environment variable is required");
 
         var backendStartInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls http://localhost:5180 --environment Test \"--ConnectionStrings:popfilenet={connectionString}\"",
+            Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls http://localhost:5180 --environment Test \"--ConnectionStrings:popfilenet={connectionString}\" \"--ImapSettings:Server=localhost\" \"--ImapSettings:Port=993\" \"--ImapSettings:Username={imapUsername}\" \"--ImapSettings:Password={imapPassword}\"",
             WorkingDirectory = SolutionRoot,
             UseShellExecute = false,
             RedirectStandardOutput = true,
@@ -220,10 +264,21 @@ public class AppServices : IAsyncLifetime
             throw new InvalidOperationException("Failed to restart backend process");
         }
 
-        // Wait for backend to be ready
-        const int maxAttempts = 30;
+        _backendProcess.OutputDataReceived += (_, e) => { if (e.Data != null) _backendOutput.Add(e.Data); };
+        _backendProcess.ErrorDataReceived += (_, e) => { if (e.Data != null) _backendErrors.Add(e.Data); };
+        _backendProcess.BeginOutputReadLine();
+        _backendProcess.BeginErrorReadLine();
+
+        const int maxAttempts = 60;
         for (var i = 0; i < maxAttempts; i++)
         {
+            if (_backendProcess.HasExited)
+            {
+                var allErrors = string.Join("\n", _backendErrors);
+                throw new InvalidOperationException(
+                    $"Backend process exited after restart (exit code: {_backendProcess.ExitCode}).\nErrors:\n{allErrors}");
+            }
+
             try
             {
                 using var client = new HttpClient();

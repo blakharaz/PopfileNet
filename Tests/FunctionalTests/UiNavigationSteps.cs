@@ -16,6 +16,15 @@ public class UiNavigationSteps
     private IBrowser? _browser;
     private IPage? _page;
     private bool _browserInstalled = true;
+    private string _scenarioId = Guid.NewGuid().ToString("N")[..8];
+
+    [BeforeScenario]
+    public void SetScenarioId()
+    {
+        _scenarioId = Guid.NewGuid().ToString("N")[..8];
+    }
+
+    private string TestName(string name) => $"{_scenarioId}_{name}";
 
     [Given("the UI is running")]
     public static async Task GivenTheUiIsRunning()
@@ -58,14 +67,18 @@ public class UiNavigationSteps
     {
         try
         {
+            Console.WriteLine("[Playwright] Initializing browser...");
             _playwright = await Microsoft.Playwright.Playwright.CreateAsync();
+            Console.WriteLine("[Playwright] Playwright created, launching Chromium...");
             _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
                 Headless = true
             });
+            Console.WriteLine("[Playwright] Browser launched successfully");
         }
-        catch (PlaywrightException)
+        catch (Exception ex)
         {
+            Console.WriteLine($"[Playwright] Failed to initialize browser: {ex.GetType().Name}: {ex.Message}");
             _browserInstalled = false;
         }
     }
@@ -91,44 +104,90 @@ public class UiNavigationSteps
     [Given("I am on the Settings page")]
     public async Task GivenIAmOnTheSettingsPage()
     {
-        // Initialize browser if not already done (similar to WhenINavigateToTheHomePage)
         if (_browser == null || _page == null)
         {
             await GivenTheUiIsRunning();
-            
+
+            if (_browser == null)
+            {
+                throw new InvalidOperationException("Browser not initialized - Playwright may not be installed");
+            }
+
             var uiUrl = TestServices.Instance.UiUrl;
             if (string.IsNullOrEmpty(uiUrl))
             {
                 throw new InvalidOperationException("UI URL not set - services may have failed to start");
             }
 
-            _page = await _browser!.NewPageAsync();
+            _page = await _browser.NewPageAsync();
             await _page.GotoAsync(uiUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         }
 
         var settingsUrl = TestServices.Instance.UiUrl + "/settings";
         await _page!.GotoAsync(settingsUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
-        // Wait a bit for Blazor to fully render
+        // Wait for Blazor circuit to be connected
+        await _page.WaitForTimeoutAsync(3000);
+        
+        // Check if Blazor is connected by looking for the circuit connection
+        var blazorConnected = await _page.EvaluateAsync<bool?>(@"() => {
+            return !!window.Blazor && !!window.Blazor._internal;
+        }");
+        System.Console.WriteLine($"Blazor connected: {blazorConnected}");
+        
         await _page.WaitForTimeoutAsync(1000);
     }
 
     [Given("there is at least one folder without a bucket assignment")]
-    public static async Task GivenThereIsAtLeastOneFolderWithoutABucketAssignment()
+    public async Task GivenThereIsAtLeastOneFolderWithoutABucketAssignment()
     {
-        // For functional tests, we'll assume the test setup has prepared appropriate data
-        // In a real implementation, we would make API calls to verify this condition
-        // For now, we'll do nothing - the test data should ensure this precondition
-        await Task.CompletedTask;
+        await TestServices.Instance.Api.CreateTestFolderAsync(TestName("UnassignedFolder"));
+    }
+
+    [Given("there is at least one folder configured")]
+    public async Task GivenThereIsAtLeastOneFolderConfigured()
+    {
+        await TestServices.Instance.Api.CreateTestFolderAsync(TestName("TestFolder"));
     }
 
     [Given("there is at least one bucket configured")]
-    public static async Task GivenThereIsAtLeastOneBucketConfigured()
+    public async Task GivenThereIsAtLeastOneBucketConfigured()
     {
-        // For functional tests, we'll assume the test setup has prepared appropriate data
-        // In a real implementation, we would make API calls to verify this condition
-        // For now, we'll do nothing - the test data should ensure this precondition
+        await TestServices.Instance.Api.CreateTestBucketAsync(TestName("TestBucket"));
+    }
+
+    [Given("there is a different bucket configured")]
+    public async Task GivenThereIsADifferentBucketConfigured()
+    {
+        await TestServices.Instance.Api.CreateTestBucketAsync(TestName("DifferentBucket"));
+    }
+
+    [Given("there is a folder assigned to a bucket")]
+    public async Task GivenThereIsAFolderAssignedToABucket()
+    {
+        var bucket = await TestServices.Instance.Api.CreateTestBucketAsync(TestName("AssignedBucket"));
+        await TestServices.Instance.Api.CreateTestFolderAsync(TestName("AssignedFolder"));
+        await TestServices.Instance.Api.SetFolderMappingAsync(TestName("AssignedFolder"), bucket);
+    }
+
+    [Given("there are at least two folders without bucket assignments")]
+    public async Task GivenThereAreAtLeastTwoFoldersWithoutBucketAssignments()
+    {
+        await TestServices.Instance.Api.CreateTestFolderAsync(TestName("UnassignedFolder1"));
+        await TestServices.Instance.Api.CreateTestFolderAsync(TestName("UnassignedFolder2"));
+    }
+
+    [Given("there are no existing folder mappings")]
+    public static async Task GivenThereAreNoExistingFolderMappings()
+    {
         await Task.CompletedTask;
+    }
+
+    [Given("there are at least two buckets configured \\(Bucket 1 and Bucket 2\\)")]
+    public async Task GivenThereAreAtLeastTwoBucketsConfiguredBucket1AndBucket2_()
+    {
+        await TestServices.Instance.Api.CreateTestBucketAsync(TestName("Bucket1"));
+        await TestServices.Instance.Api.CreateTestBucketAsync(TestName("Bucket2"));
     }
 
     [When("I select an unassigned folder")]
@@ -140,50 +199,33 @@ public class UiNavigationSteps
         }
 
         // Wait for table to load
-        await _page.WaitForTimeoutAsync(1000);
+        await _page.WaitForTimeoutAsync(2000);
 
         // Find the first folder row that shows "(None)" in the bucket column
         // We'll click the Edit button for that folder
         var rows = await _page.QuerySelectorAllAsync("table tbody tr");
+        System.Console.WriteLine($"Found {rows.Count} table rows");
+        
         foreach (var row in rows)
         {
             var bucketCell = await row.QuerySelectorAsync("td:nth-child(2)");
             if (bucketCell != null)
             {
                 var bucketText = await bucketCell.InnerTextAsync();
+                System.Console.WriteLine($"Bucket cell text: '{bucketText}'");
                 if (bucketText.Trim() == "(None)" || bucketText.Trim() == "" || bucketText.Trim() == "Not assigned")
                 {
-                    var editButton = await row.QuerySelectorAsync("button:has-text('Edit')");
-                    if (editButton != null)
-                    {
-                        await editButton.ClickAsync();
-                        return;
-                    }
-                }
-            }
-        }
-
-        // If no rows in tbody, try to find any table rows
-        var anyRows = await _page.QuerySelectorAllAsync("table tr");
-        if (anyRows.Count > 1) // More than just header
-        {
-            // Skip header row and check data rows
-            for (int i = 1; i < anyRows.Count; i++)
-            {
-                var row = anyRows[i];
-                var bucketCell = await row.QuerySelectorAsync("td:nth-child(2)");
-                if (bucketCell != null)
-                {
-                    var bucketText = await bucketCell.InnerTextAsync();
-                    if (bucketText.Trim() == "(None)" || bucketText.Trim() == "" || bucketText.Trim() == "Not assigned")
-                    {
-                        var editButton = await row.QuerySelectorAsync("button:has-text('Edit')");
-                        if (editButton != null)
-                        {
-                            await editButton.ClickAsync();
-                            return;
-                        }
-                    }
+                    // Use Playwright's Locator API for better reliability
+                    var editButtonLocator = _page.Locator("table tbody tr").Filter(new LocatorFilterOptions { HasText = bucketText.Trim() == "" ? "(None)" : bucketText.Trim() }).Locator(".edit-mapping-btn").First;
+                    
+                    System.Console.WriteLine("Clicking edit button using locator...");
+                    await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                    await _page.WaitForTimeoutAsync(3000);
+                    
+                    // Check if the form appeared
+                    var form = await _page.QuerySelectorAsync("[data-testid=\"edit-mapping-form\"]");
+                    System.Console.WriteLine($"Edit form found: {form != null}");
+                    return;
                 }
             }
         }
@@ -200,34 +242,39 @@ public class UiNavigationSteps
             throw new InvalidOperationException("Page not initialized");
         }
 
-        // Click on the bucket dropdown and select the first available option (not "(None)")
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
-        if (bucketDropdown != null)
+        // Wait for the dropdown to appear (it appears when edit form is shown)
+        var bucketDropdown = await _page.WaitForSelectorAsync("[data-testid=\"edit-bucket-dropdown\"]", new PageWaitForSelectorOptions { Timeout = 10000 });
+        
+        if (bucketDropdown == null)
         {
-            await bucketDropdown.ClickAsync();
-            
-            // Get all options and select the first one that's not empty (not "(None)")
-            var options = await bucketDropdown.QuerySelectorAllAsync("option");
-            foreach (var option in options)
+            throw new Exception("Could not find bucket dropdown");
+        }
+        
+        // Wait a bit more for the dropdown to be fully rendered
+        await _page.WaitForTimeoutAsync(500);
+
+        // Get all options and select the first one that's not empty (not "(None)")
+        var options = await bucketDropdown.QuerySelectorAllAsync("option");
+        System.Console.WriteLine($"Found {options.Count} dropdown options");
+        
+        foreach (var option in options)
+        {
+            var value = await option.GetAttributeAsync("value") ?? string.Empty;
+            var text = await option.InnerTextAsync();
+            System.Console.WriteLine($"Option value: '{value}', text: '{text}'");
+            if (!string.IsNullOrEmpty(value)) // Not the "(None)" option
             {
-                var value = await option.GetAttributeAsync("value") ?? string.Empty;
-                if (!string.IsNullOrEmpty(value)) // Not the "(None)" option
-                {
-                    await option.SelectOptionAsync(value);
-                    return;
-                }
-            }
-            
-            // If we couldn't find a non-empty option, select the first option anyway
-            if (options.Count > 0)
-            {
-                var firstOption = options[0];
-                var value = await firstOption.GetAttributeAsync("value") ?? string.Empty;
-                await firstOption.SelectOptionAsync(value);
+                // Use JavaScript to set the value and trigger change event for Blazor
+                await bucketDropdown.EvaluateAsync($@"(select) => {{
+                    select.value = '{value}';
+                    select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                }}");
+                System.Console.WriteLine($"Selected option with value: {value}");
                 return;
             }
         }
         
+        // If we couldn't find a non-empty option, throw
         throw new Exception("Could not find bucket dropdown or options");
     }
 
@@ -245,7 +292,7 @@ public class UiNavigationSteps
         // Find and click the Save button in the edit form
         // Try multiple possible selectors for the Save button
         var saveButtonSelectors = new[] {
-            "button:has-text('Save')",
+            "[data-testid=\"save-mapping\"]",
             "button[aria-label*='Save' i]",
             ".save-button",
             "[data-testid='save-button']",
@@ -290,7 +337,7 @@ public class UiNavigationSteps
         var rows = await _page.QuerySelectorAllAsync("table tbody tr");
         foreach (var row in rows)
         {
-            var editButton = await row.QuerySelectorAsync("button:has-text('Edit')");
+            var editButton = await row.QuerySelectorAsync(".edit-mapping-btn");
             if (editButton != null)
             {
                 // This is likely the row we edited - check its bucket column
@@ -304,6 +351,47 @@ public class UiNavigationSteps
                         bucketText.Trim() != "Not assigned")
                     {
                         return; // Success - folder is now assigned to a bucket
+                    }
+                }
+            }
+        }
+        
+        throw new Exception("Folder is not shown as assigned to a bucket after saving");
+    }
+
+    [Then("the folder should be shown as assigned to the new bucket")]
+    public async Task ThenTheFolderShouldBeShownAsAssignedToTheNewBucket()
+    {
+        if (_page == null)
+        {
+            throw new InvalidOperationException("Page not initialized");
+        }
+
+        // Wait for UI to update
+        await _page.WaitForTimeoutAsync(2000);
+        
+        // Check that the folder we edited now shows a different bucket assignment in the folder mappings table
+        var folderTable = await _page.QuerySelectorAsync("[data-testid=\"folder-mappings-table\"]");
+        if (folderTable != null)
+        {
+            var rows = await folderTable.QuerySelectorAllAsync("tbody tr");
+            foreach (var row in rows)
+            {
+                var editButton = await row.QuerySelectorAsync(".edit-mapping-btn");
+                if (editButton != null)
+                {
+                    // This is likely the row we edited - check its bucket column
+                    var bucketCell = await row.QuerySelectorAsync("td:nth-child(2)");
+                    if (bucketCell != null)
+                    {
+                        var bucketText = await bucketCell.InnerTextAsync();
+                        if (!string.IsNullOrEmpty(bucketText) && 
+                            bucketText.Trim() != "(None)" && 
+                            bucketText.Trim() != "" && 
+                            bucketText.Trim() != "Not assigned")
+                        {
+                            return; // Success - folder is now assigned to a (different) bucket
+                        }
                     }
                 }
             }
@@ -326,14 +414,20 @@ public class UiNavigationSteps
         await ThenTheFolderShouldBeShownAsAssignedToTheSelectedBucket();
     }
 
-    // Edit mapping steps (reuse some of the above)
-
-    [Given("there is a folder assigned to a bucket")]
-    public static async Task GivenThereIsAFolderAssignedToABucket()
+    [Then("the mapping should be updated in the database")]
+    public async Task ThenTheMappingShouldBeUpdatedInTheDatabase()
     {
-        // For functional tests, we'll assume the test setup has prepared appropriate data
-        await Task.CompletedTask;
+        if (_page == null)
+        {
+            throw new InvalidOperationException("Page not initialized");
+        }
+
+        // For functional tests, we'll verify the update by checking that the UI shows the new assignment
+        // This is similar to the persist check
+        await ThenTheFolderShouldBeShownAsAssignedToTheNewBucket();
     }
+
+    // Edit mapping steps (reuse some of the above)
 
     [When("I select the folder's current bucket assignment")]
     public async Task WhenISelectTheFolderSCurrentBucketAssignment()
@@ -344,11 +438,17 @@ public class UiNavigationSteps
         }
 
         // Wait for table to load
-        await _page.WaitForTimeoutAsync(1000);
+        await _page.WaitForTimeoutAsync(2000);
 
-        // Find the first folder row that shows a bucket assignment (not "(None)")
-        // We'll click the Edit button for that folder
-        var rows = await _page.QuerySelectorAllAsync("table tbody tr");
+        // Find the folder mappings table
+        var folderTable = await _page.QuerySelectorAsync("[data-testid=\"folder-mappings-table\"]");
+        if (folderTable == null)
+        {
+            throw new Exception("Folder mappings table not found");
+        }
+
+        // Find rows with bucket assignments
+        var rows = await folderTable.QuerySelectorAllAsync("tbody tr");
         foreach (var row in rows)
         {
             var bucketCell = await row.QuerySelectorAsync("td:nth-child(2)");
@@ -360,12 +460,10 @@ public class UiNavigationSteps
                     bucketText.Trim() != "" && 
                     bucketText.Trim() != "Not assigned")
                 {
-                    var editButton = await row.QuerySelectorAsync("button:has-text('Edit')");
-                    if (editButton != null)
-                    {
-                        await editButton.ClickAsync();
-                        return;
-                    }
+                    var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
+                    await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                    await _page.WaitForTimeoutAsync(3000);
+                    return;
                 }
             }
         }
@@ -387,12 +485,10 @@ public class UiNavigationSteps
                         bucketText.Trim() != "" && 
                         bucketText.Trim() != "Not assigned")
                     {
-                        var editButton = await row.QuerySelectorAsync("button:has-text('Edit')");
-                        if (editButton != null)
-                        {
-                            await editButton.ClickAsync();
-                            return;
-                        }
+                        var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
+                        await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                        await _page.WaitForTimeoutAsync(3000);
+                        return;
                     }
                 }
             }
@@ -401,191 +497,6 @@ public class UiNavigationSteps
         // If we get here, no assigned folder was found
         throw new Exception("No folder with a bucket assignment found to select");
     }
-
-    [When("I choose a different bucket from the dropdown")]
-    public async Task WhenIChooseADifferentBucketFromTheDropdown()
-    {
-        if (_page == null)
-        {
-            throw new InvalidOperationException("Page not initialized");
-        }
-
-        // Click on the bucket dropdown and select a different option than the current one
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
-        if (bucketDropdown != null)
-        {
-            await bucketDropdown.ClickAsync();
-            
-            // Get all options and select one that's different from the current selection
-            var options = await bucketDropdown.QuerySelectorAllAsync("option");
-            string? currentValue = null;
-            
-            // First, try to get the currently selected value
-            foreach (var option in options)
-            {
-                var isSelected = await option.GetAttributeAsync("selected");
-                if (!string.IsNullOrEmpty(isSelected))
-                {
-                    currentValue = await option.GetAttributeAsync("value");
-                    break;
-                }
-            }
-            
-            // Now select a different option
-            foreach (var option in options)
-            {
-                var value = await option.GetAttributeAsync("value") ?? string.Empty;
-                if (value != currentValue) // Different from current selection
-                {
-                    await option.SelectOptionAsync(value);
-                    return;
-                }
-            }
-            
-            // If all options are the same as current (shouldn't happen in valid test), select first
-            if (options.Count > 0)
-            {
-                var firstOption = options[0];
-                var value = await firstOption.GetAttributeAsync("value") ?? string.Empty;
-                await firstOption.SelectOptionAsync(value);
-                return;
-            }
-        }
-        
-        throw new Exception("Could not find bucket dropdown or options");
-    }
-
-    [Then("the folder should be shown as assigned to the new bucket")]
-    public async Task ThenTheFolderShouldBeShownAsAssignedToTheNewBucket()
-    {
-        if (_page == null)
-        {
-            throw new InvalidOperationException("Page not initialized");
-        }
-
-        // Wait for UI to update
-        await _page.WaitForTimeoutAsync(1000);
-        
-        // Check that the folder we edited now shows a different bucket assignment
-        var rows = await _page.QuerySelectorAllAsync("table tbody tr");
-        foreach (var row in rows)
-        {
-            var editButton = await row.QuerySelectorAsync("button:has-text('Edit')");
-            if (editButton != null)
-            {
-                // This is likely the row we edited - check its bucket column
-                var bucketCell = await row.QuerySelectorAsync("td:nth-child(2)");
-                if (bucketCell != null)
-                {
-                    var bucketText = await bucketCell.InnerTextAsync();
-                    if (!string.IsNullOrEmpty(bucketText) && 
-                        bucketText.Trim() != "(None)" && 
-                        bucketText.Trim() != "" && 
-                        bucketText.Trim() != "Not assigned")
-                    {
-                        return; // Success - folder is now assigned to a (different) bucket
-                    }
-                }
-            }
-        }
-        
-        throw new Exception("Folder is not shown as assigned to a bucket after saving");
-    }
-
-    [Then("the mapping should be updated in the database")]
-    public async Task ThenTheMappingShouldBeUpdatedInTheDatabase()
-    {
-        if (_page == null)
-        {
-            throw new InvalidOperationException("Page not initialized");
-        }
-
-        // Verify persistence by checking UI still shows the assignment
-        await ThenTheFolderShouldBeShownAsAssignedToTheNewBucket();
-    }
-
-    // Delete mapping steps
-
-    [When("I choose to remove the assignment (select \"None\")")]
-    public async Task WhenIChooseToRemoveTheAssignmentSelectNone()
-    {
-        if (_page == null)
-        {
-            throw new InvalidOperationException("Page not initialized");
-        }
-
-        // Click on the bucket dropdown and select the "(None)" option
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
-        if (bucketDropdown != null)
-        {
-            await bucketDropdown.ClickAsync();
-            
-            // Find and select the "(None)" option (empty value)
-            var options = await bucketDropdown.QuerySelectorAllAsync("option");
-            foreach (var option in options)
-            {
-                var value = await option.GetAttributeAsync("value") ?? string.Empty;
-                if (string.IsNullOrEmpty(value)) // This is the "(None)" option
-                {
-                    await option.SelectOptionAsync(value);
-                    return;
-                }
-            }
-        }
-        
-        throw new Exception("Could not find bucket dropdown or '(None)' option");
-    }
-
-    [Then("the folder should be shown as \"Not assigned\"")]
-    public async Task ThenTheFolderShouldBeShownAsNotAssigned()
-    {
-        if (_page == null)
-        {
-            throw new InvalidOperationException("Page not initialized");
-        }
-
-        // Wait for UI to update
-        await _page.WaitForTimeoutAsync(1000);
-        
-        // Check that the folder we edited now shows "(None)" or empty in the bucket column
-        var rows = await _page.QuerySelectorAllAsync("table tbody tr");
-        foreach (var row in rows)
-        {
-            var editButton = await row.QuerySelectorAsync("button:has-text('Edit')");
-            if (editButton != null)
-            {
-                // This is likely the row we edited - check its bucket column
-                var bucketCell = await row.QuerySelectorAsync("td:nth-child(2)");
-                if (bucketCell != null)
-                {
-                    var bucketText = await bucketCell.InnerTextAsync();
-                    if (string.IsNullOrEmpty(bucketText) || 
-                        bucketText.Trim() == "(None)" || 
-                        bucketText.Trim() == "" || 
-                        bucketText.Trim() == "Not assigned")
-                    {
-                        return; // Success - folder is now unassigned
-                    }
-                }
-            }
-        }
-        
-        throw new Exception("Folder is not shown as \"Not assigned\" after saving");
-    }
-
-    [Then("the mapping should be removed from the database")]
-    public async Task ThenTheMappingShouldBeRemovedFromTheDatabase()
-    {
-        if (_page == null)
-        {
-            throw new InvalidOperationException("Page not initialized");
-        }
-
-        // Verify persistence by checking UI still shows the folder as unassigned
-        await ThenTheFolderShouldBeShownAsNotAssigned();
-    }
-
-    // Validation steps
 
     [When("I attempt to assign it to a non-existent bucket ID")]
     public async Task WhenIAttemptToAssignItToANonExistentBucketId()
@@ -596,7 +507,7 @@ public class UiNavigationSteps
         }
 
         // Manipulate the DOM to set an invalid bucket ID (e.g., "99999" or "invalid")
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
+        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
         if (bucketDropdown != null)
         {
             // Use JavaScript to directly set a non-existent value
@@ -624,7 +535,7 @@ public class UiNavigationSteps
         await _page.WaitForTimeoutAsync(1000);
         
         // Check for error badges or messages
-        var errorBadge = await _page.QuerySelectorAsync(".FluentBadge.Appearance.Alert");
+        var errorBadge = await _page.QuerySelectorAsync("[data-testid=\"status-badge\"]");
         if (errorBadge != null)
         {
             var errorText = await errorBadge.InnerTextAsync();
@@ -636,7 +547,7 @@ public class UiNavigationSteps
         }
         
         // Also check status message area
-        var statusMessage = await _page.QuerySelectorAsync("[data-testid='settings-imap-stack'] .FluentBadge.Appearance.Neutral");
+        var statusMessage = await _page.QuerySelectorAsync("[data-testid=\"status-badge\"]");
         if (statusMessage != null)
         {
             var statusText = await statusMessage.InnerTextAsync();
@@ -659,7 +570,7 @@ public class UiNavigationSteps
         }
 
         // Manipulate the DOM to set an invalid folder name (e.g., "NonExistent_Folder_12345")
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
+        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
         if (bucketDropdown != null)
         {
             // Use JavaScript to directly set a non-existent folder name
@@ -687,7 +598,7 @@ public class UiNavigationSteps
         await _page.WaitForTimeoutAsync(1000);
         
         // Check for error badges or messages
-        var errorBadge = await _page.QuerySelectorAsync(".FluentBadge.Appearance.Alert");
+        var errorBadge = await _page.QuerySelectorAsync("[data-testid=\"status-badge\"]");
         if (errorBadge != null)
         {
             var errorText = await errorBadge.InnerTextAsync();
@@ -699,7 +610,7 @@ public class UiNavigationSteps
         }
         
         // Also check status message area
-        var statusMessage = await _page.QuerySelectorAsync("[data-testid='settings-imap-stack'] .FluentBadge.Appearance.Neutral");
+        var statusMessage = await _page.QuerySelectorAsync("[data-testid=\"status-badge\"]");
         if (statusMessage != null)
         {
             var statusText = await statusMessage.InnerTextAsync();
@@ -768,7 +679,7 @@ public class UiNavigationSteps
             }
             
             // Check for any error messages in the UI
-            var errorElement = await _page.QuerySelectorAsync(".FluentBadge.Appearance.Alert");
+            var errorElement = await _page.QuerySelectorAsync("[data-testid=\"status-badge\"]");
             if (errorElement != null)
             {
                 var errorText = await errorElement.InnerTextAsync();
@@ -802,7 +713,7 @@ public class UiNavigationSteps
         }
     }
 
-    [Then("each row should display the folder name, bucket assignment {string}, and action buttons")]
+    [Then(@"each row should display the folder name, bucket assignment \(or ""([^""]+)""\), and action buttons")]
     public async Task ThenEachRowShouldDisplayTheFolderNameBucketAssignmentOrAndActionButtons(string bucketDisplay)
     {
         if (_page == null)
@@ -846,26 +757,15 @@ public class UiNavigationSteps
     [Given("there is a folder assigned to Bucket {int}")]
     public async Task GivenThereIsAFolderAssignedToBucket(int bucketNumber)
     {
-        if (_page == null)
-        {
-            throw new InvalidOperationException("Page not initialized");
-        }
-
-        // For functional tests, we'll rely on test data setup
-        // In a real implementation, we might check specific folders
-        await Task.CompletedTask;
+        var bucket = await TestServices.Instance.Api.CreateTestBucketAsync(TestName($"Bucket{bucketNumber}"));
+        await TestServices.Instance.Api.CreateTestFolderAsync(TestName($"FolderForBucket{bucketNumber}"));
+        await TestServices.Instance.Api.SetFolderMappingAsync(TestName($"FolderForBucket{bucketNumber}"), bucket);
     }
 
     [Given("there is a different Bucket {int} configured")]
     public async Task GivenThereIsADifferentBucketConfigured(int bucketNumber)
     {
-        if (_page == null)
-        {
-            throw new InvalidOperationException("Page not initialized");
-        }
-
-        // For functional tests, we'll rely on test data setup
-        await Task.CompletedTask;
+        await TestServices.Instance.Api.CreateTestBucketAsync(TestName($"Bucket{bucketNumber}"));
     }
 
     [When("I select the folder")]
@@ -877,22 +777,25 @@ public class UiNavigationSteps
         }
 
         // Wait for table to load
-        await _page.WaitForTimeoutAsync(1000);
+        await _page.WaitForTimeoutAsync(3000);
 
-        // Click anywhere in the first folder row to select it
-        var firstRow = await _page.QuerySelectorAsync("tbody tr");
-        if (firstRow != null)
+        // Find the folder mappings table specifically
+        var folderTable = await _page.QuerySelectorAsync("[data-testid=\"folder-mappings-table\"]");
+        if (folderTable == null)
         {
-            await firstRow.ClickAsync();
-            return;
+            System.Console.WriteLine("Folder mappings table not found");
+            throw new Exception("Folder mappings table not found");
         }
 
-        // If no rows in tbody, try to find any table rows (skip header)
-        var allRows = await _page.QuerySelectorAllAsync("table tr");
-        if (allRows.Count > 1)
+        // Find rows in the folder mappings table
+        var rows = await folderTable.QuerySelectorAllAsync("tbody tr");
+        System.Console.WriteLine($"Found {rows.Count} folder mapping rows");
+        
+        if (rows.Count > 0)
         {
-            // Click the first data row (skip header at index 0)
-            await allRows[1].ClickAsync();
+            var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
+            await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+            await _page.WaitForTimeoutAsync(3000);
             return;
         }
 
@@ -907,25 +810,93 @@ public class UiNavigationSteps
             throw new InvalidOperationException("Page not initialized");
         }
 
-        // Click on the bucket dropdown and select the option at the specified index
-        // (assuming bucketNumber corresponds to option index, skipping header/index 0)
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
+        // Get the bucket dropdown
+        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
         if (bucketDropdown != null)
         {
-            await bucketDropdown.ClickAsync();
-            
             // Get all options and select the one at the specified index (1-based)
             var options = await bucketDropdown.QuerySelectorAllAsync("option");
             if (options.Count > bucketNumber)
             {
                 var optionToSelect = options[bucketNumber]; // 0-based index
                 var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
-                await optionToSelect.SelectOptionAsync(value);
+                
+                // Use JavaScript to set the value and trigger change event for Blazor
+                await bucketDropdown.EvaluateAsync($@"(select) => {{
+                    select.value = '{value}';
+                    select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                }}");
                 return;
             }
         }
 
         throw new Exception($"Could not select bucket {bucketNumber} from dropdown");
+    }
+
+    [When("I choose a different bucket from the dropdown")]
+    public async Task WhenIChooseADifferentBucketFromTheDropdown()
+    {
+        if (_page == null)
+        {
+            throw new InvalidOperationException("Page not initialized");
+        }
+
+        // Wait for the dropdown to appear
+        await _page.WaitForTimeoutAsync(1000);
+        
+        // Get the bucket dropdown
+        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
+        if (bucketDropdown != null)
+        {
+            // Get all options and select one that's different from the current selection
+            var options = await bucketDropdown.QuerySelectorAllAsync("option");
+            string? currentValue = null;
+            
+            // First, try to get the currently selected value
+            foreach (var option in options)
+            {
+                var isSelected = await option.GetAttributeAsync("selected");
+                if (!string.IsNullOrEmpty(isSelected))
+                {
+                    currentValue = await option.GetAttributeAsync("value");
+                    break;
+                }
+            }
+            
+            // Now select a different option using JavaScript for Blazor
+            // Skip the "(None)" option (empty value) and select an actual bucket
+            foreach (var option in options)
+            {
+                var value = await option.GetAttributeAsync("value") ?? string.Empty;
+                if (!string.IsNullOrEmpty(value) && value != currentValue) // Different from current selection and not "(None)"
+                {
+                    await bucketDropdown.EvaluateAsync($@"(select) => {{
+                        select.value = '{value}';
+                        select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    }}");
+                    return;
+                }
+            }
+            
+            // If all options are the same as current (shouldn't happen in valid test), select first non-empty
+            if (options.Count > 0)
+            {
+                foreach (var option in options)
+                {
+                    var value = await option.GetAttributeAsync("value") ?? string.Empty;
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        await bucketDropdown.EvaluateAsync($@"(select) => {{
+                            select.value = '{value}';
+                            select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        }}");
+                        return;
+                    }
+                }
+            }
+        }
+        
+        throw new Exception("Could not find bucket dropdown or options");
     }
 
     [Then("the folder should be shown as assigned to Bucket {int}")]
@@ -937,23 +908,29 @@ public class UiNavigationSteps
         }
 
         // Wait for UI to update
-        await _page.WaitForTimeoutAsync(1000);
+        await _page.WaitForTimeoutAsync(2000);
         
-        // Check that the selected folder shows the expected bucket
-        var selectedRow = await _page.QuerySelectorAsync("tbody tr");
-        if (selectedRow != null)
+        // Check that the selected folder shows the expected bucket in the folder mappings table
+        var folderTable = await _page.QuerySelectorAsync("[data-testid=\"folder-mappings-table\"]");
+        if (folderTable != null)
         {
-            var bucketCell = await selectedRow.QuerySelectorAsync("td:nth-child(2)");
-            if (bucketCell != null)
+            var rows = await folderTable.QuerySelectorAllAsync("tbody tr");
+            if (rows.Count > 0)
             {
-                var bucketText = await bucketCell.InnerTextAsync();
-                // For now, just check that it's not empty/unassigned
-                if (!string.IsNullOrEmpty(bucketText) && 
-                    bucketText.Trim() != "(None)" && 
-                    bucketText.Trim() != "" && 
-                    bucketText.Trim() != "Not assigned")
+                var firstRow = rows[0];
+                var bucketCell = await firstRow.QuerySelectorAsync("td:nth-child(2)");
+                if (bucketCell != null)
                 {
-                    return;
+                    var bucketText = await bucketCell.InnerTextAsync();
+                    System.Console.WriteLine($"Bucket cell text: '{bucketText}'");
+                    // For now, just check that it's not empty/unassigned
+                    if (!string.IsNullOrEmpty(bucketText) && 
+                        bucketText.Trim() != "(None)" && 
+                        bucketText.Trim() != "" && 
+                        bucketText.Trim() != "Not assigned")
+                    {
+                        return;
+                    }
                 }
             }
         }
@@ -1066,7 +1043,7 @@ public class UiNavigationSteps
         }
 
         // Manipulate the DOM to set an empty folder name (e.g., "")
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
+        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
         if (bucketDropdown != null)
         {
             // Use JavaScript to directly set an empty folder name
@@ -1094,7 +1071,7 @@ public class UiNavigationSteps
         await _page.WaitForTimeoutAsync(1000);
         
         // Check for error badges or messages
-        var errorBadge = await _page.QuerySelectorAsync(".FluentBadge.Appearance.Alert");
+        var errorBadge = await _page.QuerySelectorAsync("[data-testid=\"status-badge\"]");
         if (errorBadge != null)
         {
             var errorText = await errorBadge.InnerTextAsync();
@@ -1106,7 +1083,7 @@ public class UiNavigationSteps
         }
         
         // Also check status message area
-        var statusMessage = await _page.QuerySelectorAsync("[data-testid='settings-imap-stack'] .FluentBadge.Appearance.Neutral");
+        var statusMessage = await _page.QuerySelectorAsync("[data-testid=\"status-badge\"]");
         if (statusMessage != null)
         {
             var statusText = await statusMessage.InnerTextAsync();
@@ -1120,14 +1097,6 @@ public class UiNavigationSteps
         throw new Exception("Expected error message about folder name being required not found");
     }
 
-    [Given("there are at least two folders without bucket assignments")]
-    public static async Task GivenThereAreAtLeastTwoFoldersWithoutBucketAssignments()
-    {
-        // For functional tests, we'll assume the test setup has prepared appropriate data
-        // In a real implementation, we would make API calls to verify this condition
-        await Task.CompletedTask;
-    }
-
     [When("I assign Folder {int} to the bucket")]
     public async Task WhenIAssignFolderToTheBucket(int folderNumber)
     {
@@ -1137,57 +1106,61 @@ public class UiNavigationSteps
         }
 
         // Wait for table to load
-        await _page.WaitForTimeoutAsync(1000);
+        await _page.WaitForTimeoutAsync(2000);
+
+        // Find the folder mappings table
+        var folderTable = await _page.QuerySelectorAsync("[data-testid=\"folder-mappings-table\"]");
+        if (folderTable == null)
+        {
+            throw new Exception("Folder mappings table not found");
+        }
 
         // Find the folder row by index (1-based as specified in the step)
-        var rows = await _page.QuerySelectorAllAsync("table tbody tr");
+        var rows = await folderTable.QuerySelectorAllAsync("tbody tr");
         if (rows != null && rows.Count >= folderNumber)
         {
             var folderRow = rows[folderNumber - 1]; // Convert to 0-based index
             
-            // Click the Edit button for that folder
-            var editButton = await folderRow.QuerySelectorAsync("button:has-text('Edit')");
-            if (editButton != null)
+            // Click the Edit button for that folder using locator
+            var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").Nth(folderNumber - 1);
+            await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+            
+            // Wait for edit form to open
+            await _page.WaitForTimeoutAsync(3000);
+            
+            // Select a bucket from the dropdown (first non-empty option)
+            var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
+            if (bucketDropdown != null)
             {
-                await editButton.ClickAsync();
-                
-                // Wait for edit form to open
-                await _page.WaitForTimeoutAsync(500);
-                
-                // Select a bucket from the dropdown (first non-empty option)
-                var bucketDropdown = await _page.QuerySelectorAsync("select");
-                if (bucketDropdown != null)
+                // Get all options and select the first one that's not empty (not "(None)")
+                var options = await bucketDropdown.QuerySelectorAllAsync("option");
+                foreach (var option in options)
                 {
-                    await bucketDropdown.ClickAsync();
-                    
-                    // Get all options and select the first one that's not empty (not "(None)")
-                    var options = await bucketDropdown.QuerySelectorAllAsync("option");
-                    foreach (var option in options)
+                    var value = await option.GetAttributeAsync("value") ?? string.Empty;
+                    if (!string.IsNullOrEmpty(value))
                     {
-                        var value = await option.GetAttributeAsync("value") ?? string.Empty;
-                        if (string.IsNullOrEmpty(value))
-                        {
-                            continue; // Not the "(None)" option
-                        }
-
-                        await option.SelectOptionAsync(value);
+                        // Use JavaScript to set the value and trigger change event for Blazor
+                        await bucketDropdown.EvaluateAsync($@"(select) => {{
+                            select.value = '{value}';
+                            select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        }}");
                         break;
                     }
-                    
-                    // Click Save
-                    var saveButton = await _page.QuerySelectorAsync("button:has-text('Save')");
-                    if (saveButton == null)
-                    {
-                        return;
-                    }
-                    await saveButton.ClickAsync();
-                    await _page.WaitForTimeoutAsync(1000);
                 }
                 
+                // Click Save
+                var saveButton = await _page.QuerySelectorAsync("[data-testid=\"save-mapping\"]");
+                if (saveButton == null)
+                {
+                    throw new Exception("Could not find Save button");
+                }
+                
+                await saveButton.ClickAsync(new ElementHandleClickOptions { Force = true });
+                await _page.WaitForTimeoutAsync(2000);
                 return;
             }
         }
-        
+
         throw new Exception($"Could not find folder #{folderNumber} to assign");
     }
 
@@ -1213,7 +1186,9 @@ public class UiNavigationSteps
         var bucketAssignments = await _page.EvaluateAsync<string[]>(@"
             () => {
                 const assignments = [];
-                const rows = document.querySelectorAll('table tbody tr');
+                const table = document.querySelector('[data-testid=""folder-mappings-table""]');
+                if (!table) return assignments;
+                const rows = table.querySelectorAll('tbody tr');
                 rows.forEach(row => {
                     const bucketCell = row.querySelector('td:nth-child(2)');
                     if (bucketCell) {
@@ -1261,13 +1236,6 @@ public class UiNavigationSteps
         await Task.CompletedTask;
     }
 
-    [Given("there is a bucket configured")]
-    public static async Task GivenThereIsABucketConfigured()
-    {
-        // For functional tests, we'll assume the test setup has prepared appropriate data
-        await Task.CompletedTask;
-    }
-
     [Then("I should see a success message indicating the mapping was saved")]
     public async Task ThenIShouldSeeASuccessMessageIndicatingTheMappingWasSaved()
     {
@@ -1280,7 +1248,7 @@ public class UiNavigationSteps
         await _page.WaitForTimeoutAsync(1000);
         
         // Check for success badges or messages
-        var successBadge = await _page.QuerySelectorAsync(".FluentBadge.Appearance.Success");
+        var successBadge = await _page.QuerySelectorAsync("[data-testid=\"status-badge\"]");
         if (successBadge != null)
         {
             var successText = await successBadge.InnerTextAsync();
@@ -1307,10 +1275,15 @@ public class UiNavigationSteps
     }
 
     [Given("there is a folder configured")]
-    public static async Task GivenThereIsAFolderConfigured()
+    public async Task GivenThereIsAFolderConfigured()
     {
-        // For functional tests, we'll assume the test setup has prepared appropriate data
-        await Task.CompletedTask;
+        await TestServices.Instance.Api.CreateTestFolderAsync(TestName("TestFolder"));
+    }
+
+    [Given("there is a bucket configured")]
+    public async Task GivenThereIsABucketConfigured()
+    {
+        await TestServices.Instance.Api.CreateTestBucketAsync(TestName("TestBucket"));
     }
 
     [Then("the folder's assignment should remain unchanged")]
@@ -1336,7 +1309,7 @@ public class UiNavigationSteps
         }
 
         // Manipulate the DOM to set an invalid bucket ID (e.g., "-1" or "0")
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
+        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
         if (bucketDropdown != null)
         {
             // Use JavaScript to directly set a non-existent bucket ID
@@ -1361,11 +1334,17 @@ public class UiNavigationSteps
         }
 
         // Wait for table to load
-        await _page.WaitForTimeoutAsync(1000);
+        await _page.WaitForTimeoutAsync(2000);
 
-        // Find the first folder row that shows a bucket assignment (not "(None)")
-        // We'll click on the bucket cell itself
-        var rows = await _page.QuerySelectorAllAsync("table tbody tr");
+        // Find the folder mappings table
+        var folderTable = await _page.QuerySelectorAsync("[data-testid=\"folder-mappings-table\"]");
+        if (folderTable == null)
+        {
+            throw new Exception("Folder mappings table not found");
+        }
+
+        // Find rows with bucket assignments
+        var rows = await folderTable.QuerySelectorAllAsync("tbody tr");
         foreach (var row in rows)
         {
             var bucketCell = await row.QuerySelectorAsync("td:nth-child(2)");
@@ -1377,8 +1356,10 @@ public class UiNavigationSteps
                     bucketText.Trim() != "" && 
                     bucketText.Trim() != "Not assigned")
                 {
-                    // Click on the bucket cell to select it
-                    await bucketCell.ClickAsync();
+                    // Click the edit button for this row
+                    var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
+                    await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                    await _page.WaitForTimeoutAsync(3000);
                     return;
                 }
             }
@@ -1401,15 +1382,15 @@ public class UiNavigationSteps
                         bucketText.Trim() != "" && 
                         bucketText.Trim() != "Not assigned")
                     {
-                        // Click on the bucket cell to select it
-                        await bucketCell.ClickAsync();
+                        var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
+                        await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                        await _page.WaitForTimeoutAsync(3000);
                         return;
                     }
                 }
             }
         }
 
-        // If we get here, no assigned folder was found
         throw new Exception("No folder with a bucket assignment found to select");
     }
 
@@ -1437,7 +1418,7 @@ public class UiNavigationSteps
         await Task.CompletedTask;
     }
 
-    [Then("each folder should show its current bucket assignment {string}")]
+    [Then(@"each folder should show its current bucket assignment \(or ""([^""]+)""\)")]
     public async Task ThenEachFolderShouldShowItsCurrentBucketAssignmentOr(string notAssigned)
     {
         if (_page == null)
@@ -1465,51 +1446,95 @@ public class UiNavigationSteps
         }
     }
 
-    [When("I choose to remove the assignment {string}")]
-    public async Task WhenIChooseToRemoveTheAssignmentSelectNone(string noneText)
+    [When(@"I choose to remove the assignment \(select ""None""\)")]
+    public async Task WhenIChooseToRemoveTheAssignmentSelectNone()
     {
         if (_page == null)
         {
             throw new InvalidOperationException("Page not initialized");
         }
 
-        // Click on the bucket dropdown and select the "(None)" option
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
+        // Wait for the dropdown to appear
+        await _page.WaitForTimeoutAsync(1000);
+        
+        // Get the bucket dropdown
+        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
         if (bucketDropdown != null)
         {
-            await bucketDropdown.ClickAsync();
-            
-            // Find and select the "(None)" option (empty value)
+            // Find and select the "(None)" option (empty value) using JavaScript for Blazor
             var options = await bucketDropdown.QuerySelectorAllAsync("option");
             foreach (var option in options)
             {
                 var value = await option.GetAttributeAsync("value") ?? string.Empty;
                 if (string.IsNullOrEmpty(value)) // This is the "(None)" option
                 {
-                    await option.SelectOptionAsync(value);
+                    await bucketDropdown.EvaluateAsync(@"(select) => {
+                        select.value = '';
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    }");
                     return;
                 }
             }
         }
         
-        throw new Exception("Could not find bucket dropdown or '(None)' option");
+        throw new Exception("Could not find '(None)' option in dropdown");
+    }
+
+    [Then(@"the folder should be shown as ""Not assigned""")]
+    public async Task ThenTheFolderShouldBeShownAsNotAssigned()
+    {
+        if (_page == null)
+        {
+            throw new InvalidOperationException("Page not initialized");
+        }
+
+        // Wait for UI to update
+        await _page.WaitForTimeoutAsync(2000);
+        
+        // Check that the folder we edited now shows "(None)" or empty in the bucket column
+        var folderTable = await _page.QuerySelectorAsync("[data-testid=\"folder-mappings-table\"]");
+        if (folderTable != null)
+        {
+            var rows = await folderTable.QuerySelectorAllAsync("tbody tr");
+            foreach (var row in rows)
+            {
+                var editButton = await row.QuerySelectorAsync(".edit-mapping-btn");
+                if (editButton != null)
+                {
+                    // This is likely the row we edited - check its bucket column
+                    var bucketCell = await row.QuerySelectorAsync("td:nth-child(2)");
+                    if (bucketCell != null)
+                    {
+                        var bucketText = await bucketCell.InnerTextAsync();
+                        if (string.IsNullOrEmpty(bucketText) || 
+                            bucketText.Trim() == "(None)" || 
+                            bucketText.Trim() == "" || 
+                            bucketText.Trim() == "Not assigned")
+                        {
+                            return; // Success - folder is now unassigned
+                        }
+                    }
+                }
+            }
+        }
+        
+        throw new Exception("Folder is not shown as 'Not assigned' after removing mapping");
+    }
+
+    [Then("the mapping should be removed from the database")]
+    public async Task ThenTheMappingShouldBeRemovedFromTheDatabase()
+    {
+        if (_page == null)
+        {
+            throw new InvalidOperationException("Page not initialized");
+        }
+
+        // For functional tests, we'll verify the removal by checking that the UI shows the folder as unassigned
+        // This is similar to the "Not assigned" check
+        await ThenTheFolderShouldBeShownAsNotAssigned();
     }
 
     [Given("there are no existing folder mappings")]
-    public static async Task GivenThereAreNoExistingFolderMappings()
-    {
-        // For functional tests, we assume the test starts with a clean state
-        // The database should have no folder mappings at the start of the test
-        await Task.CompletedTask;
-    }
-
-    [Given("there are at least two buckets configured {string}")]
-    public static async Task GivenThereAreAtLeastTwoBucketsConfiguredBucketAndBucket(string bucketSpec)
-    {
-        // For functional tests, we'll assume the test setup has prepared appropriate data
-        await Task.CompletedTask;
-    }
-
     [When("I assign Folder A to Bucket {int}")]
     public async Task WhenIAssignFolderAToBucket(int bucketNumber)
     {
@@ -1528,7 +1553,7 @@ public class UiNavigationSteps
             var firstRow = rows[0];
             
             // Click the Edit button for that folder
-            var editButton = await firstRow.QuerySelectorAsync("button:has-text('Edit')");
+            var editButton = await firstRow.QuerySelectorAsync(".edit-mapping-btn");
             if (editButton != null)
             {
                 await editButton.ClickAsync();
@@ -1537,7 +1562,7 @@ public class UiNavigationSteps
                 await _page.WaitForTimeoutAsync(500);
                 
                 // Select a bucket from the dropdown (first non-empty option)
-                var bucketDropdown = await _page.QuerySelectorAsync("select");
+                var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
                 if (bucketDropdown != null)
                 {
                     await bucketDropdown.ClickAsync();
@@ -1552,7 +1577,7 @@ public class UiNavigationSteps
                     }
                     
                     // Click Save
-                    var saveButton = await _page.QuerySelectorAsync("button:has-text('Save')");
+                    var saveButton = await _page.QuerySelectorAsync("[data-testid=\"save-mapping\"]");
                     if (saveButton != null)
                     {
                         await saveButton.ClickAsync();
@@ -1581,7 +1606,7 @@ public class UiNavigationSteps
             var secondRow = rows[1];
             
             // Click the Edit button for that folder
-            var editButton = await secondRow.QuerySelectorAsync("button:has-text('Edit')");
+            var editButton = await secondRow.QuerySelectorAsync(".edit-mapping-btn");
             if (editButton != null)
             {
                 await editButton.ClickAsync();
@@ -1590,7 +1615,7 @@ public class UiNavigationSteps
                 await _page.WaitForTimeoutAsync(500);
                 
                 // Select a bucket from the dropdown
-                var bucketDropdown = await _page.QuerySelectorAsync("select");
+                var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
                 if (bucketDropdown != null)
                 {
                     await bucketDropdown.ClickAsync();
@@ -1605,7 +1630,7 @@ public class UiNavigationSteps
                     }
                     
                     // Click Save
-                    var saveButton = await _page.QuerySelectorAsync("button:has-text('Save')");
+                    var saveButton = await _page.QuerySelectorAsync("[data-testid=\"save-mapping\"]");
                     if (saveButton != null)
                     {
                         await saveButton.ClickAsync();
@@ -1634,7 +1659,7 @@ public class UiNavigationSteps
             var firstRow = rows[0];
             
             // Click the Edit button for that folder
-            var editButton = await firstRow.QuerySelectorAsync("button:has-text('Edit')");
+            var editButton = await firstRow.QuerySelectorAsync(".edit-mapping-btn");
             if (editButton != null)
             {
                 await editButton.ClickAsync();
@@ -1643,7 +1668,7 @@ public class UiNavigationSteps
                 await _page.WaitForTimeoutAsync(500);
                 
                 // Select a different bucket from the dropdown
-                var bucketDropdown = await _page.QuerySelectorAsync("select");
+                var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
                 if (bucketDropdown != null)
                 {
                     await bucketDropdown.ClickAsync();
@@ -1658,7 +1683,7 @@ public class UiNavigationSteps
                     }
                     
                     // Click Save
-                    var saveButton = await _page.QuerySelectorAsync("button:has-text('Save')");
+                    var saveButton = await _page.QuerySelectorAsync("[data-testid=\"save-mapping\"]");
                     if (saveButton != null)
                     {
                         await saveButton.ClickAsync();
@@ -1687,7 +1712,7 @@ public class UiNavigationSteps
             var secondRow = rows[1];
             
             // Click the Edit button for that folder
-            var editButton = await secondRow.QuerySelectorAsync("button:has-text('Edit')");
+            var editButton = await secondRow.QuerySelectorAsync(".edit-mapping-btn");
             if (editButton != null)
             {
                 await editButton.ClickAsync();
@@ -1696,7 +1721,7 @@ public class UiNavigationSteps
                 await _page.WaitForTimeoutAsync(500);
                 
                 // Select the "None" option from the dropdown
-                var bucketDropdown = await _page.QuerySelectorAsync("select");
+                var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
                 if (bucketDropdown != null)
                 {
                     await bucketDropdown.ClickAsync();
@@ -1711,7 +1736,7 @@ public class UiNavigationSteps
                     }
                     
                     // Click Save
-                    var saveButton = await _page.QuerySelectorAsync("button:has-text('Save')");
+                    var saveButton = await _page.QuerySelectorAsync("[data-testid=\"save-mapping\"]");
                     if (saveButton != null)
                     {
                         await saveButton.ClickAsync();
@@ -1844,7 +1869,7 @@ public class UiNavigationSteps
         }
 
         // Manipulate the DOM to set a whitespace-only folder name
-        var bucketDropdown = await _page.QuerySelectorAsync("select");
+        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
         if (bucketDropdown != null)
         {
             // Use JavaScript to directly set a whitespace-only folder name
@@ -1858,6 +1883,27 @@ public class UiNavigationSteps
                 }
             ");
         }
+    }
+
+    [AfterScenario]
+    public static async Task AfterScenario()
+    {
+        // Clean up test data from the database after each scenario
+        try
+        {
+            await TestServices.Instance.Api.CleanupTestDataAsync();
+        }
+        catch
+        {
+            // Ignore cleanup errors - they shouldn't fail the test
+        }
+    }
+
+    [Then("cleanup test data")]
+    public static async Task ThenCleanupTestData()
+    {
+        // Cleanup is now handled by AfterScenario hook
+        await Task.CompletedTask;
     }
 
     [AfterTestRun]

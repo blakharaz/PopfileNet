@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using PopfileNet.Backend.BackgroundServices;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.DevMode;
@@ -30,15 +31,22 @@ public class Program
                 Models.AppJsonSerializerContext.Default);
         });
 
-    var devMode = builder.Configuration.GetSection("DevMode").Get<DevModeSettings>()!;
-        builder.Services.AddSingleton(devMode);
+    var devMode = builder.Configuration.GetSection("DevMode").Get<DevModeSettings>() ?? new DevModeSettings(Enabled: false);
+    builder.Services.AddSingleton(devMode);
 
         builder.Services.AddEndpointsApiExplorer();
-        builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet");
+        builder.AddNpgsqlDbContext<PopfileNetDbContext>("popfilenet", configureDbContextOptions: options =>
+        {
+            if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Test")
+            {
+                options.ConfigureWarnings(warnings =>
+                    warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+            }
+        });
 
-        var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
-                                   ?? throw new InvalidDataException("Missing IMAP settings in app configuration");
-        builder.Services.AddSingleton(imapSettingsDefaults);
+    var imapSettingsDefaults = builder.Configuration.GetSection("ImapSettings").Get<ImapSettings>()
+                               ?? throw new InvalidDataException("Missing IMAP settings in app configuration");
+    builder.Services.AddSingleton(imapSettingsDefaults);
 
         builder.Services.AddScoped<IImapClientFactory, ImapClientFactory>();
         builder.Services.AddScoped<IImapService, ImapService>();

@@ -161,16 +161,22 @@ namespace PopfileNet.FunctionalTests
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
 #line 10
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("there is at least one folder configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 11
-    await testRunner.WhenAsync("I view the Folder Mappings section", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 12
-    await testRunner.ThenAsync("I should see all available IMAP folders listed", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.WhenAsync("I view the Folder Mappings section", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 13
+    await testRunner.ThenAsync("I should see all available IMAP folders listed", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 14
     await testRunner.AndAsync("each folder should show its current bucket assignment (or \"Not assigned\")", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 15
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -189,7 +195,7 @@ namespace PopfileNet.FunctionalTests
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Assign a folder to a bucket", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 16
+#line 18
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -199,32 +205,35 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 17
+#line 19
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 18
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 19
+#line 20
     await testRunner.AndAsync("there is at least one folder without a bucket assignment", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 20
+#line 21
     await testRunner.AndAsync("there is at least one bucket configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 21
-    await testRunner.WhenAsync("I select an unassigned folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
 #line 22
-    await testRunner.AndAsync("I choose a bucket from the dropdown", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 23
-    await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.WhenAsync("I select an unassigned folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 24
-    await testRunner.ThenAsync("the folder should be shown as assigned to the selected bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.AndAsync("I choose a bucket from the dropdown", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 25
+    await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 26
+    await testRunner.ThenAsync("the folder should be shown as assigned to the selected bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 27
     await testRunner.AndAsync("the mapping should persist in the database", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 28
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -243,7 +252,7 @@ namespace PopfileNet.FunctionalTests
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Change a folder\'s bucket assignment", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 28
+#line 31
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -253,32 +262,35 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 29
+#line 32
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 30
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 31
+#line 33
     await testRunner.AndAsync("there is a folder assigned to Bucket 1", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 32
+#line 34
     await testRunner.AndAsync("there is a different Bucket 2 configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 33
-    await testRunner.WhenAsync("I select the folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 34
-    await testRunner.AndAsync("I choose Bucket 2 from the dropdown", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
 #line 35
-    await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 36
-    await testRunner.ThenAsync("the folder should be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.WhenAsync("I select the folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 37
+    await testRunner.AndAsync("I choose Bucket 2 from the dropdown", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 38
+    await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 39
+    await testRunner.ThenAsync("the folder should be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 40
     await testRunner.AndAsync("the mapping should be updated in the database", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 41
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -297,7 +309,7 @@ namespace PopfileNet.FunctionalTests
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Unassign a folder from its bucket", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 40
+#line 44
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -307,29 +319,32 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 41
+#line 45
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 42
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 43
+#line 46
     await testRunner.AndAsync("there is a folder assigned to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 44
-    await testRunner.WhenAsync("I select the folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 45
-    await testRunner.AndAsync("I choose to remove the assignment (select \"None\")", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 46
-    await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
 #line 47
-    await testRunner.ThenAsync("the folder should be shown as \"Not assigned\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 48
+    await testRunner.WhenAsync("I select the folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 49
+    await testRunner.AndAsync("I choose to remove the assignment (select \"None\")", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 50
+    await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 51
+    await testRunner.ThenAsync("the folder should be shown as \"Not assigned\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 52
     await testRunner.AndAsync("the mapping should be removed from the database", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 53
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -348,7 +363,7 @@ namespace PopfileNet.FunctionalTests
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Edit an existing folder-to-bucket mapping", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 51
+#line 56
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -358,29 +373,35 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 52
+#line 57
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 53
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 54
+#line 58
     await testRunner.AndAsync("there is a folder assigned to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 55
+#line 59
+    await testRunner.AndAsync("there is a different bucket configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 60
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 61
     await testRunner.WhenAsync("I select the folder\'s current bucket assignment", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 56
+#line 62
     await testRunner.AndAsync("I choose a different bucket from the dropdown", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 57
+#line 63
     await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 58
+#line 64
     await testRunner.ThenAsync("the folder should be shown as assigned to the new bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 59
+#line 65
     await testRunner.AndAsync("the mapping should be updated in the database", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 66
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -399,7 +420,7 @@ namespace PopfileNet.FunctionalTests
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Delete a folder-to-bucket mapping", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 62
+#line 69
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -409,48 +430,52 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 63
+#line 70
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 64
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 65
+#line 71
     await testRunner.AndAsync("there is a folder assigned to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 66
+#line 72
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 73
     await testRunner.WhenAsync("I select the folder\'s bucket assignment", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 67
+#line 74
     await testRunner.AndAsync("I choose to remove the assignment (select \"None\")", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 68
+#line 75
     await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 69
+#line 76
     await testRunner.ThenAsync("the folder should be shown as \"Not assigned\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 70
+#line 77
     await testRunner.AndAsync("the mapping should be removed from the database", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 78
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Attempt to assign a folder to a non-existent bucket")]
+        [global::Xunit.SkippableFactAttribute(DisplayName="Attempt to assign a folder to a non-existent bucket", Skip="Ignored")]
         [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
         [global::Xunit.TraitAttribute("Description", "Attempt to assign a folder to a non-existent bucket")]
         [global::Xunit.TraitAttribute("Category", "mapping-validation")]
         public async global::System.Threading.Tasks.Task AttemptToAssignAFolderToANon_ExistentBucket()
         {
             string[] tagsOfScenario = new string[] {
-                    "mapping-validation"};
+                    "mapping-validation",
+                    "ignore"};
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "6";
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Attempt to assign a folder to a non-existent bucket", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 73
+#line 81
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -460,45 +485,46 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 74
+#line 82
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 75
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 76
+#line 83
     await testRunner.AndAsync("there is a folder configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 77
+#line 84
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 85
     await testRunner.WhenAsync("I select the folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 78
+#line 86
     await testRunner.AndAsync("I attempt to assign it to a non-existent bucket ID", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 79
+#line 87
     await testRunner.ThenAsync("I should see an error message indicating the bucket does not exist", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 80
+#line 88
     await testRunner.AndAsync("the folder\'s assignment should remain unchanged", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Attempt to assign a non-existent folder to a bucket")]
+        [global::Xunit.SkippableFactAttribute(DisplayName="Attempt to assign a non-existent folder to a bucket", Skip="Ignored")]
         [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
         [global::Xunit.TraitAttribute("Description", "Attempt to assign a non-existent folder to a bucket")]
         [global::Xunit.TraitAttribute("Category", "mapping-validation")]
         public async global::System.Threading.Tasks.Task AttemptToAssignANon_ExistentFolderToABucket()
         {
             string[] tagsOfScenario = new string[] {
-                    "mapping-validation"};
+                    "mapping-validation",
+                    "ignore"};
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "7";
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Attempt to assign a non-existent folder to a bucket", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 83
+#line 91
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -508,62 +534,20 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 84
-    await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
-#line hidden
-#line 85
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 86
-    await testRunner.AndAsync("there is a bucket configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 87
-    await testRunner.WhenAsync("I attempt to assign a non-existent folder to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
-#line hidden
-#line 88
-    await testRunner.ThenAsync("I should see an error message indicating the folder does not exist", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 89
-    await testRunner.AndAsync("no changes should be made to any folder mappings", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-            }
-            await this.ScenarioCleanupAsync();
-        }
-        
-        [global::Xunit.SkippableFactAttribute(DisplayName="Attempt to assign with empty folder name")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
-        [global::Xunit.TraitAttribute("Description", "Attempt to assign with empty folder name")]
-        [global::Xunit.TraitAttribute("Category", "mapping-validation")]
-        public async global::System.Threading.Tasks.Task AttemptToAssignWithEmptyFolderName()
-        {
-            string[] tagsOfScenario = new string[] {
-                    "mapping-validation"};
-            global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
-            string pickleIndex = "8";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Attempt to assign with empty folder name", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
-            string[] tagsOfRule = ((string[])(null));
-            global::Reqnroll.RuleInfo ruleInfo = null;
 #line 92
-  this.ScenarioInitialize(scenarioInfo, ruleInfo);
-#line hidden
-            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
-            {
-                await testRunner.SkipScenarioAsync();
-            }
-            else
-            {
-                await this.ScenarioStartAsync();
-#line 93
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+#line hidden
+#line 93
+    await testRunner.AndAsync("there is a bucket configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 94
     await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 95
-    await testRunner.WhenAsync("I attempt to assign an empty folder name to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I attempt to assign a non-existent folder to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 96
-    await testRunner.ThenAsync("I should see an error message indicating the folder name is required", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("I should see an error message indicating the folder does not exist", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 97
     await testRunner.AndAsync("no changes should be made to any folder mappings", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
@@ -572,17 +556,18 @@ namespace PopfileNet.FunctionalTests
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Attempt to assign with whitespace-only folder name")]
+        [global::Xunit.SkippableFactAttribute(DisplayName="Attempt to assign with empty folder name", Skip="Ignored")]
         [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
-        [global::Xunit.TraitAttribute("Description", "Attempt to assign with whitespace-only folder name")]
+        [global::Xunit.TraitAttribute("Description", "Attempt to assign with empty folder name")]
         [global::Xunit.TraitAttribute("Category", "mapping-validation")]
-        public async global::System.Threading.Tasks.Task AttemptToAssignWithWhitespace_OnlyFolderName()
+        public async global::System.Threading.Tasks.Task AttemptToAssignWithEmptyFolderName()
         {
             string[] tagsOfScenario = new string[] {
-                    "mapping-validation"};
+                    "mapping-validation",
+                    "ignore"};
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
-            string pickleIndex = "9";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Attempt to assign with whitespace-only folder name", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            string pickleIndex = "8";
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Attempt to assign with empty folder name", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 100
@@ -602,7 +587,7 @@ namespace PopfileNet.FunctionalTests
     await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 103
-    await testRunner.WhenAsync("I attempt to assign a whitespace-only folder name to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("I attempt to assign an empty folder name to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 104
     await testRunner.ThenAsync("I should see an error message indicating the folder name is required", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -614,17 +599,18 @@ namespace PopfileNet.FunctionalTests
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Mappings persist across application restarts")]
+        [global::Xunit.SkippableFactAttribute(DisplayName="Attempt to assign with whitespace-only folder name", Skip="Ignored")]
         [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
-        [global::Xunit.TraitAttribute("Description", "Mappings persist across application restarts")]
-        [global::Xunit.TraitAttribute("Category", "mapping-persistence")]
-        public async global::System.Threading.Tasks.Task MappingsPersistAcrossApplicationRestarts()
+        [global::Xunit.TraitAttribute("Description", "Attempt to assign with whitespace-only folder name")]
+        [global::Xunit.TraitAttribute("Category", "mapping-validation")]
+        public async global::System.Threading.Tasks.Task AttemptToAssignWithWhitespace_OnlyFolderName()
         {
             string[] tagsOfScenario = new string[] {
-                    "mapping-persistence"};
+                    "mapping-validation",
+                    "ignore"};
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
-            string pickleIndex = "10";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Mappings persist across application restarts", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            string pickleIndex = "9";
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Attempt to assign with whitespace-only folder name", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 108
@@ -644,38 +630,33 @@ namespace PopfileNet.FunctionalTests
     await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 111
-    await testRunner.AndAsync("there is a folder assigned to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.WhenAsync("I attempt to assign a whitespace-only folder name to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 112
-    await testRunner.WhenAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.ThenAsync("I should see an error message indicating the folder name is required", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 113
-    await testRunner.AndAsync("I restart the application", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 114
-    await testRunner.AndAsync("I navigate back to the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 115
-    await testRunner.ThenAsync("the folder should still be shown as assigned to the same bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.AndAsync("no changes should be made to any folder mappings", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Complete folder mapping workflow")]
+        [global::Xunit.SkippableFactAttribute(DisplayName="Mappings persist across application restarts", Skip="Ignored")]
         [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
-        [global::Xunit.TraitAttribute("Description", "Complete folder mapping workflow")]
-        [global::Xunit.TraitAttribute("Category", "mapping-workflow")]
-        public async global::System.Threading.Tasks.Task CompleteFolderMappingWorkflow()
+        [global::Xunit.TraitAttribute("Description", "Mappings persist across application restarts")]
+        [global::Xunit.TraitAttribute("Category", "mapping-persistence")]
+        public async global::System.Threading.Tasks.Task MappingsPersistAcrossApplicationRestarts()
         {
             string[] tagsOfScenario = new string[] {
-                    "mapping-workflow"};
+                    "mapping-persistence",
+                    "ignore"};
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
-            string pickleIndex = "11";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Complete folder mapping workflow", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            string pickleIndex = "10";
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Mappings persist across application restarts", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 118
+#line 116
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -685,47 +666,102 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 119
+#line 117
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 120
+#line 118
+    await testRunner.AndAsync("there is a folder assigned to a bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 119
     await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
+#line 120
+    await testRunner.WhenAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
 #line 121
-    await testRunner.AndAsync("there are no existing folder mappings", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("I restart the application", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 122
-    await testRunner.AndAsync("there are at least two buckets configured (Bucket 1 and Bucket 2)", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("I navigate back to the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 123
-    await testRunner.WhenAsync("I assign Folder A to Bucket 1", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.ThenAsync("the folder should still be shown as assigned to the same bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 124
-    await testRunner.AndAsync("I assign Folder B to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 125
-    await testRunner.ThenAsync("Folder A should be shown as assigned to Bucket 1", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
-#line hidden
-#line 126
-    await testRunner.AndAsync("Folder B should be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [global::Xunit.SkippableFactAttribute(DisplayName="Complete folder mapping workflow", Skip="Ignored")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
+        [global::Xunit.TraitAttribute("Description", "Complete folder mapping workflow")]
+        [global::Xunit.TraitAttribute("Category", "mapping-workflow")]
+        public async global::System.Threading.Tasks.Task CompleteFolderMappingWorkflow()
+        {
+            string[] tagsOfScenario = new string[] {
+                    "mapping-workflow",
+                    "ignore"};
+            global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
+            string pickleIndex = "11";
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Complete folder mapping workflow", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            string[] tagsOfRule = ((string[])(null));
+            global::Reqnroll.RuleInfo ruleInfo = null;
 #line 127
-    await testRunner.WhenAsync("I change Folder A\'s assignment to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+  this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                await testRunner.SkipScenarioAsync();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
 #line 128
-    await testRunner.ThenAsync("Folder A should be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
 #line 129
-    await testRunner.AndAsync("Folder B should still be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("there are no existing folder mappings", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 130
-    await testRunner.WhenAsync("I remove Folder B\'s assignment", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.AndAsync("there are at least two buckets configured (Bucket 1 and Bucket 2)", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 131
-    await testRunner.ThenAsync("Folder B should be shown as \"Not assigned\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 132
+    await testRunner.WhenAsync("I assign Folder A to Bucket 1", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 133
+    await testRunner.AndAsync("I assign Folder B to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 134
+    await testRunner.ThenAsync("Folder A should be shown as assigned to Bucket 1", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 135
+    await testRunner.AndAsync("Folder B should be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 136
+    await testRunner.WhenAsync("I change Folder A\'s assignment to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 137
+    await testRunner.ThenAsync("Folder A should be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 138
+    await testRunner.AndAsync("Folder B should still be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 139
+    await testRunner.WhenAsync("I remove Folder B\'s assignment", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 140
+    await testRunner.ThenAsync("Folder B should be shown as \"Not assigned\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 141
     await testRunner.AndAsync("Folder A should still be shown as assigned to Bucket 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 142
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -744,7 +780,7 @@ namespace PopfileNet.FunctionalTests
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("UI displays folder mappings in clear table format", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 135
+#line 145
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -754,43 +790,50 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 136
+#line 146
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 137
+#line 147
+    await testRunner.AndAsync("there is at least one folder configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 148
     await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 138
+#line 149
     await testRunner.WhenAsync("I view the Folder Mappings section", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 139
+#line 150
     await testRunner.ThenAsync("I should see a table with columns: Folder Name, Assigned Bucket, Actions", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 140
+#line 151
     await testRunner.AndAsync("each row should display the folder name, bucket assignment (or \"(None)\"), and act" +
                         "ion buttons", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 141
+#line 152
     await testRunner.AndAsync("unassigned folders should show \"(None)\" in the Assigned Bucket column", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 153
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="UI shows success feedback after saving mapping")]
+        [global::Xunit.SkippableFactAttribute(DisplayName="UI shows success feedback after saving mapping", Skip="Ignored")]
         [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
         [global::Xunit.TraitAttribute("Description", "UI shows success feedback after saving mapping")]
         [global::Xunit.TraitAttribute("Category", "mapping-ui-feedback")]
         public async global::System.Threading.Tasks.Task UIShowsSuccessFeedbackAfterSavingMapping()
         {
             string[] tagsOfScenario = new string[] {
-                    "mapping-ui-feedback"};
+                    "mapping-ui-feedback",
+                    "ignore"};
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "13";
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("UI shows success feedback after saving mapping", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 144
+#line 156
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -800,48 +843,52 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 145
+#line 157
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 146
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 147
+#line 158
     await testRunner.AndAsync("there is a folder without a bucket assignment", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 148
+#line 159
     await testRunner.AndAsync("there is a bucket configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 149
-    await testRunner.WhenAsync("I select the folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line 160
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 150
+#line 161
+    await testRunner.WhenAsync("I select an unassigned folder", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 162
     await testRunner.AndAsync("I choose a bucket from the dropdown", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 151
+#line 163
     await testRunner.AndAsync("I save the mapping", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 152
+#line 164
     await testRunner.ThenAsync("I should see a success message indicating the mapping was saved", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 165
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="UI shows error feedback for invalid input")]
+        [global::Xunit.SkippableFactAttribute(DisplayName="UI shows error feedback for invalid input", Skip="Ignored")]
         [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
         [global::Xunit.TraitAttribute("Description", "UI shows error feedback for invalid input")]
         [global::Xunit.TraitAttribute("Category", "mapping-ui-feedback")]
         public async global::System.Threading.Tasks.Task UIShowsErrorFeedbackForInvalidInput()
         {
             string[] tagsOfScenario = new string[] {
-                    "mapping-ui-feedback"};
+                    "mapping-ui-feedback",
+                    "ignore"};
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "14";
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("UI shows error feedback for invalid input", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 155
+#line 168
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -851,16 +898,16 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 156
+#line 169
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 157
+#line 170
     await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 158
+#line 171
     await testRunner.WhenAsync("I attempt to assign a folder to a non-existent bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 159
+#line 172
     await testRunner.ThenAsync("I should see an error message indicating the bucket does not exist", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
@@ -880,7 +927,7 @@ namespace PopfileNet.FunctionalTests
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("UI shows loading state during API calls", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 162
+#line 175
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -890,36 +937,37 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 163
+#line 176
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 164
+#line 177
     await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 165
+#line 178
     await testRunner.WhenAsync("I perform an API operation (get mappings, save mapping, etc.)", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 166
+#line 179
     await testRunner.ThenAsync("I should see a loading indicator during the operation", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Multiple folders can be assigned to the same bucket")]
+        [global::Xunit.SkippableFactAttribute(DisplayName="Multiple folders can be assigned to the same bucket", Skip="Ignored")]
         [global::Xunit.TraitAttribute("FeatureTitle", "Manage Folder-to-Bucket Mappings")]
         [global::Xunit.TraitAttribute("Description", "Multiple folders can be assigned to the same bucket")]
         [global::Xunit.TraitAttribute("Category", "mapping-multi-bucket")]
         public async global::System.Threading.Tasks.Task MultipleFoldersCanBeAssignedToTheSameBucket()
         {
             string[] tagsOfScenario = new string[] {
-                    "mapping-multi-bucket"};
+                    "mapping-multi-bucket",
+                    "ignore"};
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "16";
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Multiple folders can be assigned to the same bucket", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 169
+#line 182
   this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -929,26 +977,29 @@ namespace PopfileNet.FunctionalTests
             else
             {
                 await this.ScenarioStartAsync();
-#line 170
+#line 183
     await testRunner.GivenAsync("the UI is running", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
-#line 171
-    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
-#line hidden
-#line 172
+#line 184
     await testRunner.AndAsync("there are at least two folders without bucket assignments", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 173
+#line 185
     await testRunner.AndAsync("there is at least one bucket configured", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 174
+#line 186
+    await testRunner.AndAsync("I am on the Settings page", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 187
     await testRunner.WhenAsync("I assign Folder 1 to the bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 175
+#line 188
     await testRunner.AndAsync("I assign Folder 2 to the same bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
-#line 176
+#line 189
     await testRunner.ThenAsync("both folders should be shown as assigned to the same bucket", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 190
+    await testRunner.AndAsync("cleanup test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
