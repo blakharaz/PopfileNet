@@ -178,7 +178,7 @@ public class UiNavigationSteps
     }
 
     [Given("there are no existing folder mappings")]
-    public async Task GivenThereAreNoExistingFolderMappings()
+    public static async Task GivenThereAreNoExistingFolderMappings()
     {
         await Task.CompletedTask;
     }
@@ -244,6 +244,11 @@ public class UiNavigationSteps
 
         // Wait for the dropdown to appear (it appears when edit form is shown)
         var bucketDropdown = await _page.WaitForSelectorAsync("[data-testid=\"edit-bucket-dropdown\"]", new PageWaitForSelectorOptions { Timeout = 10000 });
+        
+        if (bucketDropdown == null)
+        {
+            throw new Exception("Could not find bucket dropdown");
+        }
         
         // Wait a bit more for the dropdown to be fully rendered
         await _page.WaitForTimeoutAsync(500);
@@ -1881,7 +1886,7 @@ public class UiNavigationSteps
     }
 
     [AfterScenario]
-    public async Task AfterScenario()
+    public static async Task AfterScenario()
     {
         // Clean up test data from the database after each scenario
         try
@@ -1895,7 +1900,7 @@ public class UiNavigationSteps
     }
 
     [Then("cleanup test data")]
-    public async Task ThenCleanupTestData()
+    public static async Task ThenCleanupTestData()
     {
         // Cleanup is now handled by AfterScenario hook
         await Task.CompletedTask;

@@ -762,4 +762,7 @@ public class FailingMockApiClient : MockApiClient
     
     public override Task<BucketDto?> UpdateBucketAsync(BucketDto bucket) => 
         throw new InvalidOperationException("Update bucket failed");
+    
+    public override Task<bool> TestConnectionAsync() => 
+        throw new InvalidOperationException("Connection test failed");
 }
