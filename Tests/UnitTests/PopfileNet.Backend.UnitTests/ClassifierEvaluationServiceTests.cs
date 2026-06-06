@@ -10,17 +10,19 @@ namespace PopfileNet.Backend.UnitTests;
 
 public class ClassifierEvaluationServiceTests
 {
-    private static IClassifierDataProvider CreateProvider(List<Email> emails, string folderFilter = "all") =>
-        new Mock<IClassifierDataProvider>()
-            .Setup(p => p.FetchFilteredAsync(It.IsAny<EmailFilterRequest>(), It.IsAny<CancellationToken>()))
+    private static IClassifierDataProvider CreateProvider(List<Email> emails, string folderFilter = "all")
+    {
+        var mock = new Mock<IClassifierDataProvider>();
+        mock.Setup(p => p.FetchFilteredAsync(It.IsAny<EmailFilterRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((EmailFilterRequest req, CancellationToken _) =>
             {
                 var baseList = emails;
                 if (req.FolderFilter != "all")
                     baseList = baseList.Where(e => e.Folder == req.FolderFilter).ToList();
                 return [.. baseList];
-            })
-            .Object;
+            });
+        return mock.Object;
+    }
 
     private static ClassifierEvaluationService CreateService(List<Email> emails, string folderFilter = "all") =>
         new(CreateProvider(emails, folderFilter));
@@ -40,7 +42,7 @@ public class ClassifierEvaluationServiceTests
     {
         var bucketId = "work";
         var emails = CreateEmailsWithBucket("e", bucketId, 20);
-        await using var _ = CreateProvider(emails);
+        _ = CreateProvider(emails);
 
         var service = CreateService(emails);
         var result = await service.RunEvaluationAsync(new EvaluationRequest());
@@ -142,7 +144,7 @@ public class ClassifierEvaluationServiceTests
             CreateEmail("e2", bucketId, DateTime.Now.AddDays(-1)), // "Inbox" default
         };
 
-        await using var _ = CreateProvider(emails);
+        _ = CreateProvider(emails);
 
         var service = CreateService(emails);
         var result = await service.RunEvaluationAsync(new EvaluationRequest());
@@ -159,7 +161,7 @@ public class ClassifierEvaluationServiceTests
             CreateEmail("e2", "personal", DateTime.Now.AddSeconds(1)),
         };
 
-        await using var _ = CreateProvider(emails);
+        _ = CreateProvider(emails);
 
         var service = CreateService(emails);
         var result = await service.RunEvaluationAsync(new EvaluationRequest());
@@ -228,7 +230,7 @@ public class ClassifierEvaluationServiceTests
 
         var service = CreateService(emails);
         var result = await service.RunEvaluationAsync(
-            new EvaluationRequest(NumberOfruns: 10, TrainTestSplit: 0.9f));
+            new EvaluationRequest(NumberOfRuns: 10, TrainTestSplit: 0.9f));
 
         // With high split and many runs, should still succeed
         result.ShouldNotBeNull();
