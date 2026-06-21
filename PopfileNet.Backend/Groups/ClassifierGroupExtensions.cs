@@ -20,6 +20,12 @@ public static class ClassifierGroupExtensions
     /// </summary>
     /// <param name="app">The web application.</param>
     /// <returns>The configured web application.</returns>
+    internal static void Reset()
+    {
+        _classifier = null;
+        _isTrained = false;
+    }
+
     public static WebApplication AddClassifierGroup(this WebApplication app)
     {
         var group = app.MapGroup("/classifier");
@@ -32,12 +38,12 @@ public static class ClassifierGroupExtensions
         return app;
     }
 
-    private static Ok<ApiResponse<ClassifierStatus>> GetStatusAsync()
+    internal static Ok<ApiResponse<ClassifierStatus>> GetStatusAsync()
     {
         return TypedResults.Ok(ApiResponse<ClassifierStatus>.Success(new ClassifierStatus(_isTrained, 0)));
     }
 
-    private static async Task<IResult> TrainAsync(PopfileNetDbContext db)
+    internal static async Task<IResult> TrainAsync(PopfileNetDbContext db)
     {
         var emails = await db.Emails
             .Include(e => e.FolderNavigation)
@@ -63,7 +69,7 @@ public static class ClassifierGroupExtensions
         return TypedResults.Ok(ApiResponse<bool>.Success(true));
     }
 
-    private static async Task<IResult> PredictAsync(PredictRequest request, PopfileNetDbContext db)
+    internal static async Task<IResult> PredictAsync(PredictRequest request, PopfileNetDbContext db)
     {
         if (_classifier == null || !_isTrained)
             return TypedResults.Ok(ApiResponse<PredictionResult>.Success(new PredictionResult("", 0, [])));

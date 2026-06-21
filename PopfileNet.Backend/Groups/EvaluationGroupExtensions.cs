@@ -21,7 +21,7 @@ public static class EvaluationGroupExtensions
         return app;
     }
 
-    private static async Task<IResult> RunEvaluationAsync(
+    internal static async Task<IResult> RunEvaluationAsync(
         EvaluationRequest request, ClassifierEvaluationService evaluationService)
     {
         try
@@ -35,7 +35,7 @@ public static class EvaluationGroupExtensions
         }
     }
 
-    private static async Task<IResult> GetConfigAsync(PopfileNetDbContext db)
+    internal static async Task<IResult> GetConfigAsync(PopfileNetDbContext db)
     {
         var folders = await (db.MailFolders.Select(f => f.Name)).Distinct().ToListAsync<string>();
         var buckets = await (from b in db.Buckets select new { b.Id, b.Name }).ToListAsync();
