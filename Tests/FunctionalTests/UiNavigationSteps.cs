@@ -138,6 +138,61 @@ public class UiNavigationSteps
         await _page.WaitForTimeoutAsync(1000);
     }
 
+    [Given("I am logged in as an admin")]
+    public async Task GivenIAmLoggedInAsAnAdmin()
+    {
+        if (_browser == null || _page == null)
+        {
+            await GivenTheUiIsRunning();
+
+            if (_browser == null)
+            {
+                throw new InvalidOperationException("Browser not initialized - Playwright may not be installed");
+            }
+
+            var uiUrl = TestServices.Instance.UiUrl;
+            if (string.IsNullOrEmpty(uiUrl))
+            {
+                throw new InvalidOperationException("UI URL not set - services may have failed to start");
+            }
+
+            _page = await _browser.NewPageAsync();
+            await _page.GotoAsync(uiUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        }
+
+        var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
+            ?? throw new InvalidOperationException("ADMIN_EMAIL environment variable is required");
+        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+            ?? throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required");
+
+        var loginUrl = TestServices.Instance.UiUrl + "/login";
+        await _page.GotoAsync(loginUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+
+        await _page.WaitForTimeoutAsync(2000);
+
+        // Fill in email field (first text input or by placeholder)
+        var emailInput = _page.Locator("input:not([type='hidden']):not([type='password'])").First;
+        await emailInput.FillAsync(adminEmail);
+
+        // Fill in password field
+        var passwordInput = _page.Locator("input[type='password']").First;
+        await passwordInput.FillAsync(adminPassword);
+
+        // Click login button
+        await _page.GetByRole(AriaRole.Button, new() { Name = "Login" }).ClickAsync();
+
+        // Wait for redirect away from login page
+        await _page.WaitForTimeoutAsync(5000);
+
+        var currentUrl = _page.Url;
+        Console.WriteLine($"After login, current URL: {currentUrl}");
+
+        if (currentUrl.Contains("/login"))
+        {
+            throw new Exception($"Login failed. Still on login page. Current URL: {currentUrl}");
+        }
+    }
+
     [Given("there is at least one folder without a bucket assignment")]
     public async Task GivenThereIsAtLeastOneFolderWithoutABucketAssignment()
     {

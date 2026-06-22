@@ -1,3 +1,4 @@
+using System.Net;
 using PopfileNet.Ui.Components;
 using PopfileNet.Ui.Services;
 using PopfileNet.ServiceDefaults;
@@ -18,12 +19,22 @@ builder.Services.AddAuthorizationCore();
 var backendUrl = builder.Configuration["services:popfilenet-backend:http:0"] 
     ?? throw new InvalidOperationException("Backend service URL not configured");
 
-builder.Services.AddHttpClient<ApiClient>(client =>
+builder.Services.AddScoped(_ =>
 {
-    client.BaseAddress = new Uri(backendUrl);
+    var handler = new SocketsHttpHandler
+    {
+        UseCookies = true,
+        CookieContainer = new CookieContainer()
+    };
+    var client = new HttpClient(handler)
+    {
+        BaseAddress = new Uri(backendUrl)
+    };
     client.DefaultRequestHeaders.Add("Accept", "application/json");
+    return client;
 });
 
+builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<IApiClient>(sp => sp.GetRequiredService<ApiClient>());
 builder.Services.AddScoped<AuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateProvider>());
