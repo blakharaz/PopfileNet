@@ -61,12 +61,12 @@ else
                         <td>
                             @if (request.CutoffType == "date")
                             {
-                                <input type="date" />
+                                <input type="date" @bind="selectedDate" @bind:event="oninput" />
                             }
                             else
                             {
-                                <input type="number" min="10" max="@totalMails" value="@(cutoffAmount.ToString())" onchange="document.querySelector('#amount-value').textContent = this.value" />
-                                <span id="amount-value" style="margin-left: 8px;">@cutoffAmount</span>
+                                <input type="number" min="10" max="@totalMails" @bind="cutoffAmount" @bind:event="oninput" />
+                                <span style="margin-left: 8px;">@cutoffAmount</span>
                             }
                         </td>
                     </tr>
@@ -178,6 +178,7 @@ else
     private readonly EvaluationRequest request = new();
     private EvaluationResult? result;
     private int cutoffAmount = 100;
+    private DateTime? selectedDate;
     private int totalMails;
     private bool isRunning;
     private string errorMsg = "";
@@ -192,7 +193,7 @@ else
     {
         var dm = await Api.GetDevModeStatusAsync();
         devMode = dm == true;
-        config = new MyConfigDto(new List<string>(), new List<MyBucketInfo>());
+        config = new MyConfigDto(new List<string>(), new List<BucketInfoDto>());
     }
 
     private async Task LoadConfig()
@@ -206,12 +207,12 @@ else
             foreach (var f in je.GetProperty("Folders").EnumerateArray())
                 folders.Add(f.GetString() ?? "");
 
-            var bucketsList = new List<MyBucketInfo>();
+            var bucketsList = new List<BucketInfoDto>();
             foreach (var b in je.GetProperty("Buckets").EnumerateArray())
             {
                 var id = b.TryGetProperty("Id", out var p) ? p.GetString() : "";
                 var name = b.TryGetProperty("Name", out var p2) ? p2.GetString() : "";
-                bucketsList.Add(new MyBucketInfo(id ?? "", name ?? ""));
+                bucketsList.Add(new BucketInfoDto(id ?? "", name ?? ""));
             }
 
             config = new MyConfigDto(folders, bucketsList);
@@ -228,6 +229,9 @@ else
     {
         if (request.CutoffType == "amount")
             request.CutoffValue = cutoffAmount.ToString();
+        else if (request.CutoffType == "date" && selectedDate.HasValue)
+            request.CutoffValue = selectedDate.Value.ToString("yyyy-MM-dd");
+
         try
         {
             isRunning = true;
@@ -258,15 +262,9 @@ else
         errorMsg = "";
     }
 
-    public class MyConfigDto(List<string> folders, List<MyBucketInfo> buckets)
+    public class MyConfigDto(List<string> folders, List<BucketInfoDto> buckets)
     {
         public List<string> Folders { get; } = folders;
-        public List<MyBucketInfo> Buckets { get; } = buckets;
-    }
-
-    public class MyBucketInfo(string id, string name)
-    {
-        public string Id { get; } = id;
-        public string Name { get; } = name;
+        public List<BucketInfoDto> Buckets { get; } = buckets;
     }
 }

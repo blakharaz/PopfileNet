@@ -51,11 +51,16 @@ public class ClassifierEvaluationService(IClassifierDataProvider dataProvider)
 
             if (request is { CutoffType: "amount", NumberOfRuns: > 1 })
             {
-                // For amount cutoff with multiple runs, randomize each run
-                var shuffledTrain = Shuffle(training);
-                var shuffleCount = Math.Max(10, (int)(training.Count * (1 - request.TrainTestSplit)));
-                actualTraining = [.. shuffledTrain.Take(shuffleCount)];
-                actualTest = test.Except(actualTraining).ToList();
+                // For amount cutoff with multiple runs, randomize each run based on the desiredtraining size
+                int trainingCount = 0;
+                if (int.TryParse(request.CutoffValue, out var amount))
+                    trainingCount = amount;
+                else
+                    trainingCount = (int)(allEmails.Count * request.TrainTestSplit);
+
+                var pool = Shuffle(allEmails);
+                actualTraining = [.. pool.Take(trainingCount)];
+                actualTest = [.. pool.Skip(trainingCount)];
             }
 
             if (actualTest.Count == 0)
@@ -92,24 +97,6 @@ public class ClassifierEvaluationService(IClassifierDataProvider dataProvider)
         if (cutoffValue == null || emails.Count == 0)
             return SplitByRatio(emails, trainTestRatio);
 
-        var trainingSet = GetTrainingSet(emails, cutoffType, cutoffValue);
-
-        if (trainingSet.Count == 0)
-            throw new InvalidOperationException("No training emails available after applying the cutoff.");
-
-        return SplitByRatio(trainingSet, trainTestRatio);
-    }
-
-    /// <summary>
-    /// Filters emails by cutoff type and returns the training set.
-    /// </summary>
-    private List<Email> GetTrainingSet(List<Email> emails, string cutoffType, string? cutoffValue)
-    {
-        if (cutoffType == "amount" && int.TryParse(cutoffValue, out var count))
-        {
-            return GetMostRecentN(emails, count);
-        }
-
         if (cutoffType == "date")
         {
             if (!DateTime.TryParseExact(
@@ -119,23 +106,35 @@ public class ClassifierEvaluationService(IClassifierDataProvider dataProvider)
                     DateTimeStyles.None,
                     out var cutoffDate))
             {
-                return emails; // Invalid date format - use all emails
+                return SplitByRatio(emails, trainTestRatio);
             }
 
-            return emails.Where(e => e.ReceivedDate < cutoffDate).ToList();
+            var training = emails.Where(e => e.ReceivedDate < cutoffDate).ToList();
+            var test = emails.Where(e => e.ReceivedDate >= cutoffDate).ToList();
+
+            if (training.Count == 0)
+                throw new InvalidOperationException("No training emails available before the cutoff date.");
+            if (test.Count == 0)
+                throw new InvalidOperationException("No test emails available after the cutoff date.");
+
+            return (training, test);
         }
 
-        // No valid cutoff or invalid type - use all emails
-        return emails;
-    }
+        if (cutoffType == "amount" && int.TryParse(cutoffValue, out var count))
+        {
+            var sorted = emails.OrderByDescending(e => e.ReceivedDate).ToList();
+            var training = sorted.Take(count).ToList();
+            var test = sorted.Skip(count).ToList();
 
-    /// <summary>
-    /// Returns the N most recent emails sorted by received date.
-    /// </summary>
-    private static List<Email> GetMostRecentN(List<Email> emails, int count)
-    {
-        var sorted = emails.OrderByDescending(e => e.ReceivedDate).ToList();
-        return sorted.Take(count).ToList();
+            if (training.Count == 0)
+                throw new InvalidOperationException("No training emails available for the specified amount.");
+            if (test.Count == 0)
+                throw new InvalidOperationException("No test emails available after taking the training amount.");
+
+            return (training, test);
+        }
+
+        return SplitByRatio(emails, trainTestRatio);
     }
 
     /// <summary>
@@ -225,11 +224,11 @@ public class ClassifierEvaluationService(IClassifierDataProvider dataProvider)
     private static (float OverallAccuracy, int Correct, int Total, List<BucketMetricDto> BucketMetrics, List<MismatchDetailDto> Mismatches) ComputeMetrics(
         Dictionary<string, (string actual, string predicted)> predictions, List<Email> test)
     {
-        if (predictions.Count == 0)
-            return (0f, 0, test.Count, [], []);
+        if (test.Count == 0)
+            return (0f, 0, 0, [], []);
 
         var correct = predictions.Values.Count(v => v.actual == v.predicted);
-        var total = predictions.Count;
+        var total = test.Count;
         var overallAccuracy = correct / (float)total;
 
         var bucketMetrics = ComputeBucketMetrics(predictions);

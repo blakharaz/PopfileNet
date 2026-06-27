@@ -12,13 +12,15 @@ public sealed class ClassifierDataProvider(PopfileNetDbContext db) : IClassifier
 {
     public async Task<List<Email>> FetchFilteredAsync(EmailFilterRequest request, CancellationToken ct = default)
     {
-        var baseQuery = db.Emails.AsQueryable();
+        IQueryable<Email> baseQuery = db.Emails
+            .Include(e => e.FolderNavigation)
+                .ThenInclude(f => f!.Bucket);
 
         if (request.FolderFilter != "all")
         {
             baseQuery = baseQuery.Where(e => e.Folder == request.FolderFilter);
         }
 
-        return await baseQuery.ToListAsync(ct);
+        return await baseQuery.AsNoTracking().ToListAsync(ct);
     }
 }

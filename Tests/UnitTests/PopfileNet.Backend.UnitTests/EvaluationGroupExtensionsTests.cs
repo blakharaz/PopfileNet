@@ -59,7 +59,7 @@ public sealed class EvaluationGroupExtensionsTests
             request, service);
 
         var ok = result.ShouldBeOfType<Ok<ApiResponse<EvaluationResult>>>();
-        ok.Value.IsSuccess.ShouldBeTrue();
+        ok.Value!.IsSuccess.ShouldBeTrue();
         ok.Value.Value.ShouldNotBeNull();
         ok.Value.Value.NumberOfRuns.ShouldBe(1);
     }
@@ -79,7 +79,7 @@ public sealed class EvaluationGroupExtensionsTests
             request, service);
 
         var badRequest = result.ShouldBeOfType<BadRequest<ApiResponse<EvaluationResult>>>();
-        badRequest.Value.IsSuccess.ShouldBeFalse();
+        badRequest.Value!.IsSuccess.ShouldBeFalse();
         badRequest.Value.Error!.Code.ShouldBe("INVALID_CONFIG");
         badRequest.Value.Error.Message.ShouldContain("No emails available");
     }
@@ -109,7 +109,7 @@ public sealed class EvaluationGroupExtensionsTests
             request, service);
 
         var ok = result.ShouldBeOfType<Ok<ApiResponse<EvaluationResult>>>();
-        ok.Value.IsSuccess.ShouldBeTrue();
+        ok.Value!.IsSuccess.ShouldBeTrue();
         ok.Value.Value!.NumberOfRuns.ShouldBe(3);
     }
 
@@ -128,7 +128,7 @@ public sealed class EvaluationGroupExtensionsTests
         var result = await EvaluationGroupExtensions.GetConfigAsync(db);
 
         var ok = result.ShouldBeOfType<Ok<ApiResponse<object>>>();
-        ok.Value.IsSuccess.ShouldBeTrue();
+        ok.Value!.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public sealed class EvaluationGroupExtensionsTests
         var result = await EvaluationGroupExtensions.GetConfigAsync(db);
 
         var ok = result.ShouldBeOfType<Ok<ApiResponse<object>>>();
-        ok.Value.IsSuccess.ShouldBeTrue();
+        ok.Value!.IsSuccess.ShouldBeTrue();
     }
 
     private static PopfileNetDbContext CreateContext(string dbName)

@@ -91,12 +91,15 @@ public sealed class EvaluatePageTests : BunitContext
 
     private sealed class DevModeEnabledMock : MockApiClient
     {
+        private static readonly string[] MockFolders = ["Inbox", "Sent"];
+        private static readonly object[] MockBuckets = [new { Id = "1", Name = "Work" }];
+
         public override Task<bool?> GetDevModeStatusAsync() => Task.FromResult<bool?>(true);
         public override Task<object?> GetEvaluationConfigAsync() =>
             Task.FromResult<object?>(new
             {
-                Folders = new[] { "Inbox", "Sent" },
-                Buckets = new[] { new { Id = "1", Name = "Work" } }
+                Folders = MockFolders,
+                Buckets = MockBuckets
             });
         public override Task<EvaluationResult?> RunEvaluationAsync(EvaluationRequest request) =>
             Task.FromResult<EvaluationResult?>(new EvaluationResult

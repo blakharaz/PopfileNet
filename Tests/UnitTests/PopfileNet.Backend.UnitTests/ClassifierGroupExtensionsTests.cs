@@ -49,7 +49,7 @@ public sealed class ClassifierGroupExtensionsTests
     {
         var result = ClassifierGroupExtensions.GetStatusAsync();
 
-        result.Value.IsSuccess.ShouldBeTrue();
+        result.Value!.IsSuccess.ShouldBeTrue();
         result.Value.Value!.IsTrained.ShouldBeFalse();
         result.Value.Value.TrainingDataCount.ShouldBe(0);
     }
@@ -62,7 +62,7 @@ public sealed class ClassifierGroupExtensionsTests
         var result = await ClassifierGroupExtensions.TrainAsync(db);
 
         var badRequest = result.ShouldBeOfType<BadRequest<ApiResponse<bool>>>();
-        badRequest.Value.IsSuccess.ShouldBeFalse();
+        badRequest.Value!.IsSuccess.ShouldBeFalse();
         badRequest.Value.Error!.Code.ShouldBe("NO_TRAINING_DATA");
     }
 
@@ -78,7 +78,7 @@ public sealed class ClassifierGroupExtensionsTests
         var result = await ClassifierGroupExtensions.TrainAsync(db);
 
         var ok = result.ShouldBeOfType<Ok<ApiResponse<bool>>>();
-        ok.Value.IsSuccess.ShouldBeTrue();
+        ok.Value!.IsSuccess.ShouldBeTrue();
         ok.Value.Value.ShouldBeTrue();
     }
 
@@ -97,7 +97,7 @@ public sealed class ClassifierGroupExtensionsTests
         var result = await ClassifierGroupExtensions.TrainAsync(db);
 
         var badRequest = result.ShouldBeOfType<BadRequest<ApiResponse<bool>>>();
-        badRequest.Value.IsSuccess.ShouldBeFalse();
+        badRequest.Value!.IsSuccess.ShouldBeFalse();
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class ClassifierGroupExtensionsTests
         var result = await ClassifierGroupExtensions.PredictAsync(request, db);
 
         var ok = result.ShouldBeOfType<Ok<ApiResponse<PredictionResult>>>();
-        ok.Value.IsSuccess.ShouldBeTrue();
+        ok.Value!.IsSuccess.ShouldBeTrue();
         ok.Value.Value!.PredictedBucket.ShouldBe("");
         ok.Value.Value.Confidence.ShouldBe(0);
     }
@@ -127,7 +127,7 @@ public sealed class ClassifierGroupExtensionsTests
         var result = await ClassifierGroupExtensions.PredictAsync(request, db);
 
         var notFound = result.ShouldBeOfType<NotFound<ApiResponse<PredictionResult>>>();
-        notFound.Value.IsSuccess.ShouldBeFalse();
+        notFound.Value!.IsSuccess.ShouldBeFalse();
         notFound.Value.Error!.Code.ShouldBe("EMAIL_NOT_FOUND");
     }
 
@@ -146,7 +146,7 @@ public sealed class ClassifierGroupExtensionsTests
         var result = await ClassifierGroupExtensions.PredictAsync(request, db);
 
         var ok = result.ShouldBeOfType<Ok<ApiResponse<PredictionResult>>>();
-        ok.Value.IsSuccess.ShouldBeTrue();
+        ok.Value!.IsSuccess.ShouldBeTrue();
         ok.Value.Value.ShouldNotBeNull();
     }
 }

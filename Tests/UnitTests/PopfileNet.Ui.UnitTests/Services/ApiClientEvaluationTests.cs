@@ -49,7 +49,7 @@ public sealed class ApiClientEvaluationTests
 
         var result = await apiClient.GetDevModeStatusAsync();
 
-        result.Value.ShouldBeFalse();
+        result!.Value.ShouldBeFalse();
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public sealed class ApiClientEvaluationTests
 
         var result = await apiClient.GetDevModeStatusAsync();
 
-        result.Value.ShouldBeFalse();
+        result!.Value.ShouldBeFalse();
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public sealed class ApiClientEvaluationTests
 
         var result = await apiClient.GetDevModeStatusAsync();
 
-        result.Value.ShouldBeFalse();
+        result!.Value.ShouldBeFalse();
     }
 
     [Fact]

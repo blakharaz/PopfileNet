@@ -1,9 +1,15 @@
-using System.Collections;
+using System.Text.Json.Serialization;
 
 namespace PopfileNet.Ui.Services;
 
-public class BucketInfoDto(string id, string name)
+public class EvaluationResult
 {
-    public string Id { get; } = id;
-    public string Name { get; } = name;
+    [JsonPropertyName("NumberOfRuns")]
+    public int NumberOfRuns { get; init; } = 0;
+    
+    [JsonPropertyName("Runs")]
+    public List<RunResultDto> Runs { get; init; } = new();
+    
+    [JsonPropertyName("Aggregated")]
+    public AggregatedMetricsDto? Aggregated { get; init; }
 }

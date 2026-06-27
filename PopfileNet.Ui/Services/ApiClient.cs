@@ -20,6 +20,25 @@ public class ApiClient(HttpClient http) : IApiClient
         return result?.Value;
     }
 
+    private async Task<bool> GetBoolAsync(string requestUri)
+    {
+        var response = await _http.GetAsync(requestUri);
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync();
+        
+        using var doc = JsonDocument.Parse(content);
+        var root = doc.RootElement;
+        
+        if (root.TryGetProperty("Value", out var valueElement))
+        {
+            if (valueElement.ValueKind == JsonValueKind.True) return true;
+            if (valueElement.ValueKind == JsonValueKind.False) return false;
+            if (valueElement.ValueKind == JsonValueKind.String && bool.TryParse(valueElement.GetString(), out var b)) return b;
+        }
+        
+        return false;
+    }
+
     private async Task<T?> PostAsync<T>(string requestUri, object? data = null) where T : class
     {
         var response = data == null
@@ -119,7 +138,7 @@ public class ApiClient(HttpClient http) : IApiClient
 
     // DevMode status
     public async Task<bool?> GetDevModeStatusAsync() =>
-        await GetAsync<string>("/classifier/dev-mode") is { } s && bool.TryParse(s, out var b) ? (bool?)b : false;
+        await GetBoolAsync("/classifier/dev-mode");
 
     // Evaluation
     public async Task<EvaluationResult?> RunEvaluationAsync(EvaluationRequest request) =>
