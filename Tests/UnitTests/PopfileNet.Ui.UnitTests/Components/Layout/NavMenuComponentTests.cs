@@ -1,11 +1,19 @@
 using Bunit;
 using PopfileNet.Ui.Components.Layout;
+using PopfileNet.Ui.Services;
+using PopfileNet.Ui.UnitTests.TestHelpers;
 using Xunit;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace PopfileNet.Ui.UnitTests.Components.Layout;
 
 public class NavMenuComponentTests : BunitContext
 {
+    public NavMenuComponentTests()
+    {
+        Services.AddSingleton<IApiClient, MockApiClient>();
+    }
+
     [Fact]
     public void NavMenu_RendersNavigation()
     {

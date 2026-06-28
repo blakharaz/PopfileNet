@@ -438,3 +438,5 @@ PopfileNet.Database/bin\\Debug
 .nuke/temp/
 .nuke/parameters.json
 experiments/
+./tmp/
+tmp
