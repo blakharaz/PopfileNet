@@ -25,7 +25,7 @@ public sealed class EvaluatePageTests : BunitContext
         
         var message = cut.Find("p");
         Assert.Contains("This page is only accessible in dev mode.", message.InnerHtml);
-        Assert.Empty(cut.FindAll("div").Where(e => e.InnerHtml.Contains("Loading")));
+        Assert.DoesNotContain(cut.FindAll("div"), e => e.InnerHtml.Contains("Loading"));
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public sealed class EvaluatePageTests : BunitContext
         Services.AddSingleton<IApiClient>(mockApi);
 
         var cut = Render<Evaluate>();
-        cut.WaitForElement("fluent-button");
+        await cut.WaitForElementAsync("fluent-button");
         
         var button = cut.FindAll("button, fluent-button").FirstOrDefault(e => e.InnerHtml.Contains("Run Evaluation"));
         if (button == null) throw new Exception("Button not found");
@@ -103,7 +103,7 @@ public sealed class EvaluatePageTests : BunitContext
         Services.AddSingleton<IApiClient>(mockApi);
 
         var cut = Render<Evaluate>();
-        cut.WaitForElement("input[type='radio']");
+        await cut.WaitForElementAsync("input[type='radio']");
         
         var radios = cut.FindAll("input[type='radio']");
         await radios[0].ClickAsync();
@@ -121,7 +121,7 @@ public sealed class EvaluatePageTests : BunitContext
         Services.AddSingleton<IApiClient>(mockApi);
 
         var cut = Render<Evaluate>();
-        cut.WaitForElement("input[type='radio']");
+        await cut.WaitForElementAsync("input[type='radio']");
         
         var radios = cut.FindAll("input[type='radio']");
         await radios[1].ClickAsync();
@@ -139,7 +139,7 @@ public sealed class EvaluatePageTests : BunitContext
         Services.AddSingleton<IApiClient>(mockApi);
 
         var cut = Render<Evaluate>();
-        cut.WaitForElement("fluent-button");
+        await cut.WaitForElementAsync("fluent-button");
         
         var button = cut.FindAll("button, fluent-button").FirstOrDefault(e => e.InnerHtml.Contains("Run Evaluation"));
         if (button == null) throw new Exception("Button not found");
@@ -157,7 +157,7 @@ public sealed class EvaluatePageTests : BunitContext
         Services.AddSingleton<IApiClient>(mockApi);
 
         var cut = Render<Evaluate>();
-        cut.WaitForElement("fluent-button");
+        await cut.WaitForElementAsync("fluent-button");
         
         var button = cut.FindAll("button, fluent-button").FirstOrDefault(e => e.InnerHtml.Contains("Run Evaluation"));
         if (button == null) throw new Exception("Button not found");
