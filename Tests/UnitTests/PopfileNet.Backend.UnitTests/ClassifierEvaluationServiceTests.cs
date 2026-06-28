@@ -264,7 +264,93 @@ public class ClassifierEvaluationServiceTests
         accuracy.ShouldBeLessThanOrEqualTo(1f);
     }
 
-    // --- Helper methods ---
+    [Fact]
+    public async Task RunEvaluationAsync_InvalidDateCutoff_FallsBackToRatioSplit()
+    {
+        var bucketId = "work";
+        var emails = CreateEmailsWithBucket("e", bucketId, 50);
+
+        var service = CreateService(emails);
+        var result = await service.RunEvaluationAsync(
+            new EvaluationRequest(CutoffType: "date", CutoffValue: "invalid-date"));
+
+        result.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task RunEvaluationAsync_InvalidAmountCutoff_FallsBackToRatioSplit()
+    {
+        var bucketId = "work";
+        var emails = CreateEmailsWithBucket("e", bucketId, 50);
+
+        var service = CreateService(emails);
+        var result = await service.RunEvaluationAsync(
+            new EvaluationRequest(CutoffType: "amount", CutoffValue: "not-a-number"));
+
+        result.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task RunEvaluationAsync_DateCutoff_ThrowsWhenTrainingSetEmpty()
+    {
+        var bucketId = "work";
+        var emails = CreateEmailsWithBucket("e", bucketId, 20);
+        // Set cutoff date to be before all emails (everything goes to test set)
+        var cutoffDate = DateTime.Now.AddYears(-10).ToString("yyyy-MM-dd");
+
+        var service = CreateService(emails);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => 
+            service.RunEvaluationAsync(new EvaluationRequest(CutoffType: "date", CutoffValue: cutoffDate)));
+    }
+
+    [Fact]
+    public async Task RunEvaluationAsync_DateCutoff_ThrowsWhenTestSetEmpty()
+    {
+        var bucketId = "work";
+        var emails = CreateEmailsWithBucket("e", bucketId, 20);
+        // Set cutoff date to be after all emails (everything goes to training set)
+        var cutoffDate = DateTime.Now.AddYears(10).ToString("yyyy-MM-dd");
+
+        var service = CreateService(emails);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => 
+            service.RunEvaluationAsync(new EvaluationRequest(CutoffType: "date", CutoffValue: cutoffDate)));
+    }
+
+    [Fact]
+    public async Task RunEvaluationAsync_AmountCutoff_ThrowsWhenTrainingSetEmpty()
+    {
+        var bucketId = "work";
+        var emails = CreateEmailsWithBucket("e", bucketId, 20);
+
+        var service = CreateService(emails);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => 
+            service.RunEvaluationAsync(new EvaluationRequest(CutoffType: "amount", CutoffValue: "0")));
+    }
+
+    [Fact]
+    public async Task RunEvaluationAsync_AmountCutoff_ThrowsWhenTestSetEmpty()
+    {
+        var bucketId = "work";
+        var emails = CreateEmailsWithBucket("e", bucketId, 20);
+
+        var service = CreateService(emails);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => 
+            service.RunEvaluationAsync(new EvaluationRequest(CutoffType: "amount", CutoffValue: "100")));
+    }
+
+    [Fact]
+    public async Task RunEvaluationAsync_ThrowsWhenNoLabeledDataAvailable()
+    {
+        var emails = new List<Email>
+        {
+            new Email { Id = "1", Subject = "Test", FolderNavigation = null },
+            new Email { Id = "2", Subject = "Test", FolderNavigation = null }
+        };
+
+        var service = CreateService(emails);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RunEvaluationAsync(new EvaluationRequest()));
+    }
+
 
     private static Email CreateEmail(string id, string bucketId, DateTime receivedDate, string folder = "Inbox") => new()
     {

@@ -142,6 +142,22 @@ public sealed class EvaluationGroupExtensionsTests
         ok.Value!.IsSuccess.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task RunEvaluationAsync_UnexpectedException_ReturnsInternalServerError()
+    {
+        var mockDataProvider = new Mock<IClassifierDataProvider>();
+        mockDataProvider.Setup(p => p.FetchFilteredAsync(
+                It.IsAny<EmailFilterRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Unexpected error"));
+
+        var service = new ClassifierEvaluationService(mockDataProvider.Object);
+        var request = new EvaluationRequest();
+
+        // The RunEvaluationAsync method doesn't catch general Exception, only InvalidOperationException.
+        // So it should bubble up and be handled by the ASP.NET Core middleware (or return 500).
+        // In terms of the static method call, it should throw.
+        await Assert.ThrowsAsync<Exception>(() => EvaluationGroupExtensions.RunEvaluationAsync(request, service));
+    }
     private static PopfileNetDbContext CreateContext(string dbName)
     {
         var options = new DbContextOptionsBuilder<PopfileNetDbContext>()

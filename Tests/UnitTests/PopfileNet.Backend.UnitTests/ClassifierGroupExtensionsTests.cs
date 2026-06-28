@@ -39,14 +39,25 @@ public sealed class ClassifierGroupExtensionsTests
         };
     }
 
-    public ClassifierGroupExtensionsTests()
+    [Fact]
+    public async Task Reset_ClearsClassifierState()
     {
+        using var db = CreateContext(nameof(Reset_ClearsClassifierState));
+        db.Emails.Add(CreateEmail("1", "Inbox", "Work"));
+        await db.SaveChangesAsync();
+        await ClassifierGroupExtensions.TrainAsync(db);
+
         ClassifierGroupExtensions.Reset();
+
+        var status = ClassifierGroupExtensions.GetStatusAsync();
+        status.Value!.Value!.IsTrained.ShouldBeFalse();
+        status.Value.Value.TrainingDataCount.ShouldBe(0);
     }
 
     [Fact]
     public void GetStatusAsync_ReturnsTrainedFalseWhenNotTrained()
     {
+        ClassifierGroupExtensions.Reset();
         var result = ClassifierGroupExtensions.GetStatusAsync();
 
         result.Value!.IsSuccess.ShouldBeTrue();
