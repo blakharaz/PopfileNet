@@ -398,7 +398,7 @@ partial class Build : NukeBuild
             StartShell($"git add \"{templateEnvPath}\"").AssertZeroExitCode();
             StartShell($"git add \"{templateComposePath}\"").AssertZeroExitCode();
 
-            var currentBranch = GitRepository.Branch;
+            var currentBranch = GitRepository?.Branch;
             var isReleaseBranch = ReleaseBranches.Any(pattern =>
                 currentBranch != null && pattern.Replace("*", "") != "" && currentBranch.StartsWith(pattern.Replace("*", "")));
 

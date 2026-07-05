@@ -17,7 +17,7 @@ public static class AuthGroupExtensions
         group.MapPost("/logout", LogoutAsync);
         group.MapGet("/me", GetCurrentUserAsync);
 
-        var adminGroup = group.MapGroup("").RequireAuthorization("Admin");
+        var adminGroup = group.MapGroup("").RequireAuthorization(Program.AdminRole);
         adminGroup.MapGet("/users", GetUsersAsync);
         adminGroup.MapGet("/users/{id}", GetUserByIdAsync);
         adminGroup.MapPost("/users", CreateUserAsync);

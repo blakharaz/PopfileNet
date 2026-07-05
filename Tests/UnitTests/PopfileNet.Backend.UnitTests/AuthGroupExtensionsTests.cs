@@ -368,7 +368,7 @@ public class AuthGroupExtensionsTests
         var result = await AuthGroupExtensions.DeleteUserAsync("1", _authServiceMock.Object, _loggerMock.Object);
 
         var badResult = result.ShouldBeOfType<Microsoft.AspNetCore.Http.HttpResults.BadRequest<ApiResponse<bool>>>();
-        badResult.Value.ShouldNotBeNull().Error.ShouldNotBeNull();
-        badResult.Value.Error.Code.ShouldBe("ERROR");
+        badResult.Value!.Error.ShouldNotBeNull();
+        badResult.Value.Error!.Code.ShouldBe("ERROR");
     }
 }

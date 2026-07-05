@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -54,23 +55,33 @@ public class AppServices : IAsyncLifetime
     public string UiUrl { get; private set; } = string.Empty;
     public string BackendUrl { get; private set; } = string.Empty;
     public ApiHelper Api { get; private set; } = null!;
+    private bool _initialized;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public async Task InitializeAsync()
     {
+        if (_initialized) return;
+        await _initLock.WaitAsync();
         var backendStarted = false;
-
         try
         {
+            if (_initialized) return;
+
             await _postgres.StartAsync();
 
             var connectionString = _postgres.GetConnectionString();
 
             BackendUrl = "http://127.0.0.1:5180";
             UiUrl = "http://127.0.0.1:5181";
-            Api = new ApiHelper(new HttpClient { BaseAddress = new Uri(BackendUrl) }, connectionString);
+            var handler = new HttpClientHandler { CookieContainer = new CookieContainer() };
+            Api = new ApiHelper(new HttpClient(handler) { BaseAddress = new Uri(BackendUrl) }, handler, connectionString);
 
             Console.WriteLine($"Solution root: {SolutionRoot}");
 
+            var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
+                             ?? throw new InvalidOperationException("ADMIN_EMAIL environment variable is required");
+            var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                               ?? throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required");
             var imapUsername = Environment.GetEnvironmentVariable("IMAP_USERNAME")
                                ?? throw new InvalidOperationException("IMAP_USERNAME environment variable is required");
             var imapPassword = Environment.GetEnvironmentVariable("IMAP_PASSWORD")
@@ -89,10 +100,8 @@ public class AppServices : IAsyncLifetime
                 {
                     ["ASPNETCORE_ENVIRONMENT"] = "Test",
                     ["ASPNETCORE_URLS"] = "http://127.0.0.1:5180;http://[::1]:5180",
-                    ["AdminEmail"] = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
-                                     ?? throw new InvalidOperationException("ADMIN_EMAIL environment variable is required"),
-                    ["AdminPassword"] = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
-                                      ?? throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required"),
+                    ["AdminEmail"] = adminEmail,
+                    ["AdminPassword"] = adminPassword,
                 }
             };
 
@@ -131,6 +140,7 @@ public class AppServices : IAsyncLifetime
                     if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound || response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     {
                         Console.WriteLine($"Backend is ready at {BackendUrl}");
+                        await Api.LoginAsync(adminEmail, adminPassword);
                         break;
                     }
                 }
@@ -190,6 +200,7 @@ public class AppServices : IAsyncLifetime
                     if ((int)response.StatusCode != 0)
                     {
                         Console.WriteLine($"UI is ready at {UiUrl}");
+                        _initialized = true;
                         return;
                     }
                 }
@@ -211,6 +222,10 @@ public class AppServices : IAsyncLifetime
         {
             KillProcessSafely(_backendProcess, backendStarted);
             throw;
+        }
+        finally
+        {
+            _initLock.Release();
         }
     }
 
@@ -309,6 +324,11 @@ public class AppServices : IAsyncLifetime
                 if (response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Backend is ready after restart");
+                    var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
+                                     ?? throw new InvalidOperationException("ADMIN_EMAIL environment variable is required");
+                    var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                                       ?? throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required");
+                    await Api.LoginAsync(adminEmail, adminPassword);
                     return;
                 }
             }

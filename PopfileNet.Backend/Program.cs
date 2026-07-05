@@ -20,6 +20,9 @@ namespace PopfileNet.Backend;
 [ExcludeFromCodeCoverage]
 public class Program
 {
+    private Program() { }
+    internal const string AdminRole = "Admin";
+
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -62,11 +65,22 @@ public class Program
 
         builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
-                options.Password.RequiredLength = 8;
-                options.Password.RequireDigit = false;
-                options.Password.RequireLowercase = false;
-                options.Password.RequireUppercase = false;
-                options.Password.RequireNonAlphanumeric = false;
+                if (!builder.Environment.IsEnvironment("Test"))
+                {
+                    options.Password.RequiredLength = 8;
+                    options.Password.RequireDigit = true;
+                    options.Password.RequireLowercase = true;
+                    options.Password.RequireUppercase = true;
+                    options.Password.RequireNonAlphanumeric = false;
+                }
+                else
+                {
+                    options.Password.RequiredLength = 6;
+                    options.Password.RequireDigit = false;
+                    options.Password.RequireLowercase = false;
+                    options.Password.RequireUppercase = false;
+                    options.Password.RequireNonAlphanumeric = false;
+                }
             })
             .AddEntityFrameworkStores<PopfileNetDbContext>()
             .AddRoles<IdentityRole>()
@@ -82,7 +96,7 @@ public class Program
             });
 
         builder.Services.AddAuthorizationBuilder()
-            .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+            .AddPolicy(AdminRole, policy => policy.RequireRole(AdminRole));
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddHttpContextAccessor();
 
@@ -157,12 +171,12 @@ public class Program
         try
         {
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-            if (!await roleManager.RoleExistsAsync("Admin"))
+            if (!await roleManager.RoleExistsAsync(AdminRole))
             {
-                await roleManager.CreateAsync(new IdentityRole("Admin"));
+                await roleManager.CreateAsync(new IdentityRole(AdminRole));
             }
 
-            await authService.CreateUserAsync(adminEmail, adminPassword, "Admin");
+            await authService.CreateUserAsync(adminEmail, adminPassword, AdminRole);
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Default admin user created");
         }

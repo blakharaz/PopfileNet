@@ -6,19 +6,20 @@ namespace PopfileNet.Ui.Services;
 public class AuthStateProvider(IApiClient apiClient) : AuthenticationStateProvider
 {
     private readonly ClaimsPrincipal _anonymous = new(new ClaimsIdentity());
-    private bool _isInitialized;
+    private AuthenticationState? _cachedState;
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        if (!_isInitialized)
+        if (_cachedState != null)
         {
-            _isInitialized = true;
+            return _cachedState;
         }
 
         var user = await apiClient.GetCurrentUserAsync();
         if (user == null)
         {
-            return new AuthenticationState(_anonymous);
+            _cachedState = new AuthenticationState(_anonymous);
+            return _cachedState;
         }
 
         var claims = new List<Claim>
@@ -30,23 +31,24 @@ public class AuthStateProvider(IApiClient apiClient) : AuthenticationStateProvid
 
         var identity = new ClaimsIdentity(claims, "cookie");
         var principal = new ClaimsPrincipal(identity);
-        return new AuthenticationState(principal);
+        _cachedState = new AuthenticationState(principal);
+        return _cachedState;
     }
 
     public void MarkInitialized()
     {
-        _isInitialized = true;
+        _cachedState = null;
     }
 
     public async Task OnLoginSuccessAsync()
     {
-        _isInitialized = true;
+        _cachedState = null;
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 
     public void OnLogout()
     {
-        _isInitialized = true;
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_anonymous)));
+        _cachedState = new AuthenticationState(_anonymous);
+        NotifyAuthenticationStateChanged(Task.FromResult(_cachedState));
     }
 }
