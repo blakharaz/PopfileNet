@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PopfileNet.Database;
 
-#nullable enable
+#nullable disable
 
 namespace PopfileNet.Database.Migrations
 {
@@ -17,34 +17,162 @@ namespace PopfileNet.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex");
+
+                    b.ToTable("AspNetRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RoleId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetRoleClaims", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserClaims", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
+                {
+                    b.Property<string>("LoginProvider")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderDisplayName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("LoginProvider", "ProviderKey");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserLogins", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RoleId")
+                        .HasColumnType("text");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetUserRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LoginProvider")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("text");
+
+                    b.HasKey("UserId", "LoginProvider", "Name");
+
+                    b.ToTable("AspNetUserTokens", (string)null);
+                });
+
             modelBuilder.Entity("PopfileNet.Common.Bucket", b =>
-            {
-                b.Property<string>("Id")
-                    .HasColumnType("text");
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
 
-                b.Property<string>("Description")
-                    .IsRequired()
-                    .HasMaxLength(500)
-                    .HasColumnType("character varying(500)");
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
-                b.Property<string>("Name")
-                    .IsRequired()
-                    .HasMaxLength(100)
-                    .HasColumnType("character varying(100)");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
-                b.HasKey("Id");
+                    b.HasKey("Id");
 
-                b.HasMany("PopfileNet.Common.MailFolder", "Folders")
-                    .WithOne("Bucket")
-                    .HasForeignKey("BucketId");
-
-                b.ToTable("Buckets");
-            });
+                    b.ToTable("Buckets");
+                });
 
             modelBuilder.Entity("PopfileNet.Common.Email", b =>
                 {
@@ -64,7 +192,6 @@ namespace PopfileNet.Database.Migrations
                         .HasColumnType("character varying(320)");
 
                     b.Property<string>("ImapUid")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
@@ -94,25 +221,27 @@ namespace PopfileNet.Database.Migrations
                 });
 
             modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
-            {
-                b.Property<string>("Id")
-                    .HasColumnType("text");
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
 
-                b.Property<string>("BucketId")
-                    .HasColumnType("text");
+                    b.Property<string>("BucketId")
+                        .HasColumnType("text");
 
-                b.Property<string>("Name")
-                    .IsRequired()
-                    .HasMaxLength(200)
-                    .HasColumnType("character varying(200)");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
-                b.HasKey("Id");
+                    b.HasKey("Id");
 
-                b.HasIndex("Name")
-                    .IsUnique();
+                    b.HasIndex("BucketId");
 
-                b.ToTable("MailFolders");
-            });
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("MailFolders");
+                });
 
             modelBuilder.Entity("PopfileNet.Common.MailHeader", b =>
                 {
@@ -136,6 +265,83 @@ namespace PopfileNet.Database.Migrations
                     b.HasIndex("EmailId");
 
                     b.ToTable("MailHeader");
+                });
+
+            modelBuilder.Entity("PopfileNet.Database.ApplicationUser", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("LockoutEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NormalizedUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("EmailIndex");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex");
+
+                    b.ToTable("AspNetUsers", (string)null);
                 });
 
             modelBuilder.Entity("PopfileNet.Database.Settings", b =>
@@ -175,6 +381,57 @@ namespace PopfileNet.Database.Migrations
                     b.ToTable("Settings");
                 });
 
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+                {
+                    b.HasOne("PopfileNet.Database.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
+                {
+                    b.HasOne("PopfileNet.Database.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PopfileNet.Database.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
+                {
+                    b.HasOne("PopfileNet.Database.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PopfileNet.Common.Email", b =>
                 {
                     b.HasOne("PopfileNet.Common.MailFolder", "FolderNavigation")
@@ -208,14 +465,14 @@ namespace PopfileNet.Database.Migrations
                     b.Navigation("UniqueId");
                 });
 
-             modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
-                 {
-                     b.HasOne("PopfileNet.Common.Bucket", "Bucket")
-                         .WithMany("Folders")
-                         .HasForeignKey("PopfileNet.Common.MailFolder", "BucketId");
+            modelBuilder.Entity("PopfileNet.Common.MailFolder", b =>
+                {
+                    b.HasOne("PopfileNet.Common.Bucket", "Bucket")
+                        .WithMany("Folders")
+                        .HasForeignKey("BucketId");
 
-                     b.Navigation("Bucket");
-                 });
+                    b.Navigation("Bucket");
+                });
 
             modelBuilder.Entity("PopfileNet.Common.MailHeader", b =>
                 {
@@ -227,10 +484,10 @@ namespace PopfileNet.Database.Migrations
                     b.Navigation("Email");
                 });
 
-             modelBuilder.Entity("PopfileNet.Common.Bucket", b =>
-                 {
-                     // Navigation property for Folders collection is handled by the WithMany above
-                 });
+            modelBuilder.Entity("PopfileNet.Common.Bucket", b =>
+                {
+                    b.Navigation("Folders");
+                });
 
             modelBuilder.Entity("PopfileNet.Common.Email", b =>
                 {

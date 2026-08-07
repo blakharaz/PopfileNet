@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
 using PopfileNet.Backend;
+using PopfileNet.Common;
 using PopfileNet.Database;
 using Xunit;
 
@@ -26,6 +28,20 @@ public abstract class DatabaseTestBase : IAsyncLifetime
     {
         await Fixture.ResetDatabaseAsync();
         await SetupClientAsync();
+
+        using var scope = Factory.Services.CreateScope();
+        var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        
+        if (!await roleManager.RoleExistsAsync("Admin"))
+        {
+            await roleManager.CreateAsync(new IdentityRole("Admin"));
+        }
+
+        if (!await authService.AnyUserExistsAsync())
+        {
+            await authService.CreateUserAsync("test@popfile.local", "testpassword123", "Admin");
+        }
     }
 
     protected abstract Task SetupClientAsync();
@@ -52,7 +68,9 @@ public abstract class DatabaseTestBase : IAsyncLifetime
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:popfilenet"] = connString
+                        ["ConnectionStrings:popfilenet"] = connString,
+                        ["AdminEmail"] = "test@popfile.local",
+                        ["AdminPassword"] = "testpassword123"
                     });
                 });
 

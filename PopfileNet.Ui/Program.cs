@@ -1,7 +1,9 @@
+using System.Net;
 using PopfileNet.Ui.Components;
 using PopfileNet.Ui.Services;
 using PopfileNet.ServiceDefaults;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,22 +14,40 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-var backendUrl = builder.Configuration["services:popfilenet-backend:http:0"] 
+builder.Services.AddAuthorizationCore();
+builder.Services.AddHttpContextAccessor();
+
+var backendUrl = builder.Configuration["services:popfilenet-backend:http:0"]
     ?? throw new InvalidOperationException("Backend service URL not configured");
 
-builder.Services.AddHttpClient<ApiClient>(client =>
+builder.Services.AddScoped(sp =>
 {
-    client.BaseAddress = new Uri(backendUrl);
+    var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+    var handler = new CookieForwardingHandler(httpContextAccessor)
+    {
+        InnerHandler = new SocketsHttpHandler()
+    };
+    var client = new HttpClient(handler)
+    {
+        BaseAddress = new Uri(backendUrl)
+    };
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    return client;
 });
 
-builder.Services.AddSingleton<IApiClient>(sp => sp.GetRequiredService<ApiClient>());
+builder.Services.AddScoped<ApiClient>();
+builder.Services.AddScoped<IApiClient>(sp => sp.GetRequiredService<ApiClient>());
+builder.Services.AddScoped<AuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateProvider>());
 
 var app = builder.Build();
-
 
 app.UseServiceDefaults();
 
 app.UseAntiforgery();
+
+var contentRoots = await StaticAssetManifest.LoadContentRootsAsync(app.Services.GetRequiredService<ILoggerFactory>());
+app.UseMiddleware<StaticAssetServingMiddleware>(contentRoots);
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

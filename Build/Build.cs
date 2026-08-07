@@ -398,7 +398,7 @@ partial class Build : NukeBuild
             StartShell($"git add \"{templateEnvPath}\"").AssertZeroExitCode();
             StartShell($"git add \"{templateComposePath}\"").AssertZeroExitCode();
 
-            var currentBranch = GitRepository.Branch;
+            var currentBranch = GitRepository?.Branch;
             var isReleaseBranch = ReleaseBranches.Any(pattern =>
                 currentBranch != null && pattern.Replace("*", "") != "" && currentBranch.StartsWith(pattern.Replace("*", "")));
 
@@ -478,7 +478,7 @@ partial class Build : NukeBuild
     void InstallPlaywright()
     {
         StartShell("dotnet tool install Microsoft.Playwright.CLI --local").AssertZeroExitCode();
-        StartShell("dotnet playwright install --with-deps chromium").AssertZeroExitCode();
+        StartShell("NEEDRESTART_MODE=a dotnet playwright install --with-deps chromium").AssertZeroExitCode();
     }
 
     string[] GetDockerTags()

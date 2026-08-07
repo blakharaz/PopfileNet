@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using PopfileNet.Backend.BackgroundServices;
 using PopfileNet.Backend.Groups;
 using PopfileNet.Backend.DevMode;
@@ -18,6 +20,9 @@ namespace PopfileNet.Backend;
 [ExcludeFromCodeCoverage]
 public class Program
 {
+    private Program() { }
+    internal const string AdminRole = "Admin";
+
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +63,43 @@ public class Program
         builder.Services.AddScoped<IClassifierDataProvider, ClassifierDataProvider>();
         builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
+        builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                if (!builder.Environment.IsEnvironment("Test"))
+                {
+                    options.Password.RequiredLength = 8;
+                    options.Password.RequireDigit = true;
+                    options.Password.RequireLowercase = true;
+                    options.Password.RequireUppercase = true;
+                    options.Password.RequireNonAlphanumeric = false;
+                }
+                else
+                {
+                    options.Password.RequiredLength = 6;
+                    options.Password.RequireDigit = false;
+                    options.Password.RequireLowercase = false;
+                    options.Password.RequireUppercase = false;
+                    options.Password.RequireNonAlphanumeric = false;
+                }
+            })
+            .AddEntityFrameworkStores<PopfileNetDbContext>()
+            .AddRoles<IdentityRole>()
+            .AddDefaultTokenProviders();
+
+        builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddCookie(options =>
+            {
+                options.LoginPath = "/auth/login";
+                options.LogoutPath = "/auth/logout";
+                options.SlidingExpiration = true;
+                options.ExpireTimeSpan = TimeSpan.FromDays(7);
+            });
+
+        builder.Services.AddAuthorizationBuilder()
+            .AddPolicy(AdminRole, policy => policy.RequireRole(AdminRole));
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddHttpContextAccessor();
+
         var app = builder.Build();
 
         app.Use(async (context, next) =>
@@ -72,6 +114,9 @@ public class Program
         });
 
         app.UseServiceDefaults();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         using (var scope = app.Services.CreateScope())
         {
@@ -91,6 +136,7 @@ public class Program
         }
 
         app.AddEvaluationGroup()
+            .AddAuthGroup()
             .AddSettingsGroup()
             .AddJobsGroup()
             .AddMailsGroup()
@@ -98,6 +144,46 @@ public class Program
             .AddCategoriesGroup()
             .AddAccountsGroup();
 
+        var adminEmail = builder.Configuration["AdminEmail"] ?? "";
+        var adminPassword = builder.Configuration["AdminPassword"] ?? "";
+
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            throw new InvalidOperationException(
+                "AdminEmail and AdminPassword must be configured. Set ADMIN_EMAIL and ADMIN_PASSWORD environment variables or add them to appsettings.json.");
+        }
+
+        await SeedAdminUserAsync(app.Services, adminEmail, adminPassword);
+
         await app.RunAsync();
+    }
+
+    private static async Task SeedAdminUserAsync(IServiceProvider services, string adminEmail, string adminPassword)
+    {
+        using var scope = services.CreateScope();
+        var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
+
+        if (await authService.AnyUserExistsAsync())
+        {
+            return;
+        }
+
+        try
+        {
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            if (!await roleManager.RoleExistsAsync(AdminRole))
+            {
+                await roleManager.CreateAsync(new IdentityRole(AdminRole));
+            }
+
+            await authService.CreateUserAsync(adminEmail, adminPassword, AdminRole);
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Default admin user created");
+        }
+        catch (Exception ex)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "Failed to seed admin user");
+        }
     }
 }

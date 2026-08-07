@@ -5,12 +5,27 @@ using PopfileNet.Backend.Models;
 
 namespace PopfileNet.FunctionalTests;
 
-public class ApiHelper(HttpClient client, string connectionString)
+public class ApiHelper(HttpClient client, HttpClientHandler handler, string connectionString)
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
+
+    public string? GetAuthCookie()
+    {
+        var uri = client.BaseAddress ?? new Uri("http://localhost");
+        var cookies = handler.CookieContainer.GetCookies(uri);
+        var authCookie = cookies.FirstOrDefault(c => c.Name.StartsWith(".AspNetCore"));
+        return authCookie?.ToString();
+    }
+
+    public async Task LoginAsync(string email, string password)
+    {
+        var request = new LoginRequest(email, password);
+        var response = await client.PostAsJsonAsync("/auth/login", request, JsonOptions);
+        response.EnsureSuccessStatusCode();
+    }
 
     public async Task<BucketDto> CreateBucketAsync(string name, string? description = null)
     {

@@ -17,7 +17,7 @@ public static class CategoriesGroupExtensions
     /// <returns>The configured web application.</returns>
     public static WebApplication AddCategoriesGroup(this WebApplication app)
     {
-        var group = app.MapGroup("/categories");
+        var group = app.MapGroup("/categories").RequireAuthorization();
         group.MapGet("/", GetCategoriesAsync);
         return app;
     }

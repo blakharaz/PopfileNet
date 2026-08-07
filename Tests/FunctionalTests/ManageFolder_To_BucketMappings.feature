@@ -8,6 +8,7 @@ Feature: Manage Folder-to-Bucket Mappings
   Scenario: View all available IMAP folders
     Given the UI is running
     And there is at least one folder configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I view the Folder Mappings section
     Then I should see all available IMAP folders listed
@@ -19,6 +20,7 @@ Feature: Manage Folder-to-Bucket Mappings
     Given the UI is running
     And there is at least one folder without a bucket assignment
     And there is at least one bucket configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I select an unassigned folder
     And I choose a bucket from the dropdown
@@ -32,6 +34,7 @@ Feature: Manage Folder-to-Bucket Mappings
     Given the UI is running
     And there is a folder assigned to Bucket 1
     And there is a different Bucket 2 configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I select the folder
     And I choose Bucket 2 from the dropdown
@@ -44,6 +47,7 @@ Feature: Manage Folder-to-Bucket Mappings
   Scenario: Unassign a folder from its bucket
     Given the UI is running
     And there is a folder assigned to a bucket
+    And I am logged in as an admin
     And I am on the Settings page
     When I select the folder
     And I choose to remove the assignment (select "None")
@@ -57,6 +61,7 @@ Feature: Manage Folder-to-Bucket Mappings
     Given the UI is running
     And there is a folder assigned to a bucket
     And there is a different bucket configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I select the folder's current bucket assignment
     And I choose a different bucket from the dropdown
@@ -69,6 +74,7 @@ Feature: Manage Folder-to-Bucket Mappings
   Scenario: Delete a folder-to-bucket mapping
     Given the UI is running
     And there is a folder assigned to a bucket
+    And I am logged in as an admin
     And I am on the Settings page
     When I select the folder's bucket assignment
     And I choose to remove the assignment (select "None")
@@ -81,6 +87,7 @@ Feature: Manage Folder-to-Bucket Mappings
   Scenario: Attempt to assign a folder to a non-existent bucket
     Given the UI is running
     And there is a folder configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I select the folder
     And I attempt to assign it to a non-existent bucket ID
@@ -91,6 +98,7 @@ Feature: Manage Folder-to-Bucket Mappings
   Scenario: Attempt to assign a non-existent folder to a bucket
     Given the UI is running
     And there is a bucket configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I attempt to assign a non-existent folder to a bucket
     Then I should see an error message indicating the folder does not exist
@@ -99,6 +107,7 @@ Feature: Manage Folder-to-Bucket Mappings
   @mapping-validation @ignore
   Scenario: Attempt to assign with empty folder name
     Given the UI is running
+    And I am logged in as an admin
     And I am on the Settings page
     When I attempt to assign an empty folder name to a bucket
     Then I should see an error message indicating the folder name is required
@@ -107,6 +116,7 @@ Feature: Manage Folder-to-Bucket Mappings
   @mapping-validation @ignore
   Scenario: Attempt to assign with whitespace-only folder name
     Given the UI is running
+    And I am logged in as an admin
     And I am on the Settings page
     When I attempt to assign a whitespace-only folder name to a bucket
     Then I should see an error message indicating the folder name is required
@@ -116,6 +126,7 @@ Feature: Manage Folder-to-Bucket Mappings
   Scenario: Mappings persist across application restarts
     Given the UI is running
     And there is a folder assigned to a bucket
+    And I am logged in as an admin
     And I am on the Settings page
     When I save the mapping
     And I restart the application
@@ -128,6 +139,7 @@ Feature: Manage Folder-to-Bucket Mappings
     Given the UI is running
     And there are no existing folder mappings
     And there are at least two buckets configured (Bucket 1 and Bucket 2)
+    And I am logged in as an admin
     And I am on the Settings page
     When I assign Folder A to Bucket 1
     And I assign Folder B to Bucket 2
@@ -145,6 +157,7 @@ Feature: Manage Folder-to-Bucket Mappings
   Scenario: UI displays folder mappings in clear table format
     Given the UI is running
     And there is at least one folder configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I view the Folder Mappings section
     Then I should see a table with columns: Folder Name, Assigned Bucket, Actions
@@ -157,6 +170,7 @@ Feature: Manage Folder-to-Bucket Mappings
     Given the UI is running
     And there is a folder without a bucket assignment
     And there is a bucket configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I select an unassigned folder
     And I choose a bucket from the dropdown
@@ -167,6 +181,7 @@ Feature: Manage Folder-to-Bucket Mappings
   @mapping-ui-feedback @ignore
   Scenario: UI shows error feedback for invalid input
     Given the UI is running
+    And I am logged in as an admin
     And I am on the Settings page
     When I attempt to assign a folder to a non-existent bucket
     Then I should see an error message indicating the bucket does not exist
@@ -174,6 +189,7 @@ Feature: Manage Folder-to-Bucket Mappings
   @mapping-ui-loading
   Scenario: UI shows loading state during API calls
     Given the UI is running
+    And I am logged in as an admin
     And I am on the Settings page
     When I perform an API operation (get mappings, save mapping, etc.)
     Then I should see a loading indicator during the operation
@@ -183,6 +199,7 @@ Feature: Manage Folder-to-Bucket Mappings
     Given the UI is running
     And there are at least two folders without bucket assignments
     And there is at least one bucket configured
+    And I am logged in as an admin
     And I am on the Settings page
     When I assign Folder 1 to the bucket
     And I assign Folder 2 to the same bucket

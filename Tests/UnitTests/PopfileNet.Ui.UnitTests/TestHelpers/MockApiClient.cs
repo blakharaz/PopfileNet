@@ -120,4 +120,33 @@ public class MockApiClient : IApiClient
 
     public virtual Task<EvaluationResult?> RunEvaluationAsync(EvaluationRequest request) =>
         Task.FromResult<EvaluationResult?>(null);
+
+    public virtual Task<LoginResponse?> LoginAsync(string email, string password) =>
+        Task.FromResult<LoginResponse?>(new LoginResponse(true, new UserDto("1", email, "Admin"), null));
+
+    public virtual Task LogoutAsync() => Task.CompletedTask;
+
+    public virtual Task<UserDto?> GetCurrentUserAsync() =>
+        Task.FromResult<UserDto?>(new UserDto("1", "admin@popfile.local", "Admin"));
+
+    public virtual Task<PagedResponse<UserDto>?> GetUsersAsync(int page = 1, int pageSize = 20) =>
+        Task.FromResult<PagedResponse<UserDto>?>(new PagedResponse<UserDto>
+        {
+            Items = [],
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = 0,
+            TotalPages = 1,
+            HasPrevious = false,
+            HasNext = false,
+            IsSuccess = true
+        });
+
+    public virtual Task<UserDto?> CreateUserAsync(string email, string password, string role) =>
+        Task.FromResult<UserDto?>(new UserDto("new-id", email, role));
+
+    public virtual Task<UserDto?> UpdateUserAsync(string id, string? email, string? role) =>
+        Task.FromResult<UserDto?>(new UserDto(id, email ?? "", role ?? "User"));
+
+    public virtual Task DeleteUserAsync(string id) => Task.CompletedTask;
 }

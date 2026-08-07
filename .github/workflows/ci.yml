@@ -29,6 +29,8 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       IMAP_USERNAME: ${{ secrets.IMAP_USERNAME }}
       IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -65,6 +67,8 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       IMAP_USERNAME: ${{ secrets.IMAP_USERNAME }}
       IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
         with:

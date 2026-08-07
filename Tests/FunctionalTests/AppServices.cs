@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -49,26 +50,38 @@ public class AppServices : IAsyncLifetime
     private Process? _uiProcess;
     private readonly List<string> _backendErrors = [];
     private readonly List<string> _backendOutput = [];
+    private readonly List<string> _uiErrors = [];
+    private readonly List<string> _uiOutput = [];
     public string UiUrl { get; private set; } = string.Empty;
     public string BackendUrl { get; private set; } = string.Empty;
     public ApiHelper Api { get; private set; } = null!;
+    private bool _initialized;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public async Task InitializeAsync()
     {
+        if (_initialized) return;
+        await _initLock.WaitAsync();
         var backendStarted = false;
-
         try
         {
+            if (_initialized) return;
+
             await _postgres.StartAsync();
 
             var connectionString = _postgres.GetConnectionString();
 
-            BackendUrl = "http://localhost:5180";
-            UiUrl = "http://localhost:5181";
-            Api = new ApiHelper(new HttpClient { BaseAddress = new Uri(BackendUrl) }, connectionString);
+            BackendUrl = "http://127.0.0.1:5180";
+            UiUrl = "http://127.0.0.1:5181";
+            var handler = new HttpClientHandler { CookieContainer = new CookieContainer() };
+            Api = new ApiHelper(new HttpClient(handler) { BaseAddress = new Uri(BackendUrl) }, handler, connectionString);
 
             Console.WriteLine($"Solution root: {SolutionRoot}");
 
+            var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
+                             ?? throw new InvalidOperationException("ADMIN_EMAIL environment variable is required");
+            var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                               ?? throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required");
             var imapUsername = Environment.GetEnvironmentVariable("IMAP_USERNAME")
                                ?? throw new InvalidOperationException("IMAP_USERNAME environment variable is required");
             var imapPassword = Environment.GetEnvironmentVariable("IMAP_PASSWORD")
@@ -77,7 +90,7 @@ public class AppServices : IAsyncLifetime
             var backendStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls {BackendUrl} --environment Test \"--ConnectionStrings:popfilenet={connectionString}\" \"--ImapSettings:Server=localhost\" \"--ImapSettings:Port=993\" \"--ImapSettings:Username={imapUsername}\" \"--ImapSettings:Password={imapPassword}\"",
+                Arguments = $"exec \"{SolutionRoot}/PopfileNet.Backend/bin/Release/net10.0/PopfileNet.Backend.dll\" --environment Test \"--ConnectionStrings:popfilenet={connectionString}\" \"--ImapSettings:Server=localhost\" \"--ImapSettings:Port=993\" \"--ImapSettings:Username={imapUsername}\" \"--ImapSettings:Password={imapPassword}\"",
                 WorkingDirectory = SolutionRoot,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -86,6 +99,9 @@ public class AppServices : IAsyncLifetime
                 EnvironmentVariables =
                 {
                     ["ASPNETCORE_ENVIRONMENT"] = "Test",
+                    ["ASPNETCORE_URLS"] = "http://127.0.0.1:5180;http://[::1]:5180",
+                    ["AdminEmail"] = adminEmail,
+                    ["AdminPassword"] = adminPassword,
                 }
             };
 
@@ -121,9 +137,10 @@ public class AppServices : IAsyncLifetime
                 {
                     using var client = new HttpClient();
                     var response = await client.GetAsync(BackendUrl);
-                    if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound || response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     {
                         Console.WriteLine($"Backend is ready at {BackendUrl}");
+                        await Api.LoginAsync(adminEmail, adminPassword);
                         break;
                     }
                 }
@@ -148,7 +165,7 @@ public class AppServices : IAsyncLifetime
             var uiStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Ui/PopfileNet.Ui.csproj\" --urls {UiUrl} --environment Test \"--ConnectionStrings:popfilenet={connectionString}\"",
+                Arguments = $"exec \"{SolutionRoot}/PopfileNet.Ui/bin/Release/net10.0/PopfileNet.Ui.dll\" --environment Test \"--ConnectionStrings:popfilenet={connectionString}\"",
                 WorkingDirectory = SolutionRoot,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -157,6 +174,7 @@ public class AppServices : IAsyncLifetime
                 EnvironmentVariables =
                 {
                     ["ASPNETCORE_ENVIRONMENT"] = "Test",
+                    ["ASPNETCORE_URLS"] = "http://127.0.0.1:5181;http://[::1]:5181",
                     ["services__popfilenet-backend__http__0"] = BackendUrl,
                 }
             };
@@ -167,6 +185,11 @@ public class AppServices : IAsyncLifetime
                 throw new InvalidOperationException("Failed to start UI process");
             }
 
+            _uiProcess.OutputDataReceived += (_, e) => { if (e.Data != null) _uiOutput.Add(e.Data); };
+            _uiProcess.ErrorDataReceived += (_, e) => { if (e.Data != null) _uiErrors.Add(e.Data); };
+            _uiProcess.BeginOutputReadLine();
+            _uiProcess.BeginErrorReadLine();
+
             const int uiMaxAttempts = 120;
             for (var i = 0; i < uiMaxAttempts; i++)
             {
@@ -174,9 +197,10 @@ public class AppServices : IAsyncLifetime
                 {
                     using var client = new HttpClient();
                     var response = await client.GetAsync(UiUrl);
-                    if (response.IsSuccessStatusCode)
+                    if ((int)response.StatusCode != 0)
                     {
                         Console.WriteLine($"UI is ready at {UiUrl}");
+                        _initialized = true;
                         return;
                     }
                 }
@@ -187,12 +211,21 @@ public class AppServices : IAsyncLifetime
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            throw new InvalidOperationException($"UI failed to start at {UiUrl} after {uiMaxAttempts} seconds");
+            var allUiErrors = string.Join("\n", _uiErrors);
+            var allUiOutput = string.Join("\n", _uiOutput);
+            throw new InvalidOperationException(
+                $"UI failed to start at {UiUrl} after {uiMaxAttempts} seconds.\n" +
+                $"Errors:\n{allUiErrors}\n" +
+                $"Output:\n{allUiOutput}");
         }
         catch
         {
             KillProcessSafely(_backendProcess, backendStarted);
             throw;
+        }
+        finally
+        {
+            _initLock.Release();
         }
     }
 
@@ -246,7 +279,7 @@ public class AppServices : IAsyncLifetime
         var backendStartInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"run --project \"{SolutionRoot}/PopfileNet.Backend/PopfileNet.Backend.csproj\" --urls http://localhost:5180 --environment Test \"--ConnectionStrings:popfilenet={connectionString}\" \"--ImapSettings:Server=localhost\" \"--ImapSettings:Port=993\" \"--ImapSettings:Username={imapUsername}\" \"--ImapSettings:Password={imapPassword}\"",
+            Arguments = $"exec \"{SolutionRoot}/PopfileNet.Backend/bin/Release/net10.0/PopfileNet.Backend.dll\" --environment Test \"--ConnectionStrings:popfilenet={connectionString}\" \"--ImapSettings:Server=localhost\" \"--ImapSettings:Port=993\" \"--ImapSettings:Username={imapUsername}\" \"--ImapSettings:Password={imapPassword}\"",
             WorkingDirectory = SolutionRoot,
             UseShellExecute = false,
             RedirectStandardOutput = true,
@@ -254,7 +287,12 @@ public class AppServices : IAsyncLifetime
             CreateNoWindow = true,
             EnvironmentVariables =
             {
-                ["ASPNETCORE_ENVIRONMENT"] = "Test"
+                ["ASPNETCORE_ENVIRONMENT"] = "Test",
+                ["ASPNETCORE_URLS"] = "http://127.0.0.1:5180;http://[::1]:5180",
+                ["AdminEmail"] = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
+                                 ?? throw new InvalidOperationException("ADMIN_EMAIL environment variable is required"),
+                ["AdminPassword"] = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                                  ?? throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required"),
             }
         };
 
@@ -282,10 +320,15 @@ public class AppServices : IAsyncLifetime
             try
             {
                 using var client = new HttpClient();
-                var response = await client.GetAsync("http://localhost:5180/health");
+                var response = await client.GetAsync("http://127.0.0.1:5180/health");
                 if (response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Backend is ready after restart");
+                    var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
+                                     ?? throw new InvalidOperationException("ADMIN_EMAIL environment variable is required");
+                    var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                                       ?? throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required");
+                    await Api.LoginAsync(adminEmail, adminPassword);
                     return;
                 }
             }

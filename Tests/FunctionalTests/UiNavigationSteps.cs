@@ -47,7 +47,39 @@ public class UiNavigationSteps
         }
 
         _page = await _browser.NewPageAsync();
+        _page.Console += (_, msg) =>
+        {
+            Console.WriteLine($"[BROWSER {msg.Type}] {msg.Text}");
+        };
+        _page.PageError += (_, msg) =>
+        {
+            Console.WriteLine($"[BROWSER ERROR] {msg}");
+        };
+        _page.Response += (_, response) =>
+        {
+            Console.WriteLine($"[NETWORK {response.Status}] {response.Url}");
+        };
         await _page.GotoAsync(uiUrl, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+
+        var blazorPresent = await _page.EvaluateAsync<bool?>(@"() => !!window.Blazor");
+        Console.WriteLine($"Blazor object present on home page: {blazorPresent}");
+
+        // Also check the actual script tag for blazor
+        var scriptSrc = await _page.EvaluateAsync<string?>(@"() => {
+            var s = document.querySelector('script[src*=""blazor""]');
+            return s ? s.getAttribute('src') : null;
+        }");
+        Console.WriteLine($"Blazor script tag src: {scriptSrc}");
+
+        // Check the Content-Type from the actual response
+        using var diagHttp = new HttpClient();
+        var blobResp = await diagHttp.GetAsync("http://127.0.0.1:5181/_framework/blazor.web.js");
+        Console.WriteLine($"Non-versioned: {blobResp.StatusCode} Content-Type: '{blobResp.Content.Headers.ContentType?.MediaType}' Length: {blobResp.Content.Headers.ContentLength}");
+        var blobResp2 = await diagHttp.GetAsync("http://127.0.0.1:5181/_framework/blazor.web.qcnkhbt5lj.js");
+        Console.WriteLine($"Versioned: {blobResp2.StatusCode} Content-Type: '{blobResp2.Content.Headers.ContentType?.MediaType}' Length: {blobResp2.Content.Headers.ContentLength}");
+        // Also check all _framework files
+        var blobResp3 = await diagHttp.GetAsync("http://127.0.0.1:5181/_framework/blazor.server.js");
+        Console.WriteLine($"blazor.server.js: {blobResp3.StatusCode} Content-Type: '{blobResp3.Content.Headers.ContentType?.MediaType}' Length: {blobResp3.Content.Headers.ContentLength}");
     }
 
     [Then("the page should load successfully")]
@@ -124,18 +156,97 @@ public class UiNavigationSteps
         }
 
         var settingsUrl = TestServices.Instance.UiUrl + "/settings";
-        await _page!.GotoAsync(settingsUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        
+        // Listen for browser console messages (includes JS errors)
+        _page!.Console += (_, msg) =>
+        {
+            Console.WriteLine($"[BROWSER {msg.Type}] {msg.Text}");
+        };
+        _page!.PageError += (_, msg) =>
+        {
+            Console.WriteLine($"[BROWSER ERROR] {msg}");
+        };
+        
+        await _page.GotoAsync(settingsUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
-        // Wait for Blazor circuit to be connected
-        await _page.WaitForTimeoutAsync(3000);
-        
-        // Check if Blazor is connected by looking for the circuit connection
-        var blazorConnected = await _page.EvaluateAsync<bool?>(@"() => {
-            return !!window.Blazor && !!window.Blazor._internal;
-        }");
+        // Wait for Blazor circuit to be connected by polling
+        var blazorConnected = false;
+        for (var i = 0; i < 30; i++)
+        {
+            var connected = await _page.EvaluateAsync<bool?>(@"() => {
+                return !!window.Blazor && !!window.Blazor._internal;
+            }");
+            if (connected == true)
+            {
+                blazorConnected = true;
+                break;
+            }
+            await _page.WaitForTimeoutAsync(1000);
+        }
         System.Console.WriteLine($"Blazor connected: {blazorConnected}");
-        
-        await _page.WaitForTimeoutAsync(1000);
+    }
+
+    [Given("I am logged in as an admin")]
+    public async Task GivenIAmLoggedInAsAnAdmin()
+    {
+        if (_browser == null || _page == null)
+        {
+            await GivenTheUiIsRunning();
+
+            if (_browser == null)
+            {
+                throw new InvalidOperationException("Browser not initialized - Playwright may not be installed");
+            }
+
+            var uiUrl = TestServices.Instance.UiUrl;
+            if (string.IsNullOrEmpty(uiUrl))
+            {
+                throw new InvalidOperationException("UI URL not set - services may have failed to start");
+            }
+
+            _page = await _browser.NewPageAsync();
+            await _page.GotoAsync(uiUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        }
+
+        var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
+            ?? throw new InvalidOperationException("ADMIN_EMAIL environment variable is required");
+        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+            ?? throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required");
+
+        var loginUrl = TestServices.Instance.UiUrl + "/login";
+        await _page.GotoAsync(loginUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+
+        await _page.WaitForTimeoutAsync(2000);
+
+        // Set auth cookie from API login into the browser context
+        var authCookie = TestServices.Instance.Api.GetAuthCookie();
+        if (authCookie != null)
+        {
+            var parts = authCookie.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                var uri = new Uri(TestServices.Instance.UiUrl);
+                await _page.Context.AddCookiesAsync([new Cookie
+                {
+                    Name = parts[0].Trim(),
+                    Value = parts[1].Split(';')[0].Trim(),
+                    Domain = uri.Host,
+                    Path = "/"
+                }]);
+            }
+        }
+
+        // Navigate to settings page to verify login
+        await _page.GotoAsync(TestServices.Instance.UiUrl + "/settings", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await _page.WaitForTimeoutAsync(2000);
+
+        var currentUrl = _page.Url;
+        Console.WriteLine($"After login, current URL: {currentUrl}");
+
+        if (currentUrl.Contains("/login"))
+        {
+            throw new Exception($"Login via cookie failed. Still on login page. Current URL: {currentUrl}");
+        }
     }
 
     [Given("there is at least one folder without a bucket assignment")]
@@ -203,8 +314,14 @@ public class UiNavigationSteps
 
         // Find the first folder row that shows "(None)" in the bucket column
         // We'll click the Edit button for that folder
-        var rows = await _page.QuerySelectorAllAsync("table tbody tr");
-        System.Console.WriteLine($"Found {rows.Count} table rows");
+        var folderTable = await _page.WaitForSelectorAsync("[data-testid=\"folder-mappings-table\"]", new PageWaitForSelectorOptions { Timeout = 10000 });
+        if (folderTable == null)
+        {
+            throw new Exception("Folder mappings table not found");
+        }
+        var rows = await folderTable.QuerySelectorAllAsync("tbody tr");
+        await _page.EvaluateAsync("console.log('DEBUG: rows=' + document.querySelectorAll('[data-testid=\"folder-mappings-table\"] tbody tr').length)");
+        Console.Error.WriteLine($"Found {rows.Count} table rows");
         
         foreach (var row in rows)
         {
@@ -212,19 +329,20 @@ public class UiNavigationSteps
             if (bucketCell != null)
             {
                 var bucketText = await bucketCell.InnerTextAsync();
-                System.Console.WriteLine($"Bucket cell text: '{bucketText}'");
+                Console.Error.WriteLine($"Bucket cell text: '{bucketText}'");
                 if (bucketText.Trim() == "(None)" || bucketText.Trim() == "" || bucketText.Trim() == "Not assigned")
                 {
                     // Use Playwright's Locator API for better reliability
-                    var editButtonLocator = _page.Locator("table tbody tr").Filter(new LocatorFilterOptions { HasText = bucketText.Trim() == "" ? "(None)" : bucketText.Trim() }).Locator(".edit-mapping-btn").First;
+                    var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] tbody tr").Filter(new LocatorFilterOptions { HasText = bucketText.Trim() == "" ? "(None)" : bucketText.Trim() }).Locator(".edit-mapping-btn").First;
                     
-                    System.Console.WriteLine("Clicking edit button using locator...");
-                    await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
-                    await _page.WaitForTimeoutAsync(3000);
+                    var buttonCount = await editButtonLocator.CountAsync();
+                    Console.Error.WriteLine($"Edit button count: {buttonCount}");
+                    
+                    await ClickFluentButtonAsync(editButtonLocator);
                     
                     // Check if the form appeared
-                    var form = await _page.QuerySelectorAsync("[data-testid=\"edit-mapping-form\"]");
-                    System.Console.WriteLine($"Edit form found: {form != null}");
+                    await CaptureDiagnosticsAsync("after-edit-click");
+                    var form = await _page.WaitForSelectorAsync("[data-testid=\"edit-mapping-form\"]", new PageWaitForSelectorOptions { Timeout = 5000 });
                     return;
                 }
             }
@@ -234,8 +352,7 @@ public class UiNavigationSteps
         throw new Exception("No unassigned folder found to select");
     }
 
-    [When("I choose a bucket from the dropdown")]
-    public async Task WhenIChooseABucketFromTheDropdown()
+    private async Task SelectBucketAsync(string? valueToSelect = null, int timeoutMs = 30000)
     {
         if (_page == null)
         {
@@ -243,39 +360,153 @@ public class UiNavigationSteps
         }
 
         // Wait for the dropdown to appear (it appears when edit form is shown)
-        var bucketDropdown = await _page.WaitForSelectorAsync("[data-testid=\"edit-bucket-dropdown\"]", new PageWaitForSelectorOptions { Timeout = 10000 });
-        
-        if (bucketDropdown == null)
+        var dropdown = await _page.WaitForSelectorAsync(
+            "[data-testid=\"edit-bucket-dropdown\"]",
+            new PageWaitForSelectorOptions { Timeout = timeoutMs, State = WaitForSelectorState.Visible });
+
+        if (dropdown == null)
         {
-            throw new Exception("Could not find bucket dropdown");
+            await CaptureDiagnosticsAsync("dropdown-not-found");
+            throw new Exception("Could not find bucket dropdown after waiting");
         }
-        
-        // Wait a bit more for the dropdown to be fully rendered
+
+        // Small pause for Blazor to complete rendering
         await _page.WaitForTimeoutAsync(500);
 
-        // Get all options and select the first one that's not empty (not "(None)")
-        var options = await bucketDropdown.QuerySelectorAllAsync("option");
-        System.Console.WriteLine($"Found {options.Count} dropdown options");
-        
-        foreach (var option in options)
+        // Find which option to select
+        string? targetValue = valueToSelect;
+
+        if (targetValue == null)
         {
-            var value = await option.GetAttributeAsync("value") ?? string.Empty;
-            var text = await option.InnerTextAsync();
-            System.Console.WriteLine($"Option value: '{value}', text: '{text}'");
-            if (!string.IsNullOrEmpty(value)) // Not the "(None)" option
+            // Pick first non-empty option (skip "(None)")
+            var options = await dropdown.QuerySelectorAllAsync("option");
+            System.Console.WriteLine($"Found {options.Count} dropdown options");
+            foreach (var option in options)
             {
-                // Use JavaScript to set the value and trigger change event for Blazor
-                await bucketDropdown.EvaluateAsync($@"(select) => {{
-                    select.value = '{value}';
-                    select.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                }}");
-                System.Console.WriteLine($"Selected option with value: {value}");
-                return;
+                var val = await option.GetAttributeAsync("value") ?? "";
+                var text = await option.InnerTextAsync();
+                System.Console.WriteLine($"Option value='{val}' text='{text}'");
+                if (!string.IsNullOrEmpty(val))
+                {
+                    targetValue = val;
+                    break;
+                }
+            }
+
+            if (targetValue == null)
+            {
+                await LogDropdownOptionsAsync();
+                await CaptureDiagnosticsAsync("no-options");
+                throw new Exception("Could not find any non-empty bucket option in dropdown");
             }
         }
-        
-        // If we couldn't find a non-empty option, throw
-        throw new Exception("Could not find bucket dropdown or options");
+
+        // Try Playwright's native SelectOptionAsync first (works for <select> elements)
+        try
+        {
+            await dropdown.SelectOptionAsync(new SelectOptionValue { Value = targetValue });
+            return;
+        }
+        catch
+        {
+            // Fallback: JavaScript evaluation with change event for Blazor
+        }
+
+        await dropdown.EvaluateAsync($@"(select) => {{
+            select.value = '{targetValue.Replace("'", "\\'")}';
+            select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        }}");
+    }
+
+    private async Task CaptureDiagnosticsAsync(string tag)
+    {
+        if (_page == null) return;
+        try
+        {
+            System.Console.WriteLine($"=== DIAGNOSTICS ({tag}) ===");
+            System.Console.WriteLine($"URL: {_page.Url}");
+            var title = await _page.TitleAsync();
+            System.Console.WriteLine($"Title: {title}");
+
+            var html = await _page.ContentAsync();
+            System.Console.WriteLine($"HTML length: {html.Length}");
+            System.Console.WriteLine($"HTML preview (first 2000 chars): {html[..Math.Min(html.Length, 2000)]}");
+
+            var path = Path.Combine(Path.GetTempPath(), $"opencode-failure-{tag}-{DateTime.Now:yyyyMMdd-HHmmss}.html");
+            await File.WriteAllTextAsync(path, html);
+            System.Console.WriteLine($"Saved page HTML to {path}");
+
+            try
+            {
+                var screenshotPath = Path.Combine(Path.GetTempPath(), $"opencode-failure-{tag}-{DateTime.Now:yyyyMMdd-HHmmss}.png");
+                await _page.ScreenshotAsync(new PageScreenshotOptions { Path = screenshotPath, FullPage = true });
+                System.Console.WriteLine($"Saved screenshot to {screenshotPath}");
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"Failed to capture screenshot: {ex.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"Failed to capture diagnostics: {ex.Message}");
+        }
+    }
+
+    private async Task ClickFluentButtonAsync(ILocator buttonLocator)
+    {
+        // Fluent UI <fluent-button> captures click events inside its shadow DOM,
+        // preventing them from reaching Blazor's document-level event delegation.
+        // Use JavaScript to dispatch a composed MouseEvent from the host element,
+        // which correctly crosses the shadow DOM boundary.
+        if (_page == null) return;
+        var handle = await buttonLocator.ElementHandleAsync();
+        if (handle != null)
+        {
+            await _page.EvaluateAsync(@"el => {
+                const event = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    composed: true,
+                    view: window
+                });
+                el.dispatchEvent(event);
+            }", handle);
+        }
+        await _page.WaitForTimeoutAsync(5000);
+    }
+
+    private async Task LogDropdownOptionsAsync()
+    {
+        if (_page == null) return;
+        try
+        {
+            var dropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
+            if (dropdown == null)
+            {
+                System.Console.WriteLine("Dropdown not present in DOM");
+                return;
+            }
+            var options = await dropdown.QuerySelectorAllAsync("option");
+            System.Console.WriteLine($"Dropdown options ({options.Count}):");
+            foreach (var opt in options)
+            {
+                var val = await opt.GetAttributeAsync("value") ?? "";
+                var text = await opt.InnerTextAsync();
+                var selected = await opt.GetAttributeAsync("selected");
+                System.Console.WriteLine($"  value='{val}' text='{text}' selected={selected}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"Failed to log dropdown options: {ex.Message}");
+        }
+    }
+
+    [When("I choose a bucket from the dropdown")]
+    public async Task WhenIChooseABucketFromTheDropdown()
+    {
+        await SelectBucketAsync();
     }
 
     [When("I save the mapping")]
@@ -461,7 +692,7 @@ public class UiNavigationSteps
                     bucketText.Trim() != "Not assigned")
                 {
                     var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
-                    await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                    await ClickFluentButtonAsync(editButtonLocator);
                     await _page.WaitForTimeoutAsync(3000);
                     return;
                 }
@@ -486,7 +717,7 @@ public class UiNavigationSteps
                         bucketText.Trim() != "Not assigned")
                     {
                         var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
-                        await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                        await ClickFluentButtonAsync(editButtonLocator);
                         await _page.WaitForTimeoutAsync(3000);
                         return;
                     }
@@ -794,7 +1025,7 @@ public class UiNavigationSteps
         if (rows.Count > 0)
         {
             var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
-            await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+            await ClickFluentButtonAsync(editButtonLocator);
             await _page.WaitForTimeoutAsync(3000);
             return;
         }
@@ -810,27 +1041,54 @@ public class UiNavigationSteps
             throw new InvalidOperationException("Page not initialized");
         }
 
-        // Get the bucket dropdown
-        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
-        if (bucketDropdown != null)
+        var dropdown = await _page.WaitForSelectorAsync(
+            "[data-testid=\"edit-bucket-dropdown\"]",
+            new PageWaitForSelectorOptions { Timeout = 30000, State = WaitForSelectorState.Visible });
+
+        if (dropdown == null)
         {
-            // Get all options and select the one at the specified index (1-based)
-            var options = await bucketDropdown.QuerySelectorAllAsync("option");
-            if (options.Count > bucketNumber)
-            {
-                var optionToSelect = options[bucketNumber]; // 0-based index
-                var value = await optionToSelect.GetAttributeAsync("value") ?? string.Empty;
-                
-                // Use JavaScript to set the value and trigger change event for Blazor
-                await bucketDropdown.EvaluateAsync($@"(select) => {{
-                    select.value = '{value}';
-                    select.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                }}");
-                return;
-            }
+            await CaptureDiagnosticsAsync("dropdown-not-found");
+            throw new Exception("Could not find bucket dropdown");
         }
 
-        throw new Exception($"Could not select bucket {bucketNumber} from dropdown");
+        await _page.WaitForTimeoutAsync(500);
+
+        // Get all options (0-based, option[0] is "(None)")
+        var options = await dropdown.QuerySelectorAllAsync("option");
+        System.Console.WriteLine($"Found {options.Count} dropdown options for bucket {bucketNumber}");
+        for (var i = 0; i < options.Count; i++)
+        {
+            var val = await options[i].GetAttributeAsync("value") ?? "";
+            var text = await options[i].InnerTextAsync();
+            System.Console.WriteLine($"  option[{i}] value='{val}' text='{text}'");
+        }
+
+        if (options.Count > bucketNumber)
+        {
+            var optionToSelect = options[bucketNumber];
+            var value = await optionToSelect.GetAttributeAsync("value") ?? "";
+
+            // Try native SelectOptionAsync first
+            try
+            {
+                await dropdown.SelectOptionAsync(new SelectOptionValue { Value = value });
+                return;
+            }
+            catch
+            {
+                // Fallback: JavaScript evaluation
+            }
+
+            await dropdown.EvaluateAsync($@"(select) => {{
+                select.value = '{value.Replace("'", "\\'")}';
+                select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+            }}");
+            return;
+        }
+
+        await LogDropdownOptionsAsync();
+        await CaptureDiagnosticsAsync("no-options");
+        throw new Exception($"Could not select bucket {bucketNumber} from dropdown. Found {options.Count} options.");
     }
 
     [When("I choose a different bucket from the dropdown")]
@@ -841,61 +1099,59 @@ public class UiNavigationSteps
             throw new InvalidOperationException("Page not initialized");
         }
 
-        // Wait for the dropdown to appear
-        await _page.WaitForTimeoutAsync(1000);
-        
-        // Get the bucket dropdown
-        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
-        if (bucketDropdown != null)
+        var dropdown = await _page.WaitForSelectorAsync(
+            "[data-testid=\"edit-bucket-dropdown\"]",
+            new PageWaitForSelectorOptions { Timeout = 30000, State = WaitForSelectorState.Visible });
+
+        if (dropdown == null)
         {
-            // Get all options and select one that's different from the current selection
-            var options = await bucketDropdown.QuerySelectorAllAsync("option");
-            string? currentValue = null;
-            
-            // First, try to get the currently selected value
-            foreach (var option in options)
+            await CaptureDiagnosticsAsync("dropdown-not-found");
+            throw new Exception("Could not find bucket dropdown");
+        }
+
+        await _page.WaitForTimeoutAsync(500);
+
+        // Get all options and select one that's different from the current selection
+        var options = await dropdown.QuerySelectorAllAsync("option");
+        System.Console.WriteLine($"Found {options.Count} dropdown options for 'different bucket'");
+        string? currentValue = null;
+
+        for (var i = 0; i < options.Count; i++)
+        {
+            var val = await options[i].GetAttributeAsync("value") ?? "";
+            var text = await options[i].InnerTextAsync();
+            var isSelected = await options[i].GetAttributeAsync("selected");
+            System.Console.WriteLine($"  option[{i}] value='{val}' text='{text}' selected={isSelected}");
+            if (!string.IsNullOrEmpty(isSelected))
             {
-                var isSelected = await option.GetAttributeAsync("selected");
-                if (!string.IsNullOrEmpty(isSelected))
-                {
-                    currentValue = await option.GetAttributeAsync("value");
-                    break;
-                }
-            }
-            
-            // Now select a different option using JavaScript for Blazor
-            // Skip the "(None)" option (empty value) and select an actual bucket
-            foreach (var option in options)
-            {
-                var value = await option.GetAttributeAsync("value") ?? string.Empty;
-                if (!string.IsNullOrEmpty(value) && value != currentValue) // Different from current selection and not "(None)"
-                {
-                    await bucketDropdown.EvaluateAsync($@"(select) => {{
-                        select.value = '{value}';
-                        select.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                    }}");
-                    return;
-                }
-            }
-            
-            // If all options are the same as current (shouldn't happen in valid test), select first non-empty
-            if (options.Count > 0)
-            {
-                foreach (var option in options)
-                {
-                    var value = await option.GetAttributeAsync("value") ?? string.Empty;
-                    if (!string.IsNullOrEmpty(value))
-                    {
-                        await bucketDropdown.EvaluateAsync($@"(select) => {{
-                            select.value = '{value}';
-                            select.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                        }}");
-                        return;
-                    }
-                }
+                currentValue = val;
             }
         }
-        
+
+        foreach (var option in options)
+        {
+            var value = await option.GetAttributeAsync("value") ?? "";
+            if (!string.IsNullOrEmpty(value) && value != currentValue)
+            {
+                try
+                {
+                    await dropdown.SelectOptionAsync(new SelectOptionValue { Value = value });
+                    return;
+                }
+                catch
+                {
+                }
+
+                await dropdown.EvaluateAsync($@"(select) => {{
+                    select.value = '{value.Replace("'", "\\'")}';
+                    select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                }}");
+                return;
+            }
+        }
+
+        await LogDropdownOptionsAsync();
+        await CaptureDiagnosticsAsync("no-options");
         throw new Exception("Could not find bucket dropdown or options");
     }
 
@@ -1123,7 +1379,7 @@ public class UiNavigationSteps
             
             // Click the Edit button for that folder using locator
             var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").Nth(folderNumber - 1);
-            await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+            await ClickFluentButtonAsync(editButtonLocator);
             
             // Wait for edit form to open
             await _page.WaitForTimeoutAsync(3000);
@@ -1149,14 +1405,13 @@ public class UiNavigationSteps
                 }
                 
                 // Click Save
-                var saveButton = await _page.QuerySelectorAsync("[data-testid=\"save-mapping\"]");
-                if (saveButton == null)
+                var saveButton = _page.Locator("[data-testid=\"save-mapping\"]");
+                if (await saveButton.CountAsync() == 0)
                 {
                     throw new Exception("Could not find Save button");
                 }
                 
-                await saveButton.ClickAsync(new ElementHandleClickOptions { Force = true });
-                await _page.WaitForTimeoutAsync(2000);
+                await ClickFluentButtonAsync(saveButton);
                 return;
             }
         }
@@ -1358,7 +1613,7 @@ public class UiNavigationSteps
                 {
                     // Click the edit button for this row
                     var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
-                    await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                    await ClickFluentButtonAsync(editButtonLocator);
                     await _page.WaitForTimeoutAsync(3000);
                     return;
                 }
@@ -1383,7 +1638,7 @@ public class UiNavigationSteps
                         bucketText.Trim() != "Not assigned")
                     {
                         var editButtonLocator = _page.Locator("[data-testid=\"folder-mappings-table\"] .edit-mapping-btn").First;
-                        await editButtonLocator.ClickAsync(new LocatorClickOptions { Force = true });
+                        await ClickFluentButtonAsync(editButtonLocator);
                         await _page.WaitForTimeoutAsync(3000);
                         return;
                     }
@@ -1454,30 +1709,33 @@ public class UiNavigationSteps
             throw new InvalidOperationException("Page not initialized");
         }
 
-        // Wait for the dropdown to appear
-        await _page.WaitForTimeoutAsync(1000);
-        
-        // Get the bucket dropdown
-        var bucketDropdown = await _page.QuerySelectorAsync("[data-testid=\"edit-bucket-dropdown\"]");
-        if (bucketDropdown != null)
+        var dropdown = await _page.WaitForSelectorAsync(
+            "[data-testid=\"edit-bucket-dropdown\"]",
+            new PageWaitForSelectorOptions { Timeout = 30000, State = WaitForSelectorState.Visible });
+
+        if (dropdown == null)
         {
-            // Find and select the "(None)" option (empty value) using JavaScript for Blazor
-            var options = await bucketDropdown.QuerySelectorAllAsync("option");
-            foreach (var option in options)
-            {
-                var value = await option.GetAttributeAsync("value") ?? string.Empty;
-                if (string.IsNullOrEmpty(value)) // This is the "(None)" option
-                {
-                    await bucketDropdown.EvaluateAsync(@"(select) => {
-                        select.value = '';
-                        select.dispatchEvent(new Event('change', { bubbles: true }));
-                    }");
-                    return;
-                }
-            }
+            await CaptureDiagnosticsAsync("dropdown-not-found");
+            throw new Exception("Could not find bucket dropdown");
         }
-        
-        throw new Exception("Could not find '(None)' option in dropdown");
+
+        await _page.WaitForTimeoutAsync(500);
+
+        // Select the "(None)" option (empty value)
+        try
+        {
+            await dropdown.SelectOptionAsync(new SelectOptionValue { Value = "" });
+            return;
+        }
+        catch
+        {
+        }
+
+        // Fallback: JavaScript evaluation
+        await dropdown.EvaluateAsync(@"(select) => {
+            select.value = '';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }");
     }
 
     [Then(@"the folder should be shown as ""Not assigned""")]

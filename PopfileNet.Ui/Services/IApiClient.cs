@@ -2,6 +2,14 @@ namespace PopfileNet.Ui.Services;
 
 public interface IApiClient
 {
+    Task<LoginResponse?> LoginAsync(string email, string password);
+    Task LogoutAsync();
+    Task<UserDto?> GetCurrentUserAsync();
+    Task<PagedResponse<UserDto>?> GetUsersAsync(int page = 1, int pageSize = 20);
+    Task<UserDto?> CreateUserAsync(string email, string password, string role);
+    Task<UserDto?> UpdateUserAsync(string id, string? email, string? role);
+    Task DeleteUserAsync(string id);
+
     Task<PagedResponse<AccountDto>?> GetAccountsAsync(int page = 1, int pageSize = 20);
     Task<PagedResponse<BucketDto>?> GetCategoriesAsync(int page = 1, int pageSize = 20);
     Task<AppSettingsDto?> GetSettingsAsync();

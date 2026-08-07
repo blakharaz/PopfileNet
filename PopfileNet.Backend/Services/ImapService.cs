@@ -9,8 +9,10 @@ namespace PopfileNet.Backend.Services;
 
 // simple domain exception used when the backend has not been configured yet
 
-public class ImapService(ISettingsService settingsService, ILogger<ImapClientService> logger, IImapClientFactory clientFactory) : IImapService
+public class ImapService(ISettingsService settingsService, ILoggerFactory loggerFactory, IImapClientFactory clientFactory) : IImapService
 {
+    private readonly ILogger<ImapClientService> _logger = loggerFactory.CreateLogger<ImapClientService>();
+
     private static bool HasRequiredSettings(ImapSettings settings)
         => !string.IsNullOrWhiteSpace(settings.Server) && !string.IsNullOrWhiteSpace(settings.Username);
 
@@ -41,7 +43,7 @@ public class ImapService(ISettingsService settingsService, ILogger<ImapClientSer
             throw new ImapNotConfiguredException();
         }
         
-        var imapClientService = new ImapClientService(Options.Create(settings), logger, clientFactory);
+        var imapClientService = new ImapClientService(Options.Create(settings), _logger, clientFactory);
         return imapClientService;
     }
 
@@ -71,7 +73,7 @@ public class ImapService(ISettingsService settingsService, ILogger<ImapClientSer
         }
 
         var folders = await (await GetImapClientService(cancellationToken)).GetAllPersonalFoldersAsync(cancellationToken);
-        return folders.Select(f => new FolderInfo(id: f.Id, fullname: f.FullName, name: f.Name)).ToList();
+        return folders.Select(f => new FolderInfo(id: f.Id!, fullname: f.FullName, name: f.Name)).ToList();
     }
 
     private async Task<ImapSettings> GetImapSettingsAsync(CancellationToken ct = default)

@@ -19,7 +19,7 @@ public static class JobsGroupExtensions
     /// <returns>The configured web application.</returns>
     public static WebApplication AddJobsGroup(this WebApplication app)
     {
-        var group = app.MapGroup("/jobs");
+        var group = app.MapGroup("/jobs").RequireAuthorization();
         group.MapPost("/sync", SyncAsync);
         group.MapPost("/update-folder-list", UpdateFolderListAsync);
         return app;

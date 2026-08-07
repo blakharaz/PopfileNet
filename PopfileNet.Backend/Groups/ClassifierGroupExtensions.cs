@@ -28,7 +28,7 @@ public static class ClassifierGroupExtensions
 
     public static WebApplication AddClassifierGroup(this WebApplication app)
     {
-        var group = app.MapGroup("/classifier");
+        var group = app.MapGroup("/classifier").RequireAuthorization();
         
         group.MapGet("/status", GetStatusAsync);
         group.MapGet("/dev-mode", () => TypedResults.Ok(ApiResponse<bool>.Success(app.Configuration.GetValue<bool>("DevMode"))));
