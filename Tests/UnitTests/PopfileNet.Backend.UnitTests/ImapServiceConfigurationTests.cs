@@ -1,5 +1,6 @@
 using Shouldly;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PopfileNet.Backend.Services;
 using PopfileNet.Backend.Models;
@@ -15,13 +16,13 @@ namespace PopfileNet.Backend.UnitTests
     public class ImapServiceConfigurationTests
     {
         private readonly Mock<ISettingsService> _mockSettings;
-        private readonly Mock<ILogger<ImapClientService>> _mockLogger;
+        private readonly Mock<ILoggerFactory> _mockLoggerFactory;
         private readonly Mock<IImapClientFactory> _mockFactory;
 
         public ImapServiceConfigurationTests()
         {
             _mockSettings = new Mock<ISettingsService>();
-            _mockLogger = new Mock<ILogger<ImapClientService>>();
+            _mockLoggerFactory = new Mock<ILoggerFactory>();
             _mockFactory = new Mock<IImapClientFactory>();
         }
 
@@ -30,7 +31,10 @@ namespace PopfileNet.Backend.UnitTests
             _mockSettings.Setup(s => s.GetImapSettingsOnlyAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(settings?.ImapSettings ?? new ImapSettingsDto());
 
-            return new ImapService(_mockSettings.Object, _mockLogger.Object, _mockFactory.Object);
+            _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>()))
+                .Returns(new NullLogger<ImapClientService>());
+
+            return new ImapService(_mockSettings.Object, _mockLoggerFactory.Object, _mockFactory.Object);
         }
 
         [Fact]

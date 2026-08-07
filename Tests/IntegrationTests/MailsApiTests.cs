@@ -2,8 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using PopfileNet.Backend.Models;
-using System.Net.Http.Json;
-using PopfileNet.Backend.Models;
 using Shouldly;
 using Xunit;
 
