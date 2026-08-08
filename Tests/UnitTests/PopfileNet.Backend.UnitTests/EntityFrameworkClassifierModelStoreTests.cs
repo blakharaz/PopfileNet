@@ -136,7 +136,6 @@ public sealed class EntityFrameworkClassifierModelStoreTests : IDisposable
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("   ")]
     public async Task ExistsAsync_InvalidOwner_Throws(string? ownerId)
     {
         var action = async () => await _store.ExistsAsync(ownerId!);

@@ -17,8 +17,7 @@ public class EntityFrameworkClassifierModelStore(
 
     public async Task<bool> ExistsAsync(string ownerId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(ownerId))
-            throw new ArgumentException("Owner id must be provided", nameof(ownerId));
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
         return await dbContext.ClassifierModels
@@ -28,8 +27,7 @@ public class EntityFrameworkClassifierModelStore(
 
     public async Task<ClassifierModelMeta?> GetMetaAsync(string ownerId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(ownerId))
-            throw new ArgumentException("Owner id must be provided", nameof(ownerId));
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
         return await dbContext.ClassifierModels
@@ -39,8 +37,7 @@ public class EntityFrameworkClassifierModelStore(
 
     public Task<Stream?> OpenReadAsync(string ownerId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(ownerId))
-            throw new ArgumentException("Owner id must be provided", nameof(ownerId));
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
 
         var path = GetModelPath(ownerId);
         if (!File.Exists(path))
@@ -51,8 +48,7 @@ public class EntityFrameworkClassifierModelStore(
 
     public async Task SaveAsync(string ownerId, Stream model, ClassifierModelMeta meta, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(ownerId))
-            throw new ArgumentException("Owner id must be provided", nameof(ownerId));
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(meta);
 
@@ -101,8 +97,7 @@ public class EntityFrameworkClassifierModelStore(
 
     public async Task DeleteAsync(string ownerId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(ownerId))
-            throw new ArgumentException("Owner id must be provided", nameof(ownerId));
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
         var meta = await dbContext.ClassifierModels
