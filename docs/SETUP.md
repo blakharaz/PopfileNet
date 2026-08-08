@@ -41,10 +41,30 @@ Edit `PopfileNet.Cli/appsettings.json` with your IMAP server details:
 
 ### Gmail Specific
 
+### Gmail Specific
+
 If using Gmail:
 1. Enable 2-Factor Authentication
 2. Generate an App Password at https://myaccount.google.com/security
 3. Use the App Password as `Password`
+
+### Classifier Model Persistence
+
+Trained models are saved to `Classifier:ModelsRoot` (default `classifier-models`
+relative to the backend working directory) with metadata in the `ClassifierModels`
+table. To use a custom location, set the `Classifier__ModelsRoot` environment
+variable or add a `Classifier` section to `PopfileNet.Backend/appsettings.json`:
+
+```json
+"Classifier": {
+  "ModelsRoot": "/absolute/path/to/classifier-models",
+  "MaxCachedModels": 16,
+  "CacheTtl": "00:20:00"
+}
+```
+
+The `ClassifierModels` table is created automatically by the EF Core migration
+applied at backend startup.
 
 ## Running
 
