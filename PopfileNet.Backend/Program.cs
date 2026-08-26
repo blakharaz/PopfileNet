@@ -63,9 +63,7 @@ public class Program
         builder.Services.AddScoped<ClassifierEvaluationService>();
         builder.Services.AddScoped<IClassifierDataProvider, ClassifierDataProvider>();
 
-        var classifierOptions = builder.Configuration.GetSection("Classifier").Get<ClassifierOptions>() ??
-                                new ClassifierOptions();
-        builder.Services.AddSingleton(Microsoft.Extensions.Options.Options.Create(classifierOptions));
+        builder.Services.Configure<ClassifierOptions>(builder.Configuration.GetSection("Classifier"));
         builder.Services.AddPooledDbContextFactory<PopfileNetDbContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("popfilenet")));
         builder.Services.AddSingleton<IClassifierModelStore, EntityFrameworkClassifierModelStore>();

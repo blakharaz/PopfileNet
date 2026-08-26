@@ -8,9 +8,15 @@ namespace PopfileNet.Backend.Services;
 /// <summary>
 /// Provides per-owner classifier instances, loading models from the store on demand and caching them in memory.
 /// </summary>
-public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierOptions> options)
+public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierOptions> options, Func<DateTime>? utcNow = null)
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
+    private readonly Func<DateTime> _utcNow = utcNow ?? (() => DateTime.UtcNow);
+
+    /// <summary>
+    /// Gets the number of classifier instances currently held in the in-memory cache.
+    /// </summary>
+    internal int CacheCount => _cache.Count;
 
     /// <summary>
     /// Returns a trained classifier for the given owner, loading the persisted model on demand.
@@ -22,7 +28,7 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
 
         if (_cache.TryGetValue(ownerId, out var entry))
         {
-            entry.LastUsedTicks = Environment.TickCount64;
+            entry.LastUsedTicks = _utcNow().Ticks;
             return entry.Model;
         }
 
@@ -37,7 +43,7 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
         var classifier = new NaiveBayesianClassifier();
         classifier.Load(stream);
 
-        var created = new CacheEntry(classifier) { LastUsedTicks = Environment.TickCount64 };
+        var created = new CacheEntry(classifier) { LastUsedTicks = _utcNow().Ticks };
         _cache[ownerId] = created;
         Evict();
 
@@ -59,7 +65,7 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
         {
             OwnerId = ownerId,
             TrainingSampleCount = classifier.TrainingSampleCount,
-            TrainedAtUtc = DateTime.UtcNow
+            TrainedAtUtc = _utcNow()
         };
 
         await using var stream = new MemoryStream();
@@ -68,7 +74,7 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
 
         await store.SaveAsync(ownerId, stream, meta, ct);
 
-        _cache[ownerId] = new CacheEntry(classifier) { LastUsedTicks = Environment.TickCount64 };
+        _cache[ownerId] = new CacheEntry(classifier) { LastUsedTicks = _utcNow().Ticks };
     }
 
     /// <summary>
@@ -86,16 +92,22 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
     public Task<ClassifierModelMeta?> GetMetaAsync(string ownerId, CancellationToken ct = default)
         => store.GetMetaAsync(ownerId, ct);
 
-    private void Evict()
+    /// <summary>
+    /// Evicts idle entries past the cache TTL and, when over <see cref="ClassifierOptions.MaxCachedModels"/>, the least-recently-used entries.
+    /// </summary>
+    internal void Evict()
     {
-        var now = Environment.TickCount64;
+        var now = _utcNow().Ticks;
         var ttlTicks = options.Value.CacheTtl.Ticks;
         var capacity = options.Value.MaxCachedModels;
 
-        foreach (var (owner, entry) in _cache)
+        if (ttlTicks >= 0)
         {
-            if (now - entry.LastUsedTicks > ttlTicks)
-                _cache.TryRemove(owner, out _);
+            foreach (var (owner, entry) in _cache)
+            {
+                if (now - entry.LastUsedTicks >= ttlTicks)
+                    _cache.TryRemove(owner, out _);
+            }
         }
 
         if (_cache.Count <= capacity)

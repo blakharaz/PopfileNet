@@ -149,6 +149,61 @@ public sealed class ClassifierManagerTests : IDisposable
         a.ShouldNotBeSameAs(b);
     }
 
+    [Fact]
+    public async Task Evict_IdleBeyondTtl_RemovesEntryWhenClockAdvances()
+    {
+        var now = new DateTime(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+        var manager = new ClassifierManager(
+            CreateStore(), Microsoft.Extensions.Options.Options.Create(_options), () => now);
+
+        await manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+
+        // TTL configured as 20 minutes: nothing evicted within the TTL window.
+        manager.Evict();
+        manager.CacheCount.ShouldBe(1);
+
+        // Advance the clock past the TTL and evict: the idle entry must be removed.
+        now = now.AddMinutes(21);
+        manager.Evict();
+        manager.CacheCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Evict_ExceedingCapacity_EvictsLeastRecentlyUsed()
+    {
+        var now = new DateTime(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+        var options = new ClassifierOptions { ModelsRoot = _modelsRoot, MaxCachedModels = 2 };
+        var manager = new ClassifierManager(
+            CreateStore(), Microsoft.Extensions.Options.Options.Create(options), () => now);
+
+        await manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+        now = now.AddMinutes(1);
+        await manager.SaveModelAsync("owner-2", CreateTrainedClassifier());
+        now = now.AddMinutes(1);
+        await manager.SaveModelAsync("owner-3", CreateTrainedClassifier());
+
+        manager.Evict();
+
+        // Capacity 2: the least-recently-used entry (owner-1) is evicted.
+        manager.CacheCount.ShouldBe(2);
+        (await manager.GetModelAsync("owner-1")).ShouldNotBeNull(); // reloadable from store
+        manager.CacheCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Evict_ZeroTtl_EvictsAllIdleEntriesImmediately()
+    {
+        var manager = new ClassifierManager(
+            CreateStore(),
+            Microsoft.Extensions.Options.Options.Create(new ClassifierOptions { ModelsRoot = _modelsRoot, CacheTtl = TimeSpan.Zero }),
+            () => new DateTime(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc));
+
+        await manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+        manager.Evict();
+
+        manager.CacheCount.ShouldBe(0);
+    }
+
     private sealed class TestDbContextFactory(DbContextOptions<PopfileNetDbContext> options)
         : IDbContextFactory<PopfileNetDbContext>
     {

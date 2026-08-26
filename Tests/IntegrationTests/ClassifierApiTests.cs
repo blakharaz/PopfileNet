@@ -1,8 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using PopfileNet.Backend;
 using PopfileNet.Backend.Models;
+using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
 using Shouldly;
@@ -106,7 +112,7 @@ public class ClassifierApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixt
         content.Value.PredictedBucket.ShouldBeEmpty();
     }
 
-    [Fact]
+[Fact]
     public async Task Train_PersistsModel_AndRestartLoadsItOnDemand()
     {
         await LoginAsync();
@@ -144,5 +150,35 @@ public class ClassifierApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixt
         var prediction = await predictResponse.Content.ReadFromJsonAsync<ApiResponse<PredictionResult>>();
         prediction!.IsSuccess.ShouldBeTrue();
         prediction.Value!.PredictedBucket.ShouldBeOneOf("Work", "Personal");
+    }
+
+    [Fact]
+    public async Task ClassifierConfig_InvalidValues_AreClampedOnStartup()
+    {
+        var factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Test");
+                builder.ConfigureAppConfiguration((context, config) =>
+                {
+                    config.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["ConnectionStrings:popfilenet"] = Fixture.ConnectionString,
+                        ["AdminEmail"] = AdminEmail,
+                        ["AdminPassword"] = AdminPassword,
+                        ["Classifier:ModelsRoot"] = ModelsRoot,
+                        ["Classifier:MaxCachedModels"] = "-5",
+                        ["Classifier:CacheTtl"] = "-00:15:00"
+                    });
+                });
+            });
+
+        await using (factory)
+        {
+            var options = factory.Services.GetRequiredService<IOptions<ClassifierOptions>>().Value;
+
+            options.MaxCachedModels.ShouldBe(1);
+            options.CacheTtl.ShouldBe(TimeSpan.Zero);
+        }
     }
 }
