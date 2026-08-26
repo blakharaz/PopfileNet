@@ -155,6 +155,150 @@ public class NaiveBayesianClassifierTests
         result.PredictedLabel.ShouldNotBeNullOrEmpty();
     }
 
+    [Fact]
+    public void IsTrained_FalseBeforeTrain_ReturnsFalse()
+    {
+        var classifier = new NaiveBayesianClassifier();
+
+        classifier.IsTrained.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsTrained_AfterTrain_ReturnsTrue()
+    {
+        var classifier = CreateTrainedClassifier();
+
+        classifier.IsTrained.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void TrainingSampleCount_AfterTrain_ReturnsSampleCount()
+    {
+        var classifier = new NaiveBayesianClassifier();
+        var trainingData = new EmailClassificationDataSet();
+        trainingData.AddMail(CreateSampleEmail("Newsletter", "Content"), "spam");
+        trainingData.AddMail(CreateSampleEmail("Meeting", "Content"), "ham");
+
+        classifier.Train(trainingData);
+
+        classifier.TrainingSampleCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Save_TrainedModel_WritesNonEmptyStream()
+    {
+        var classifier = CreateTrainedClassifier();
+        using var stream = new MemoryStream();
+
+        classifier.Save(stream);
+
+        stream.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void Save_UntrainedModel_ThrowsInvalidOperationException()
+    {
+        var classifier = new NaiveBayesianClassifier();
+        using var stream = new MemoryStream();
+
+        var action = () => classifier.Save(stream);
+
+        action.ShouldThrow<InvalidOperationException>()
+            .Message.ShouldContain("Model not trained");
+    }
+
+    [Fact]
+    public void Save_NullStream_ThrowsArgumentNullException()
+    {
+        var classifier = CreateTrainedClassifier();
+
+        var action = () => classifier.Save(null!);
+
+        action.ShouldThrow<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Load_NullStream_ThrowsArgumentNullException()
+    {
+        var classifier = new NaiveBayesianClassifier();
+
+        var action = () => classifier.Load(null!);
+
+        action.ShouldThrow<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Load_ValidModel_ThenPredict_ReturnsPrediction()
+    {
+        var original = CreateTrainedClassifier();
+        using var stream = new MemoryStream();
+        original.Save(stream);
+
+        var loaded = new NaiveBayesianClassifier();
+        stream.Position = 0;
+        loaded.Load(stream);
+
+        loaded.IsTrained.ShouldBeTrue();
+        var result = loaded.Predict(CreateSampleEmail("New meeting", "Let's schedule a meeting for tomorrow"));
+        result.ShouldNotBeNull();
+        result.PredictedLabel.ShouldNotBeNullOrEmpty();
+        result.Scores.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public void Predict_BeforeLoad_ThrowsInvalidOperationException()
+    {
+        var loaded = new NaiveBayesianClassifier();
+
+        var action = () => loaded.Predict(CreateSampleEmail("Test", "Test content"));
+
+        action.ShouldThrow<InvalidOperationException>()
+            .Message.ShouldContain("Model not trained");
+    }
+
+    [Fact]
+    public void Load_CorruptStream_ThrowsInvalidOperationException()
+    {
+        var classifier = new NaiveBayesianClassifier();
+        using var stream = new MemoryStream([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        var action = () => classifier.Load(stream);
+
+        action.ShouldThrow<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void TrainAfterLoad_ReplacesModel()
+    {
+        var original = CreateTrainedClassifier();
+        using var stream = new MemoryStream();
+        original.Save(stream);
+
+        var reloaded = new NaiveBayesianClassifier();
+        stream.Position = 0;
+        reloaded.Load(stream);
+
+        var trainingData = new EmailClassificationDataSet();
+        trainingData.AddMail(CreateSampleEmail("New A", "New content A"), "alpha");
+        trainingData.AddMail(CreateSampleEmail("New B", "New content B"), "beta");
+        reloaded.Train(trainingData);
+
+        reloaded.IsTrained.ShouldBeTrue();
+        reloaded.TrainingSampleCount.ShouldBe(2);
+        var result = reloaded.Predict(CreateSampleEmail("New A", "New content A"));
+        result.PredictedLabel.ShouldBeOneOf("alpha", "beta");
+    }
+
+    private static NaiveBayesianClassifier CreateTrainedClassifier()
+    {
+        var classifier = new NaiveBayesianClassifier();
+        var trainingData = new EmailClassificationDataSet();
+        trainingData.AddMail(CreateSampleEmail("Newsletter about products", "Buy our new products now!"), "spam");
+        trainingData.AddMail(CreateSampleEmail("Meeting tomorrow", "Let's schedule a meeting for tomorrow"), "ham");
+        classifier.Train(trainingData);
+        return classifier;
+    }
+
     private static Email CreateSampleEmail(string subject, string body)
     {
         return new Email

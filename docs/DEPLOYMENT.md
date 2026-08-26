@@ -164,6 +164,45 @@ PostgreSQL connection string for EF Core migrations and queries:
 
 In Docker Compose, use `Host=postgres` (the service name).
 
+### Classifier Settings (`Classifier`)
+
+Configures where trained classifier models are persisted and how many are cached.
+
+| Setting | Description | Default | Required |
+|---------|-------------|---------|----------|
+| `Classifier:ModelsRoot` | Directory where model artifacts (`model.zip`) are written, one sub-folder per owner | `classifier-models` | No |
+| `Classifier:MaxCachedModels` | Max classifier instances kept in the in-memory LRU cache | `16` | No |
+| `Classifier:CacheTtl` | Idle time before a cached classifier is evicted (Timespan format) | `00:20:00` | No |
+
+```json
+"Classifier": {
+  "ModelsRoot": "classifier-models",
+  "MaxCachedModels": 16,
+  "CacheTtl": "00:20:00"
+}
+```
+
+Can be overridden with environment variables, e.g. `Classifier__ModelsRoot=/data/classifier-models`.
+
+**Important:** `ModelsRoot` must point at a **persistent volume** so trained
+models survive container restarts/recreates (the same requirement as PostgreSQL
+data). In Docker Compose, mount a named volume:
+
+```yaml
+  backend:
+    volumes:
+      - modeldata:/data
+    environment:
+      Classifier__ModelsRoot: /data/classifier-models
+
+volumes:
+  modeldata:
+```
+
+Model metadata (owner, training sample count, trained-at timestamp, format
+version) is stored in the `ClassifierModels` table in PostgreSQL, so it is
+backed by the same database volume.
+
 ### DevMode (`DevMode`)
 
 Enable developer mode to access evaluation pages and debugging tools. **Should be disabled in production.**

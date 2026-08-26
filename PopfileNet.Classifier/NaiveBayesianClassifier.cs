@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using Microsoft.ML;
 using Microsoft.ML.Data;
@@ -12,6 +13,56 @@ public class NaiveBayesianClassifier {
     private ITransformer? _featureTransformer;
     private ITransformer? _trainerTransformer;
     private ITransformer? _postTransformer;
+    private int _trainingSampleCount;
+    private DataViewSchema? _modelInputSchema;
+
+    /// <summary>
+    /// Gets a value indicating whether the classifier has a trained model ready for prediction.
+    /// </summary>
+    public bool IsTrained => _modelForPrediction != null;
+
+    /// <summary>
+    /// Gets the number of training samples used to train the current model.
+    /// </summary>
+    public int TrainingSampleCount => _trainingSampleCount;
+
+    /// <summary>
+    /// Saves the trained prediction model and its schema to the given stream.
+    /// </summary>
+    /// <param name="destination">The stream to write the model to.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="destination"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the classifier has not been trained.</exception>
+    public void Save(Stream destination)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+
+        if (!IsTrained)
+            throw new InvalidOperationException("Model not trained. Call Train() before Save().");
+
+        _mlContext.Model.Save(_modelForPrediction, _modelInputSchema, destination);
+    }
+
+    /// <summary>
+    /// Loads a previously saved prediction model and its schema from the given stream.
+    /// </summary>
+    /// <param name="source">The stream containing the saved model.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
+    public void Load(Stream source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        try
+        {
+            _modelForPrediction = _mlContext.Model.Load(source, out var schema);
+            _modelInputSchema = schema;
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidDataException or IOException)
+        {
+            throw new InvalidOperationException("Unable to load model. The stream does not contain a valid classifier model.", ex);
+        }
+
+        _trainingSampleCount = 0;
+    }
 
     public void Train(EmailClassificationDataSet trainingData)
     {
@@ -22,6 +73,9 @@ public class NaiveBayesianClassifier {
             throw new InvalidOperationException("Training data is empty. Add training samples before calling Train().");
 
         var dataView = _mlContext.Data.LoadFromEnumerable(dataEnumerable);
+
+        _modelInputSchema = dataView.Schema;
+        _trainingSampleCount = dataEnumerable.Count();
 
         // Step 1: Feature transformation pipeline
         var featureEstimator = _mlContext.Transforms.Concatenate("TextForFeaturize", "Subject", "Content")

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
@@ -61,6 +62,12 @@ public class Program
         builder.Services.AddScoped<IMigrationChecker, MigrationChecker>();
         builder.Services.AddScoped<ClassifierEvaluationService>();
         builder.Services.AddScoped<IClassifierDataProvider, ClassifierDataProvider>();
+
+        builder.Services.Configure<ClassifierOptions>(builder.Configuration.GetSection("Classifier"));
+        builder.Services.AddPooledDbContextFactory<PopfileNetDbContext>(options =>
+            options.UseNpgsql(builder.Configuration.GetConnectionString("popfilenet")));
+        builder.Services.AddSingleton<IClassifierModelStore, EntityFrameworkClassifierModelStore>();
+        builder.Services.AddSingleton<ClassifierManager>();
         builder.Services.AddHostedService<EmailSyncBackgroundService>();
 
         builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
