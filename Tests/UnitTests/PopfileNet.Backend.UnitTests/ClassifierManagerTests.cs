@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using PopfileNet.Backend.Models;
 using PopfileNet.Backend.Services;
 using PopfileNet.Classifier;
@@ -38,6 +39,22 @@ public sealed class ClassifierManagerTests : IDisposable
             new TestDbContextFactory(options),
             Microsoft.Extensions.Options.Options.Create(new ClassifierOptions { ModelsRoot = _modelsRoot }));
     }
+
+    [Fact]
+    public void Di_ResolvesManagerWithOptionalConstructorParameters()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IClassifierModelStore>(CreateStore());
+        services.Configure<ClassifierOptions>(_ => { });
+        services.AddSingleton<ClassifierManager>();
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<ClassifierManager>().ShouldNotBeNull();
+    }
+
+    private string GetModelPath(string ownerId) =>
+        Path.Combine(_modelsRoot, ownerId, "model.zip");
 
     private static NaiveBayesianClassifier CreateTrainedClassifier()
     {
@@ -99,6 +116,46 @@ public sealed class ClassifierManagerTests : IDisposable
 
         status.IsTrained.ShouldBeTrue();
         status.Source.ShouldBe(ClassifierSource.LoadedFromDisk);
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_ArtifactMissing_ReturnsNotTrained()
+    {
+        await _manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+        File.Delete(GetModelPath("owner-1"));
+
+        var status = await _manager.GetStatusAsync("owner-1");
+
+        status.IsTrained.ShouldBeFalse();
+        status.Source.ShouldBe(ClassifierSource.NotTrained);
+    }
+
+    [Fact]
+    public async Task GetModelAsync_CorruptedArtifact_ReturnsNullAndDeletesArtifact()
+    {
+        await _manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+        await File.WriteAllBytesAsync(GetModelPath("owner-1"), [1, 2, 3, 4, 5, 6, 7, 8]);
+
+        var freshManager = new ClassifierManager(CreateStore(), Microsoft.Extensions.Options.Options.Create(_options));
+        var model = await freshManager.GetModelAsync("owner-1");
+
+        model.ShouldBeNull();
+        File.Exists(GetModelPath("owner-1")).ShouldBeFalse();
+        (await freshManager.GetMetaAsync("owner-1")).ShouldBeNull();
+        (await freshManager.GetStatusAsync("owner-1")).Source.ShouldBe(ClassifierSource.NotTrained);
+    }
+
+    [Fact]
+    public async Task GetModelAsync_MissingArtifactWithMetadata_ReturnsNullAndCleansMetadata()
+    {
+        await _manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+        File.Delete(GetModelPath("owner-1"));
+
+        var freshManager = new ClassifierManager(CreateStore(), Microsoft.Extensions.Options.Options.Create(_options));
+        var model = await freshManager.GetModelAsync("owner-1");
+
+        model.ShouldBeNull();
+        (await freshManager.GetMetaAsync("owner-1")).ShouldBeNull();
     }
 
     [Fact]

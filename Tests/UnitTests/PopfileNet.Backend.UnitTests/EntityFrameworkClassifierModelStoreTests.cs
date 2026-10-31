@@ -124,6 +124,16 @@ public sealed class EntityFrameworkClassifierModelStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ExistsAsync_WhenArtifactDeleted_ReturnsFalse()
+    {
+        await _store.SaveAsync("owner-1", new MemoryStream([1]), new ClassifierModelMeta { OwnerId = "owner-1" });
+        File.Delete(_store.GetModelPath("owner-1"));
+
+        (await _store.ExistsAsync("owner-1")).ShouldBeFalse();
+        (await _store.GetMetaAsync("owner-1")).ShouldNotBeNull();
+    }
+
+    [Fact]
     public async Task Owners_AreIsolated_OnDiskAndMetadata()
     {
         await _store.SaveAsync("owner-a", new MemoryStream([1]), new ClassifierModelMeta { OwnerId = "owner-a" });

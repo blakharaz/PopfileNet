@@ -46,8 +46,9 @@ public class NaiveBayesianClassifier {
     /// Loads a previously saved prediction model and its schema from the given stream.
     /// </summary>
     /// <param name="source">The stream containing the saved model.</param>
+    /// <param name="trainingSampleCount">Number of samples the model was trained on, when known.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
-    public void Load(Stream source)
+    public void Load(Stream source, int trainingSampleCount = 0)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -61,7 +62,7 @@ public class NaiveBayesianClassifier {
             throw new InvalidOperationException("Unable to load model. The stream does not contain a valid classifier model.", ex);
         }
 
-        _trainingSampleCount = 0;
+        _trainingSampleCount = trainingSampleCount;
     }
 
     public void Train(EmailClassificationDataSet trainingData)

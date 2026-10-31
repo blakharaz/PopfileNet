@@ -257,6 +257,20 @@ public class NaiveBayesianClassifierTests
     }
 
     [Fact]
+    public void Load_WithTrainingSampleCount_PreservesCount()
+    {
+        var original = CreateTrainedClassifier();
+        using var stream = new MemoryStream();
+        original.Save(stream);
+        stream.Position = 0;
+
+        var reloaded = new NaiveBayesianClassifier();
+        reloaded.Load(stream, 42);
+
+        reloaded.TrainingSampleCount.ShouldBe(42);
+    }
+
+    [Fact]
     public void Load_CorruptStream_ThrowsInvalidOperationException()
     {
         var classifier = new NaiveBayesianClassifier();

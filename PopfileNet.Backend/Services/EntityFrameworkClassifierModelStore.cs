@@ -19,6 +19,9 @@ public class EntityFrameworkClassifierModelStore(
     {
         ArgumentException.ThrowIfNullOrEmpty(ownerId);
 
+        if (!File.Exists(GetModelPath(ownerId)))
+            return false;
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
         return await dbContext.ClassifierModels
             .AsNoTracking()

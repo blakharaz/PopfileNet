@@ -6,7 +6,7 @@ namespace PopfileNet.Common;
 public interface IClassifierModelStore
 {
     /// <summary>
-    /// Determines whether a persisted model exists for the given owner.
+    /// Determines whether a persisted model exists for the given owner, both on disk and in the database.
     /// </summary>
     Task<bool> ExistsAsync(string ownerId, CancellationToken ct = default);
 

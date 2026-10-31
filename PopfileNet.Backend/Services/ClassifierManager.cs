@@ -9,7 +9,11 @@ namespace PopfileNet.Backend.Services;
 /// <summary>
 /// Provides per-owner classifier instances, loading models from the store on demand and caching them in memory.
 /// </summary>
-public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierOptions> options, Func<DateTime>? utcNow = null)
+public class ClassifierManager(
+    IClassifierModelStore store,
+    IOptions<ClassifierOptions> options,
+    Func<DateTime>? utcNow = null,
+    ILogger<ClassifierManager>? logger = null)
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
     private readonly Func<DateTime> _utcNow = utcNow ?? (() => DateTime.UtcNow);
@@ -23,6 +27,10 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
     /// Returns a trained classifier for the given owner, loading the persisted model on demand.
     /// Returns null when no model has been persisted for the owner.
     /// </summary>
+    /// <remarks>
+    /// Corrupted or missing artifacts are discarded together with their metadata so the owner is
+    /// reported as not trained and can retrain.
+    /// </remarks>
     public async Task<NaiveBayesianClassifier?> GetModelAsync(string ownerId, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
@@ -39,10 +47,26 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
 
         await using var stream = await store.OpenReadAsync(ownerId, ct);
         if (stream == null)
+        {
+            logger?.LogWarning(
+                "Classifier metadata for owner {OwnerId} exists but the model artifact is missing. Removing stale metadata.",
+                ownerId);
+            await store.DeleteAsync(ownerId, ct);
             return null;
+        }
 
         var classifier = new NaiveBayesianClassifier();
-        classifier.Load(stream);
+        try
+        {
+            classifier.Load(stream, meta.TrainingSampleCount);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or FormatException or InvalidDataException)
+        {
+            logger?.LogWarning(ex, "Discarding corrupted classifier model for owner {OwnerId}.", ownerId);
+            _cache.TryRemove(ownerId, out _);
+            await store.DeleteAsync(ownerId, ct);
+            return null;
+        }
 
         _cache[ownerId] = new CacheEntry(classifier, ClassifierSource.LoadedFromDisk) { LastUsedTicks = _utcNow().Ticks };
         Evict();
@@ -95,9 +119,15 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
     /// <summary>
     /// Returns the current status for the given owner, including where the model comes from.
     /// </summary>
+    /// <remarks>
+    /// A model only counts as trained when both its metadata and its artifact are present on disk.
+    /// </remarks>
     public async Task<ClassifierStatus> GetStatusAsync(string ownerId, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+
+        if (!await store.ExistsAsync(ownerId, ct))
+            return new ClassifierStatus(false, 0);
 
         var meta = await store.GetMetaAsync(ownerId, ct);
         if (meta == null)
