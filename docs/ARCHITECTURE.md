@@ -112,8 +112,9 @@ Pipeline:
 3. Naive Bayes training
 4. Prediction with score output
 
-The classifier supports persistence via `Save(Stream)` / `Load(Stream)` using
-ML.NET's native model format, and exposes `IsTrained` and `TrainingSampleCount`.
+The classifier supports persistence via `Save(Stream)` / `Load(Stream, trainingSampleCount)`
+using ML.NET's native model format, and exposes `IsTrained` and
+`TrainingSampleCount`.
 
 ## Model Persistence & Load-on-Demand
 
@@ -157,6 +158,46 @@ currently unused) can drive the owner key so each tenant keeps separate models.
   `NameIdentifier` claim and routes `/classifier/train`, `/classifier/predict`
   and `/classifier/status` through the store and manager (no static global
   model anymore).
+
+### Lifecycle
+
+Models are **not** preloaded at startup. The first request that needs a model
+(`/classifier/status` or `/classifier/predict`) loads it from disk for that
+owner; a restart therefore costs one load per active owner instead of a
+startup pass over every owner. Startup never fails because of a missing or
+broken artifact.
+
+`GET /classifier/status` reports where the model currently comes from:
+
+| `Source` | Meaning |
+|----------|---------|
+| `NotTrained` | No model metadata or no artifact on disk |
+| `TrainedInMemory` | Trained during this process (already persisted) |
+| `LoadedFromDisk` | Persisted by an earlier process, loaded (or loadable) from disk |
+
+`IsTrained` is only true when **both** the metadata row and `model.zip` exist,
+so a lost volume or a manually deleted artifact is reported as `NotTrained`
+instead of a phantom "Trained".
+
+### Failure handling
+
+- **Missing artifact** (metadata row without `model.zip`): the stale metadata is
+  removed and the owner is treated as not trained.
+- **Corrupted artifact** (ML.NET cannot deserialize the file): the artifact and
+  its metadata are deleted, the cache entry is dropped and a warning is logged.
+  The model is fully reproducible from the emails and buckets in the database,
+  so recovery is a single retrain.
+- **Predict without a model**: `POST /classifier/predict` returns
+  `409 Conflict` with error code `MODEL_NOT_TRAINED` (previously an empty
+  `200` result, which was indistinguishable from a real prediction).
+
+### Known limitation: shared training corpus
+
+Model artifacts are stored per owner, but `/classifier/train` currently trains
+on **all** emails in the database: neither `Email` nor `MailFolder` has an
+owner/account column yet. In a multi-user deployment every model is therefore
+trained on the same corpus. Scoping the training data per account/tenant is
+tracked in issue #60 and will require a schema change plus IMAP sync changes.
 
 ### Configuration
 

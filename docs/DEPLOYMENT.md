@@ -186,7 +186,14 @@ Can be overridden with environment variables, e.g. `Classifier__ModelsRoot=/data
 
 **Important:** `ModelsRoot` must point at a **persistent volume** so trained
 models survive container restarts/recreates (the same requirement as PostgreSQL
-data). In Docker Compose, mount a named volume:
+data).
+
+The Aspire AppHost already declares this for the generated Docker Compose file:
+it sets `Classifier__ModelsRoot=/data/classifier-models` on the backend service
+and mounts the named volume `classifier-models` at that path, so
+`compose/docker-compose.yaml.example` ships with persistence enabled.
+
+Deployments created before this change must add the mount manually:
 
 ```yaml
   backend:

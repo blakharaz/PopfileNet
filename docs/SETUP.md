@@ -66,6 +66,13 @@ variable or add a `Classifier` section to `PopfileNet.Backend/appsettings.json`:
 The `ClassifierModels` table is created automatically by the EF Core migration
 applied at backend startup.
 
+Models are loaded from disk on first use (not at startup). The classifier page
+shows whether the model is **not trained**, **trained this session**, or
+**loaded from disk**. If the artifact is missing or corrupted it is discarded
+and the model is reported as not trained — retrain from the classifier page to
+recover. In Docker Compose the AppHost already mounts a persistent volume for
+the model directory; see DEPLOYMENT.md.
+
 ## Running
 
 ### CLI Commands
