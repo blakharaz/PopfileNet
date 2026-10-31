@@ -55,8 +55,7 @@ public static class ClassifierGroupExtensions
         PopfileNetDbContext db, ClassifierManager manager, ClaimsPrincipal user)
     {
         var emails = await db.Emails
-            .Include(e => e.FolderNavigation)
-            .ThenInclude(f => f!.Bucket)
+            .Include(e => e.FolderNavigation!.Bucket)
             .ToListAsync();
 
         var validEmails = emails.Where(e => e.FolderNavigation?.Bucket != null).ToList();
