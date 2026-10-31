@@ -144,6 +144,30 @@ public sealed class ClassifierGroupExtensionsTests : IDisposable
     }
 
     [Fact]
+    public async Task PredictAsync_WithCorruptedModel_ReturnsConflictAndClearsMetadata()
+    {
+        using var db = CreateContext(nameof(PredictAsync_WithCorruptedModel_ReturnsConflictAndClearsMetadata));
+        db.Emails.Add(CreateEmail("1", "Inbox", "Work"));
+        await db.SaveChangesAsync();
+
+        var manager = CreateManager(nameof(PredictAsync_WithCorruptedModel_ReturnsConflictAndClearsMetadata));
+        await ClassifierGroupExtensions.TrainAsync(db, manager, _user);
+
+        // Corrupt the persisted artifact and force a reload from disk.
+        var store = CreateStore(nameof(PredictAsync_WithCorruptedModel_ReturnsConflictAndClearsMetadata));
+        await File.WriteAllBytesAsync(store.GetModelPath("test-user"), [1, 2, 3, 4, 5, 6, 7, 8]);
+        var freshManager = CreateManager(nameof(PredictAsync_WithCorruptedModel_ReturnsConflictAndClearsMetadata));
+
+        var result = await ClassifierGroupExtensions.PredictAsync(
+            new PredictRequest("1"), db, freshManager, _user);
+
+        var conflict = result.ShouldBeOfType<Conflict<ApiResponse<PredictionResult>>>();
+        conflict.Value!.Error!.Code.ShouldBe("MODEL_NOT_TRAINED");
+        File.Exists(store.GetModelPath("test-user")).ShouldBeFalse();
+        (await store.GetMetaAsync("test-user")).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task TrainAsync_WithUnlabeledData_ReturnsBadRequest()
     {
         using var db = CreateContext(nameof(TrainAsync_WithUnlabeledData_ReturnsBadRequest));
@@ -163,18 +187,17 @@ public sealed class ClassifierGroupExtensionsTests : IDisposable
     }
 
     [Fact]
-    public async Task PredictAsync_WithUntrainedClassifier_ReturnsEmptyResult()
+    public async Task PredictAsync_WithUntrainedClassifier_ReturnsConflict()
     {
-        using var db = CreateContext(nameof(PredictAsync_WithUntrainedClassifier_ReturnsEmptyResult));
-        var manager = CreateManager(nameof(PredictAsync_WithUntrainedClassifier_ReturnsEmptyResult));
+        using var db = CreateContext(nameof(PredictAsync_WithUntrainedClassifier_ReturnsConflict));
+        var manager = CreateManager(nameof(PredictAsync_WithUntrainedClassifier_ReturnsConflict));
         var request = new PredictRequest("test-id");
 
         var result = await ClassifierGroupExtensions.PredictAsync(request, db, manager, _user);
 
-        var ok = result.ShouldBeOfType<Ok<ApiResponse<PredictionResult>>>();
-        ok.Value!.IsSuccess.ShouldBeTrue();
-        ok.Value.Value!.PredictedBucket.ShouldBe("");
-        ok.Value.Value.Confidence.ShouldBe(0);
+        var conflict = result.ShouldBeOfType<Conflict<ApiResponse<PredictionResult>>>();
+        conflict.Value!.IsSuccess.ShouldBeFalse();
+        conflict.Value.Error!.Code.ShouldBe("MODEL_NOT_TRAINED");
     }
 
     [Fact]

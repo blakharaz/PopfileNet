@@ -80,7 +80,8 @@ public static class ClassifierGroupExtensions
     {
         var classifier = await manager.GetModelAsync(ResolveOwnerId(user));
         if (classifier == null)
-            return TypedResults.Ok(ApiResponse<PredictionResult>.Success(new PredictionResult("", 0, [])));
+            return TypedResults.Conflict(ApiResponse<PredictionResult>.Failure(
+                "MODEL_NOT_TRAINED", "No trained classifier model. Train the model first."));
 
         var email = await db.Emails.FindAsync(request.EmailId);
         if (email == null)

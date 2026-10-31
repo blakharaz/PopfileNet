@@ -98,18 +98,17 @@ public class ClassifierApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixt
     }
 
     [Fact]
-    public async Task Predict_WithoutTraining_ReturnsSuccessWithEmptyResult()
+    public async Task Predict_WithoutTraining_ReturnsConflict()
     {
         await LoginAsync();
         var response = await Client.PostAsJsonAsync("/classifier/predict", new PredictRequest("some-email-id"));
 
-        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         
         var content = await response.Content.ReadFromJsonAsync<ApiResponse<PredictionResult>>();
         content.ShouldNotBeNull();
-        content.IsSuccess.ShouldBeTrue();
-        content.Value.ShouldNotBeNull();
-        content.Value.PredictedBucket.ShouldBeEmpty();
+        content.IsSuccess.ShouldBeFalse();
+        content.Error!.Code.ShouldBe("MODEL_NOT_TRAINED");
     }
 
 [Fact]
@@ -152,6 +151,40 @@ public class ClassifierApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixt
         var prediction = await predictResponse.Content.ReadFromJsonAsync<ApiResponse<PredictionResult>>();
         prediction!.IsSuccess.ShouldBeTrue();
         prediction.Value!.PredictedBucket.ShouldBeOneOf("Work", "Personal");
+    }
+
+    [Fact]
+    public async Task CorruptModel_IsDiscardedAndStatusReportsNotTrained()
+    {
+        await LoginAsync();
+        await SeedEmailsAsync();
+
+        var trainResponse = await Client.PostAsync("/classifier/train", null);
+        trainResponse.EnsureSuccessStatusCode();
+
+        var modelPath = Directory
+            .GetFiles(ModelsRoot, "model.zip", SearchOption.AllDirectories)
+            .Single();
+        await File.WriteAllBytesAsync(modelPath, [1, 2, 3, 4, 5, 6, 7, 8]);
+
+        // A new factory simulates a restart, so the corrupted artifact is loaded from disk.
+        Client.Dispose();
+        await Factory.DisposeAsync();
+        Factory = CreateWebApplicationFactory(Fixture.ConnectionString);
+        Client = Factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        await LoginAsync();
+
+        var predictResponse = await Client.PostAsJsonAsync("/classifier/predict", new PredictRequest("1"));
+        predictResponse.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        var prediction = await predictResponse.Content.ReadFromJsonAsync<ApiResponse<PredictionResult>>();
+        prediction!.Error!.Code.ShouldBe("MODEL_NOT_TRAINED");
+
+        File.Exists(modelPath).ShouldBeFalse();
+
+        var status = await (await Client.GetAsync("/classifier/status"))
+            .Content.ReadFromJsonAsync<ApiResponse<ClassifierStatus>>();
+        status!.Value!.IsTrained.ShouldBeFalse();
+        status.Value.Source.ShouldBe("NotTrained");
     }
 
     [Fact]
