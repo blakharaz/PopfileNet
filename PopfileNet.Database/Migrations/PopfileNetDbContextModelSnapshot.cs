@@ -17,7 +17,7 @@ namespace PopfileNet.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.7")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -228,10 +228,23 @@ namespace PopfileNet.Database.Migrations
                     b.Property<string>("BucketId")
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("LastSyncAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LastSyncEmailCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LastSyncError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int>("SyncStatus")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

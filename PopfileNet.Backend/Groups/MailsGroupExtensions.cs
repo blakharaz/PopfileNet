@@ -71,7 +71,13 @@ public static class MailsGroupExtensions
         var folders = await db.MailFolders
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(f => new FolderDto(f.Id, f.Name))
+            .Select(f => new FolderDto(
+                f.Id,
+                f.Name,
+                f.SyncStatus.ToString(),
+                f.LastSyncAt,
+                f.LastSyncEmailCount,
+                f.LastSyncError))
             .ToListAsync();
         
         return TypedResults.Ok(PagedApiResponse<FolderDto>.Success(folders, page, pageSize, totalCount));

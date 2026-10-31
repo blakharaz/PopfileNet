@@ -70,4 +70,47 @@ public class EmailRepository(PopfileNetDbContext dbContext) : IEmailRepository
         dbContext.MailFolders.AddRange(folders);
         await dbContext.SaveChangesAsync(ct);
     }
+
+    public async Task MarkFolderSyncingAsync(string folderId, CancellationToken ct = default)
+    {
+        await dbContext.MailFolders
+            .Where(f => f.Id == folderId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(f => f.SyncStatus, FolderSyncStatus.Syncing)
+                .SetProperty(f => f.LastSyncError, (string?)null), ct);
+    }
+
+    public async Task CompleteFolderSyncAsync(string folderId, int syncedEmailCount, CancellationToken ct = default)
+    {
+        await dbContext.MailFolders
+            .Where(f => f.Id == folderId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(f => f.SyncStatus, FolderSyncStatus.Idle)
+                .SetProperty(f => f.LastSyncAt, DateTimeOffset.UtcNow)
+                .SetProperty(f => f.LastSyncEmailCount, syncedEmailCount)
+                .SetProperty(f => f.LastSyncError, (string?)null), ct);
+    }
+
+    public async Task FailFolderSyncAsync(string folderId, string error, CancellationToken ct = default)
+    {
+        var message = error.Length > MaxSyncErrorLength ? error[..MaxSyncErrorLength] : error;
+
+        await dbContext.MailFolders
+            .Where(f => f.Id == folderId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(f => f.SyncStatus, FolderSyncStatus.Error)
+                .SetProperty(f => f.LastSyncAt, DateTimeOffset.UtcNow)
+                .SetProperty(f => f.LastSyncError, message), ct);
+    }
+
+    public async Task<int> ResetStaleSyncingFoldersAsync(CancellationToken ct = default)
+    {
+        return await dbContext.MailFolders
+            .Where(f => f.SyncStatus == FolderSyncStatus.Syncing)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(f => f.SyncStatus, FolderSyncStatus.Error)
+                .SetProperty(f => f.LastSyncError, "Sync was interrupted by an application restart"), ct);
+    }
+
+    private const int MaxSyncErrorLength = 1000;
 }

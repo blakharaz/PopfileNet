@@ -72,12 +72,15 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
         builder.Entity<MailFolder>(entity =>
         {
             entity.HasKey(f => f.Id);
-            
+
             entity.Property(f => f.Name)
                 .IsRequired()
                 .HasMaxLength(200);
-            
+
             entity.HasIndex(f => f.Name).IsUnique();
+
+            entity.Property(f => f.LastSyncError)
+                .HasMaxLength(1000);
         });
 
         builder.Entity<Bucket>(entity =>
