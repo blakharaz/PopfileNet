@@ -1,4 +1,4 @@
-using PopfileNet.Common;
+using PopfileNet.Backend.Services;
 using PopfileNet.Database.Repositories;
 
 namespace PopfileNet.Backend.BackgroundServices;
@@ -15,11 +15,24 @@ public class EmailSyncBackgroundService(
     {
         logger.LogInformation("Email sync background service started with interval {Interval}", _syncInterval);
 
+        await ResetStaleFolderStatesAsync(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await SyncEmailsAsync(stoppingToken);
+                using var scope = scopeFactory.CreateScope();
+                var syncService = scope.ServiceProvider.GetRequiredService<EmailSyncService>();
+
+                var started = await syncService.TryRunSyncAsync(stoppingToken);
+                if (!started)
+                {
+                    logger.LogDebug("Manual sync already running; skipping scheduled sync");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Service is shutting down
             }
             catch (Exception ex)
             {
@@ -30,61 +43,22 @@ public class EmailSyncBackgroundService(
         }
     }
 
-    private async Task SyncEmailsAsync(CancellationToken cancellationToken)
+    private async Task ResetStaleFolderStatesAsync(CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
-        var emailRepository = scope.ServiceProvider.GetRequiredService<IEmailRepository>();
-        var imapService = scope.ServiceProvider.GetRequiredService<IImapService>();
-
-        if (!await imapService.IsConfiguredAsync(cancellationToken))
+        try
         {
-            logger.LogInformation("IMAP settings not configured; skipping sync");
-            return;
-        }
+            using var scope = scopeFactory.CreateScope();
+            var emailRepository = scope.ServiceProvider.GetRequiredService<IEmailRepository>();
 
-        var folders = await imapService.GetAllPersonalFoldersAsync(cancellationToken);
-        
-        var existingFolders = await emailRepository.GetAllFolderIdByNameAsync(cancellationToken);
-        var newFolderNames = folders.Select(f => f.FullName).Except(existingFolders.Keys).ToList();
-
-        if (newFolderNames.Count > 0)
-        {
-            var newFolders = newFolderNames.Select(name => new MailFolder { Name = name });
-            await emailRepository.InsertFoldersAsync(newFolders, cancellationToken);
-            existingFolders = await emailRepository.GetAllFolderIdByNameAsync(cancellationToken);
-        }
-
-        var existingImapUids = await emailRepository.GetExistingImapUidsByFolderAsync(cancellationToken);
-
-        List<Email> allEmails = [];
-
-        foreach (var folder in folders)
-        {
-            var folderId = existingFolders[folder.FullName];
-            var ids = await imapService.FetchEmailIdsAsync(folder.FullName, cancellationToken);
-            var newIds = ids.Where(id => !existingImapUids.ContainsKey(id.ToString())).ToList();
-
-            if (newIds.Count == 0)
+            var resetCount = await emailRepository.ResetStaleSyncingFoldersAsync(ct);
+            if (resetCount > 0)
             {
-                continue;
+                logger.LogInformation("Reset {Count} folder(s) stuck in syncing state", resetCount);
             }
-
-            var emails = await imapService.FetchEmailsAsync(newIds, folder.FullName, cancellationToken);
-            foreach (var email in emails)
-            {
-                email.Folder = folderId;
-            }
-            allEmails.AddRange(emails);
         }
-
-        if (allEmails.Count > 0)
+        catch (Exception ex)
         {
-            var insertedCount = await emailRepository.InsertEmailsIgnoringDuplicatesAsync(allEmails, cancellationToken);
-            logger.LogInformation("Synced {Count} new emails", insertedCount);
-        }
-        else
-        {
-            logger.LogDebug("No new emails to sync");
+            logger.LogError(ex, "Failed to reset stale folder sync states");
         }
     }
 }

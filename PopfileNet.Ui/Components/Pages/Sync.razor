@@ -1,38 +1,76 @@
 @page "/sync"
 @using PopfileNet.Ui.Services
+@implements IDisposable
 
 <FluentCard data-testid="sync-card">
     <h2>Mail Sync</h2>
-    
+
     <FluentStack Orientation="Orientation.Vertical" Gap="20" data-testid="sync-stack">
         <FluentStack Orientation="Orientation.Horizontal" Gap="10">
-            <FluentButton Appearance="Appearance.Accent" @onclick="RefreshFolders">Refresh Folders</FluentButton>
-            <FluentButton @onclick="SyncAll">Sync All Emails</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" @onclick="@(() => RefreshFolders())" Disabled="IsLoading">Refresh Folders</FluentButton>
+            <FluentButton @onclick="SyncAll" Disabled="@(IsLoading || AnyFolderSyncing)">Sync All Emails</FluentButton>
         </FluentStack>
-        
+
+        @if (AnyFolderSyncing)
+        {
+            <FluentBadge Appearance="Appearance.Accent" data-testid="sync-activity-banner">Sync in progress…</FluentBadge>
+        }
+        else if (!string.IsNullOrEmpty(SyncStatusMessage))
+        {
+            <FluentBadge Appearance="Appearance.Neutral" data-testid="sync-status-message">@SyncStatusMessage</FluentBadge>
+        }
+
+        @if (Folders.Any(f => f.LastSyncAt != null))
+        {
+            <p data-testid="sync-summary">
+                Last folder sync: <strong>@(MostRecentSync?.LocalDateTime.ToString("g"))</strong>
+                &mdash; new emails: <strong>@TotalLastSyncEmailCount</strong>
+                @if (ErrorFolderCount > 0)
+                {
+                    <FluentBadge Appearance="Appearance.Neutral"
+                                 Style="background-color: #c50f1f; color: white; margin-left: 10px;"
+                                 data-testid="sync-error-badge">
+                        @($"{ErrorFolderCount} folder(s) with errors")
+                    </FluentBadge>
+                }
+            </p>
+        }
+
         <table>
             <thead>
                 <tr>
-                    <th>Folder Name</th>
-                    <th>Actions</th>
+                    <th>Folder</th>
+                    <th>Status</th>
+                    <th>Last Sync</th>
+                    <th>Emails Added</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var folder in Folders)
                 {
-                    <tr>
+                    <tr data-testid="folder-row-@folder.Name">
                         <td>@folder.Name</td>
-                        <td><FluentButton @onclick="() => SyncFolder(folder.Name)">Sync</FluentButton></td>
+                        <td>
+                            <FluentBadge Appearance="@GetBadgeAppearance(folder.Status)"
+                                         Style="@GetBadgeStyle(folder.Status)"
+                                         data-testid="folder-status">@folder.Status</FluentBadge>
+                            @if (!string.IsNullOrEmpty(folder.LastSyncError))
+                            {
+                                <p style="color: #c50f1f; font-size: 0.85rem; margin: 4px 0 0 0;" data-testid="folder-error">@folder.LastSyncError</p>
+                            }
+                        </td>
+                        <td>@(folder.LastSyncAt?.LocalDateTime.ToString("g") ?? "-")</td>
+                        <td>@(folder.LastSyncAt is null ? "-" : folder.LastSyncEmailCount.ToString())</td>
                     </tr>
                 }
             </tbody>
         </table>
-        
+
         @if (IsLoading)
         {
             <FluentProgressRing />
         }
-        
+
         @if (!string.IsNullOrEmpty(StatusMessage))
         {
             <FluentBadge Appearance="Appearance.Neutral">
@@ -44,14 +82,14 @@
 
 <FluentCard>
     <h2>Database Statistics</h2>
-    
+
     <p>Total Folders: @(FoldersResponse?.TotalCount ?? 0)</p>
     <p>Total Emails: @(MailsResponse?.TotalCount ?? 0)</p>
 </FluentCard>
 
 <FluentCard>
     <h2>Recent Emails</h2>
-    
+
     @if (MailsResponse?.Items.Count > 0)
     {
         <table>
@@ -75,7 +113,7 @@
                 }
             </tbody>
         </table>
-        
+
         <FluentStack Orientation="Orientation.Horizontal" Gap="10" Style="margin-top: 10px;">
             <FluentButton @onclick="PreviousPage" Disabled="@(MailsResponse.Page <= 1)">Previous</FluentButton>
             <span>Page @MailsResponse.Page of @MailsResponse.TotalPages</span>
@@ -91,23 +129,48 @@
 @code {
     [Inject]
     public IApiClient Api { get; set; } = null!;
-    
+
     public List<FolderDto> Folders { get; set; } = [];
     public PagedResponse<FolderDto>? FoldersResponse { get; set; }
     public PagedResponse<EmailDto>? MailsResponse { get; set; }
     public bool IsLoading { get; set; }
     public string StatusMessage { get; set; } = "";
+    public string SyncStatusMessage { get; set; } = "";
     public int CurrentPage { get; set; } = 1;
-    
+
+    private bool isPolling;
+    private CancellationTokenSource? pollCts;
+
+    public bool AnyFolderSyncing => Folders.Any(f => f.Status == "Syncing");
+
+    public DateTimeOffset? MostRecentSync =>
+        Folders.Where(f => f.LastSyncAt != null)
+            .Select(f => f.LastSyncAt)
+            .DefaultIfEmpty(null)
+            .Max();
+
+    public int TotalLastSyncEmailCount => Folders.Sum(f => f.LastSyncEmailCount);
+
+    public int ErrorFolderCount => Folders.Count(f => f.Status == "Error");
+
     protected override async Task OnInitializedAsync()
     {
         await RefreshFolders();
         await LoadMails();
+
+        if (AnyFolderSyncing)
+        {
+            EnsurePolling();
+        }
     }
-    
-    private async Task RefreshFolders()
+
+    private async Task RefreshFolders(bool showLoader = true)
     {
-        IsLoading = true;
+        if (showLoader)
+        {
+            IsLoading = true;
+        }
+
         try
         {
             FoldersResponse = await Api.GetFoldersAsync(1, 100);
@@ -123,7 +186,80 @@
             IsLoading = false;
         }
     }
-    
+
+    private async Task SyncAll()
+    {
+        try
+        {
+            var result = await Api.SyncEmailsAsync();
+            SyncStatusMessage = result?.Message ?? "Sync started";
+            await RefreshFolders(showLoader: false);
+
+            if (AnyFolderSyncing)
+            {
+                EnsurePolling();
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private void EnsurePolling()
+    {
+        if (isPolling)
+        {
+            return;
+        }
+
+        isPolling = true;
+        pollCts = new CancellationTokenSource();
+        _ = PollFolderStatesAsync(pollCts.Token);
+    }
+
+    private async Task PollFolderStatesAsync(CancellationToken ct)
+    {
+        var startedAt = DateTimeOffset.UtcNow;
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                await RefreshFolders(showLoader: false);
+
+                // Keep polling a few extra seconds in case the backend has not marked
+                // the first folder as syncing yet (small startup race after the trigger).
+                var keepPolling = AnyFolderSyncing || DateTimeOffset.UtcNow - startedAt < TimeSpan.FromSeconds(6);
+                if (!keepPolling)
+                {
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Page was disposed
+        }
+        finally
+        {
+            isPolling = false;
+        }
+    }
+
+    private static Appearance GetBadgeAppearance(string status) => status switch
+    {
+        "Syncing" => Appearance.Accent,
+        _ => Appearance.Neutral
+    };
+
+    private static string? GetBadgeStyle(string status) => status switch
+    {
+        "Error" => "background-color: #c50f1f; color: white;",
+        _ => null
+    };
+
     private async Task LoadMails()
     {
         try
@@ -135,45 +271,7 @@
             StatusMessage = $"Error loading emails: {ex.Message}";
         }
     }
-    
-    private async Task SyncFolder(string folderName)
-    {
-        IsLoading = true;
-        try
-        {
-            var result = await Api.SyncEmailsAsync();
-            StatusMessage = result?.Message ?? "Sync completed";
-            await LoadMails();
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-    
-    private async Task SyncAll()
-    {
-        IsLoading = true;
-        try
-        {
-            var result = await Api.SyncEmailsAsync();
-            StatusMessage = result?.Message ?? "Sync completed";
-            await LoadMails();
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-    
+
     private async Task PreviousPage()
     {
         if (CurrentPage > 1)
@@ -182,7 +280,7 @@
             await LoadMails();
         }
     }
-    
+
     private async Task NextPage()
     {
         if (MailsResponse?.HasNext == true)
@@ -190,5 +288,12 @@
             CurrentPage++;
             await LoadMails();
         }
+    }
+
+    public void Dispose()
+    {
+        pollCts?.Cancel();
+        pollCts?.Dispose();
+        pollCts = null;
     }
 }
