@@ -159,6 +159,19 @@ public sealed class ClassifierManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveModelAsync_RespectsMaxCachedModels()
+    {
+        var options = new ClassifierOptions { ModelsRoot = _modelsRoot, MaxCachedModels = 2 };
+        var manager = new ClassifierManager(CreateStore(), Microsoft.Extensions.Options.Options.Create(options));
+
+        await manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+        await manager.SaveModelAsync("owner-2", CreateTrainedClassifier());
+        await manager.SaveModelAsync("owner-3", CreateTrainedClassifier());
+
+        manager.CacheCount.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task SaveThenGet_CachesAndReturnsModel()
     {
         var classifier = CreateTrainedClassifier();

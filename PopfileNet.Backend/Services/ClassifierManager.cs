@@ -99,6 +99,7 @@ public class ClassifierManager(
         await store.SaveAsync(ownerId, stream, meta, ct);
 
         _cache[ownerId] = new CacheEntry(classifier, ClassifierSource.TrainedInMemory) { LastUsedTicks = _utcNow().Ticks };
+        Evict();
     }
 
     /// <summary>
