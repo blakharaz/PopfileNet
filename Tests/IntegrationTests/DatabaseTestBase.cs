@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
 using PopfileNet.Backend;
+using PopfileNet.Backend.Services;
 using PopfileNet.Common;
 using PopfileNet.Database;
 using Xunit;
@@ -18,6 +19,8 @@ public abstract class DatabaseTestBase : IAsyncLifetime
     protected readonly DatabaseFixture Fixture;
     protected HttpClient Client = null!;
     protected WebApplicationFactory<Program> Factory = null!;
+    protected readonly string ModelsRoot = Path.Combine(
+        Path.GetTempPath(), "popfilenet-it-" + Guid.NewGuid().ToString("N"));
 
     protected DatabaseTestBase(DatabaseFixture fixture)
     {
@@ -27,6 +30,7 @@ public abstract class DatabaseTestBase : IAsyncLifetime
     public virtual async Task InitializeAsync()
     {
         await Fixture.ResetDatabaseAsync();
+        Directory.CreateDirectory(ModelsRoot);
         await SetupClientAsync();
 
         using var scope = Factory.Services.CreateScope();
@@ -53,6 +57,8 @@ public abstract class DatabaseTestBase : IAsyncLifetime
         {
             await Factory.DisposeAsync();
         }
+        if (Directory.Exists(ModelsRoot))
+            Directory.Delete(ModelsRoot, recursive: true);
     }
 
     protected WebApplicationFactory<Program> CreateWebApplicationFactory(string? connectionString = null)
@@ -80,6 +86,8 @@ public abstract class DatabaseTestBase : IAsyncLifetime
                     {
                         options.UseNpgsql(connString);
                     });
+                    services.AddSingleton(
+                        Microsoft.Extensions.Options.Options.Create(new ClassifierOptions { ModelsRoot = ModelsRoot }));
                 });
             });
     }

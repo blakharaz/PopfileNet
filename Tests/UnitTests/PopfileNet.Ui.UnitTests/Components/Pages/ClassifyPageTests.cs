@@ -82,6 +82,25 @@ public class ClassifyPageTests : BunitContext
             },
             TimeSpan.FromSeconds(2)));
     }
-    
 
+    [Theory]
+    [InlineData("LoadedFromDisk", "Loaded from disk")]
+    [InlineData("TrainedInMemory", "Trained this session")]
+    [InlineData("NotTrained", "Not trained")]
+    public async Task Classify_DisplaysModelSource(string source, string expected)
+    {
+        Services.AddSingleton<IApiClient>(new StatusApiClient(new ClassifierStatus(true, 5, source, DateTime.UtcNow)));
+
+        var cut = Render<Classify>();
+
+        await cut.InvokeAsync(() => cut.WaitForAssertion(
+            () => Assert.Contains(expected, cut.Markup),
+            TimeSpan.FromSeconds(2)));
+    }
+
+    private sealed class StatusApiClient(ClassifierStatus status) : MockApiClient
+    {
+        public override Task<ClassifierStatus?> GetClassifierStatusAsync() =>
+            Task.FromResult<ClassifierStatus?>(status);
+    }
 }

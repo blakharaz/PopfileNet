@@ -10,6 +10,7 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
     public DbSet<Bucket> Buckets { get; set; } = null!;
     public DbSet<MailFolder> MailFolders { get; set; } = null!;
     public DbSet<Settings> Settings { get; set; } = null!;
+    public DbSet<ClassifierModelMeta> ClassifierModels { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -100,6 +101,21 @@ public class PopfileNetDbContext(DbContextOptions<PopfileNetDbContext> options) 
         builder.Entity<Settings>(entity =>
         {
             entity.HasKey(s => s.Id);
+        });
+
+        builder.Entity<ClassifierModelMeta>(entity =>
+        {
+            entity.HasKey(m => m.OwnerId);
+
+            entity.Property(m => m.OwnerId)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(m => m.TrainingSampleCount);
+
+            entity.Property(m => m.TrainedAtUtc);
+
+            entity.Property(m => m.FormatVersion);
         });
 
         builder.Entity<ApplicationUser>(entity =>

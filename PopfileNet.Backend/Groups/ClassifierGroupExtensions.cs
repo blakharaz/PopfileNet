@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using PopfileNet.Backend.Models;
+using PopfileNet.Backend.Services;
 using PopfileNet.Classifier;
 using PopfileNet.Common;
 using PopfileNet.Database;
@@ -12,20 +14,13 @@ namespace PopfileNet.Backend.Groups;
 /// </summary>
 public static class ClassifierGroupExtensions
 {
-    private static NaiveBayesianClassifier? _classifier;
-    private static bool _isTrained;
+    private const string DefaultOwnerId = "default";
 
     /// <summary>
     /// Maps the classifier endpoints to the application.
     /// </summary>
     /// <param name="app">The web application.</param>
     /// <returns>The configured web application.</returns>
-    internal static void Reset()
-    {
-        _classifier = null;
-        _isTrained = false;
-    }
-
     public static WebApplication AddClassifierGroup(this WebApplication app)
     {
         var group = app.MapGroup("/classifier").RequireAuthorization();
@@ -38,16 +33,27 @@ public static class ClassifierGroupExtensions
         return app;
     }
 
-    internal static Ok<ApiResponse<ClassifierStatus>> GetStatusAsync()
+    /// <summary>
+    /// Resolves the model owner id for the current authenticated user.
+    /// </summary>
+    private static string ResolveOwnerId(ClaimsPrincipal user)
     {
-        return TypedResults.Ok(ApiResponse<ClassifierStatus>.Success(new ClassifierStatus(_isTrained, 0)));
+        var id = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        return string.IsNullOrWhiteSpace(id) ? DefaultOwnerId : id;
     }
 
-    internal static async Task<IResult> TrainAsync(PopfileNetDbContext db)
+    internal static async Task<Ok<ApiResponse<ClassifierStatus>>> GetStatusAsync(
+        ClassifierManager manager, ClaimsPrincipal user)
+    {
+        var status = await manager.GetStatusAsync(ResolveOwnerId(user));
+        return TypedResults.Ok(ApiResponse<ClassifierStatus>.Success(status));
+    }
+
+    internal static async Task<IResult> TrainAsync(
+        PopfileNetDbContext db, ClassifierManager manager, ClaimsPrincipal user)
     {
         var emails = await db.Emails
-            .Include(e => e.FolderNavigation)
-            .ThenInclude(f => f!.Bucket)
+            .Include(e => e.FolderNavigation!.Bucket)
             .ToListAsync();
 
         var validEmails = emails.Where(e => e.FolderNavigation?.Bucket != null).ToList();
@@ -62,23 +68,26 @@ public static class ClassifierGroupExtensions
             trainingData.AddMail(email, bucketName);
         }
 
-        _classifier = new NaiveBayesianClassifier();
-        _classifier.Train(trainingData);
-        _isTrained = true;
+        var classifier = new NaiveBayesianClassifier();
+        classifier.Train(trainingData);
+        await manager.SaveModelAsync(ResolveOwnerId(user), classifier);
 
         return TypedResults.Ok(ApiResponse<bool>.Success(true));
     }
 
-    internal static async Task<IResult> PredictAsync(PredictRequest request, PopfileNetDbContext db)
+    internal static async Task<IResult> PredictAsync(
+        PredictRequest request, PopfileNetDbContext db, ClassifierManager manager, ClaimsPrincipal user)
     {
-        if (_classifier == null || !_isTrained)
-            return TypedResults.Ok(ApiResponse<PredictionResult>.Success(new PredictionResult("", 0, [])));
+        var classifier = await manager.GetModelAsync(ResolveOwnerId(user));
+        if (classifier == null)
+            return TypedResults.Conflict(ApiResponse<PredictionResult>.Failure(
+                "MODEL_NOT_TRAINED", "No trained classifier model. Train the model first."));
 
         var email = await db.Emails.FindAsync(request.EmailId);
         if (email == null)
             return TypedResults.NotFound(ApiResponse<PredictionResult>.Failure("EMAIL_NOT_FOUND", "Email not found"));
 
-        var prediction = _classifier.Predict(email);
+        var prediction = classifier.Predict(email);
         
         var result = new PredictionResult(
             prediction.PredictedLabel, 

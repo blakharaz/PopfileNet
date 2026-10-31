@@ -17,7 +17,7 @@ namespace PopfileNet.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.7")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -172,6 +172,26 @@ namespace PopfileNet.Database.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Buckets");
+                });
+
+            modelBuilder.Entity("PopfileNet.Common.ClassifierModelMeta", b =>
+                {
+                    b.Property<string>("OwnerId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("FormatVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("TrainedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TrainingSampleCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("OwnerId");
+
+                    b.ToTable("ClassifierModels");
                 });
 
             modelBuilder.Entity("PopfileNet.Common.Email", b =>

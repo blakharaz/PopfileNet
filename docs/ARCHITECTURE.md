@@ -112,6 +112,111 @@ Pipeline:
 3. Naive Bayes training
 4. Prediction with score output
 
+The classifier supports persistence via `Save(Stream)` / `Load(Stream, trainingSampleCount)`
+using ML.NET's native model format, and exposes `IsTrained` and
+`TrainingSampleCount`.
+
+## Model Persistence & Load-on-Demand
+
+Trained classifier models are persisted so a model survives an application
+restart and can be loaded lazily per owner. Models are split into two parts:
+
+- **Blob**: the ML.NET artifact (`model.zip`) written to disk
+- **Metadata**: a `ClassifierModels` table in PostgreSQL (one row per owner)
+
+### Disk layout
+
+```
+{Classifier:ModelsRoot}/{ownerId}/model.zip
+```
+
+`ownerId` is the authenticated user's ID, lowercased and sanitized for the
+filesystem. Each owner gets its own sub-directory, which is the foundation for
+multi-tenancy: in the future `ApplicationUser.TenantId` (already on the model,
+currently unused) can drive the owner key so each tenant keeps separate models.
+
+### Components
+
+- `IClassifierModelStore` (`PopfileNet.Common`) - stream-typed interface for
+  saving/opening/querying/deleting a model per owner. It is deliberately free of
+  ML.NET types so the storage strategy can be swapped (files+Postgres today,
+  object storage later).
+- `EntityFrameworkClassifierModelStore` (`PopfileNet.Backend.Services`) - blob
+  on disk (temp-file + rename for crash safety), metadata upserted in
+  PostgreSQL; blob is rolled back if the metadata write fails.
+- `ClassifierManager` (`PopfileNet.Backend.Services`) - the load-on-demand entry
+  point. Caches one classifier instance per owner in a `ConcurrentDictionary`,
+  each with its own `MLContext` (ML.NET is not thread-safe, so per-owner
+  instances with their own contexts are what makes concurrent multi-user
+  prediction safe). On a cache miss it reads the metadata row (cheap) and if a
+  model exists, loads the blob into a fresh classifier.
+- LRU/TTL eviction: the in-memory cache is bounded by `MaxCachedModels`
+  (LRU) and `CacheTtl` so idle owners are released without losing data —
+  eviction is lossless because the model stays on disk and is re-hydrated on
+  the next request.
+- `ClassifierGroupExtensions` resolves the owner from the authenticated user's
+  `NameIdentifier` claim and routes `/classifier/train`, `/classifier/predict`
+  and `/classifier/status` through the store and manager (no static global
+  model anymore).
+
+### Lifecycle
+
+Models are **not** preloaded at startup. The first request that needs a model
+(`/classifier/status` or `/classifier/predict`) loads it from disk for that
+owner; a restart therefore costs one load per active owner instead of a
+startup pass over every owner. Startup never fails because of a missing or
+broken artifact.
+
+`GET /classifier/status` reports where the model currently comes from:
+
+| `Source` | Meaning |
+|----------|---------|
+| `NotTrained` | No model metadata or no artifact on disk |
+| `TrainedInMemory` | Trained during this process (already persisted) |
+| `LoadedFromDisk` | Persisted by an earlier process, loaded (or loadable) from disk |
+
+`IsTrained` is only true when **both** the metadata row and `model.zip` exist,
+so a lost volume or a manually deleted artifact is reported as `NotTrained`
+instead of a phantom "Trained".
+
+### Failure handling
+
+- **Missing artifact** (metadata row without `model.zip`): the stale metadata is
+  removed and the owner is treated as not trained.
+- **Corrupted artifact** (ML.NET cannot deserialize the file): the artifact and
+  its metadata are deleted, the cache entry is dropped and a warning is logged.
+  The model is fully reproducible from the emails and buckets in the database,
+  so recovery is a single retrain.
+- **Predict without a model**: `POST /classifier/predict` returns
+  `409 Conflict` with error code `MODEL_NOT_TRAINED` (previously an empty
+  `200` result, which was indistinguishable from a real prediction).
+
+### Known limitation: shared training corpus
+
+Model artifacts are stored per owner, but `/classifier/train` currently trains
+on **all** emails in the database: neither `Email` nor `MailFolder` has an
+owner/account column yet. In a multi-user deployment every model is therefore
+trained on the same corpus. Scoping the training data per account/tenant is
+tracked in issue #60 and will require a schema change plus IMAP sync changes.
+
+### Configuration
+
+`Classifier` section in `appsettings.json`:
+
+```json
+{
+  "Classifier": {
+    "ModelsRoot": "classifier-models",
+    "MaxCachedModels": 16,
+    "CacheTtl": "00:20:00"
+  }
+}
+```
+
+`ModelsRoot` is relative to the backend working directory by default; on
+deployments it should be an absolute path on a persistent volume (see
+DEPLOYMENT.md).
+
 ### PopfileNet.Cli
 
 Console application using [System.CommandLine](https://docs.microsoft.com/en-us/dotnet/standard/commandline/) for development testing only:

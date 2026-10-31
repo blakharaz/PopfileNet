@@ -8,8 +8,12 @@
         <FluentCard>
             <h3>Training</h3>
             <FluentStack Orientation="Orientation.Vertical" Gap="10">
-                <p>Status: <strong>@(Status?.IsTrained == true ? "Trained" : "Not Trained")</strong></p>
+                <p>Status: <strong>@SourceLabel</strong></p>
                 <p>Training Data: @(Status?.TrainingDataCount ?? 0) emails</p>
+                @if (Status?.TrainedAtUtc is { } trainedAt)
+                {
+                    <p>Trained: @trainedAt.ToLocalTime().ToString("g")</p>
+                }
                 <FluentButton Appearance="Appearance.Accent" @onclick="Train" Disabled="@IsTraining">
                     @(IsTraining ? "Training..." : "Train Model")
                 </FluentButton>
@@ -118,6 +122,16 @@
     public PredictionResult? Prediction { get; set; }
     public string StatusMessage { get; set; } = "";
     public bool IsTraining { get; set; }
+
+    public string SourceLabel => Status switch
+    {
+        null => "Not trained",
+        { IsTrained: false } => "Not trained",
+        { Source: "NotTrained" } => "Not trained",
+        { Source: "LoadedFromDisk" } => "Loaded from disk",
+        { Source: "TrainedInMemory" } => "Trained this session",
+        _ => "Trained"
+    };
     
     protected override async Task OnInitializedAsync()
     {
