@@ -125,6 +125,7 @@ public class ClassifierApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixt
             .Content.ReadFromJsonAsync<ApiResponse<ClassifierStatus>>();
         statusAfterTrain!.Value!.IsTrained.ShouldBeTrue();
         statusAfterTrain.Value.TrainingDataCount.ShouldBe(3);
+        statusAfterTrain.Value.Source.ShouldBe("TrainedInMemory");
 
         // The model artifact must exist on disk under the authenticated user's owner directory.
         var modelPath = Directory
@@ -144,6 +145,7 @@ public class ClassifierApiTests(DatabaseFixture fixture) : DatabaseTestBase(fixt
         var statusAfterRestart = await (await Client.GetAsync("/classifier/status"))
             .Content.ReadFromJsonAsync<ApiResponse<ClassifierStatus>>();
         statusAfterRestart!.Value!.IsTrained.ShouldBeTrue();
+        statusAfterRestart.Value.Source.ShouldBe("LoadedFromDisk");
 
         var predictResponse = await Client.PostAsJsonAsync("/classifier/predict", new PredictRequest("1"));
         predictResponse.EnsureSuccessStatusCode();

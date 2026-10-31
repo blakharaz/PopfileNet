@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PopfileNet.Backend.Models;
 using PopfileNet.Backend.Services;
 using PopfileNet.Classifier;
 using PopfileNet.Common;
@@ -63,6 +64,41 @@ public sealed class ClassifierManagerTests : IDisposable
     {
         var result = await _manager.GetModelAsync("unknown-owner");
         result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_NoModel_ReturnsNotTrained()
+    {
+        var status = await _manager.GetStatusAsync("unknown-owner");
+
+        status.IsTrained.ShouldBeFalse();
+        status.Source.ShouldBe(ClassifierSource.NotTrained);
+        status.TrainingDataCount.ShouldBe(0);
+        status.TrainedAtUtc.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_AfterSave_ReturnsTrainedInMemory()
+    {
+        await _manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+
+        var status = await _manager.GetStatusAsync("owner-1");
+
+        status.IsTrained.ShouldBeTrue();
+        status.Source.ShouldBe(ClassifierSource.TrainedInMemory);
+        status.TrainedAtUtc.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_FreshManager_ReturnsLoadedFromDisk()
+    {
+        await _manager.SaveModelAsync("owner-1", CreateTrainedClassifier());
+
+        var freshManager = new ClassifierManager(CreateStore(), Microsoft.Extensions.Options.Options.Create(_options));
+        var status = await freshManager.GetStatusAsync("owner-1");
+
+        status.IsTrained.ShouldBeTrue();
+        status.Source.ShouldBe(ClassifierSource.LoadedFromDisk);
     }
 
     [Fact]

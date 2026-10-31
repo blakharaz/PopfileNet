@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
+using PopfileNet.Backend.Models;
 using PopfileNet.Classifier;
 using PopfileNet.Common;
 
@@ -43,8 +44,7 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
         var classifier = new NaiveBayesianClassifier();
         classifier.Load(stream);
 
-        var created = new CacheEntry(classifier) { LastUsedTicks = _utcNow().Ticks };
-        _cache[ownerId] = created;
+        _cache[ownerId] = new CacheEntry(classifier, ClassifierSource.LoadedFromDisk) { LastUsedTicks = _utcNow().Ticks };
         Evict();
 
         return classifier;
@@ -74,7 +74,7 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
 
         await store.SaveAsync(ownerId, stream, meta, ct);
 
-        _cache[ownerId] = new CacheEntry(classifier) { LastUsedTicks = _utcNow().Ticks };
+        _cache[ownerId] = new CacheEntry(classifier, ClassifierSource.TrainedInMemory) { LastUsedTicks = _utcNow().Ticks };
     }
 
     /// <summary>
@@ -91,6 +91,24 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
     /// </summary>
     public Task<ClassifierModelMeta?> GetMetaAsync(string ownerId, CancellationToken ct = default)
         => store.GetMetaAsync(ownerId, ct);
+
+    /// <summary>
+    /// Returns the current status for the given owner, including where the model comes from.
+    /// </summary>
+    public async Task<ClassifierStatus> GetStatusAsync(string ownerId, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+
+        var meta = await store.GetMetaAsync(ownerId, ct);
+        if (meta == null)
+            return new ClassifierStatus(false, 0);
+
+        var source = _cache.TryGetValue(ownerId, out var entry)
+            ? entry.Origin
+            : ClassifierSource.LoadedFromDisk;
+
+        return new ClassifierStatus(true, meta.TrainingSampleCount, source, meta.TrainedAtUtc);
+    }
 
     /// <summary>
     /// Evicts idle entries past the cache TTL and, when over <see cref="ClassifierOptions.MaxCachedModels"/>, the least-recently-used entries.
@@ -124,9 +142,10 @@ public class ClassifierManager(IClassifierModelStore store, IOptions<ClassifierO
             _cache.TryRemove(owner, out _);
     }
 
-    private sealed class CacheEntry(NaiveBayesianClassifier model)
+    private sealed class CacheEntry(NaiveBayesianClassifier model, string origin)
     {
         public NaiveBayesianClassifier Model { get; } = model;
+        public string Origin { get; } = origin;
         public long LastUsedTicks { get; set; }
     }
 }

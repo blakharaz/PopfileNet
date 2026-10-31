@@ -121,6 +121,26 @@ public sealed class ClassifierGroupExtensionsTests : IDisposable
         var status = await ClassifierGroupExtensions.GetStatusAsync(manager, _user);
         status.Value!.Value!.IsTrained.ShouldBeTrue();
         status.Value.Value.TrainingDataCount.ShouldBe(2);
+        status.Value.Value.Source.ShouldBe(ClassifierSource.TrainedInMemory);
+        status.Value.Value.TrainedAtUtc.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_AfterRestart_ReportsLoadedFromDisk()
+    {
+        using var db = CreateContext(nameof(GetStatusAsync_AfterRestart_ReportsLoadedFromDisk));
+        db.Emails.Add(CreateEmail("1", "Inbox", "Work"));
+        await db.SaveChangesAsync();
+
+        var manager = CreateManager(nameof(GetStatusAsync_AfterRestart_ReportsLoadedFromDisk));
+        await ClassifierGroupExtensions.TrainAsync(db, manager, _user);
+
+        // Simulate a restart: a fresh manager shares the same store but has an empty cache.
+        var freshManager = CreateManager(nameof(GetStatusAsync_AfterRestart_ReportsLoadedFromDisk));
+        var status = await ClassifierGroupExtensions.GetStatusAsync(freshManager, _user);
+
+        status.Value!.Value!.IsTrained.ShouldBeTrue();
+        status.Value.Value.Source.ShouldBe(ClassifierSource.LoadedFromDisk);
     }
 
     [Fact]

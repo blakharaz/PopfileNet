@@ -45,10 +45,8 @@ public static class ClassifierGroupExtensions
     internal static async Task<Ok<ApiResponse<ClassifierStatus>>> GetStatusAsync(
         ClassifierManager manager, ClaimsPrincipal user)
     {
-        var meta = await manager.GetMetaAsync(ResolveOwnerId(user));
-        var isTrained = meta != null;
-        return TypedResults.Ok(ApiResponse<ClassifierStatus>.Success(
-            new ClassifierStatus(isTrained, meta?.TrainingSampleCount ?? 0)));
+        var status = await manager.GetStatusAsync(ResolveOwnerId(user));
+        return TypedResults.Ok(ApiResponse<ClassifierStatus>.Success(status));
     }
 
     internal static async Task<IResult> TrainAsync(
